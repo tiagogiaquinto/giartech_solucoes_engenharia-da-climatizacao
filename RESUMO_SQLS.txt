@@ -1,0 +1,88 @@
+╔══════════════════════════════════════════════════════════════╗
+║          SQLs PARA EXECUTAR NO SUPABASE DASHBOARD           ║
+╚══════════════════════════════════════════════════════════════╝
+
+📁 ARQUIVO PRINCIPAL: SQLS_SUPABASE.sql
+📖 GUIA DETALHADO:   GUIA_EXECUTAR_SQLS.md
+
+═══════════════════════════════════════════════════════════════
+
+🎯 ORDEM DE EXECUÇÃO:
+
+1️⃣  Criar bucket "avatars" (Storage)
+2️⃣  Adicionar coluna "avatar" em users
+3️⃣  Criar tabela "service_order_items"
+4️⃣  Criar tabela "service_order_team"
+5️⃣  Adicionar colunas em "service_orders"
+6️⃣  Criar função de cálculo automático
+7️⃣  Criar triggers
+8️⃣  Executar verificações
+
+═══════════════════════════════════════════════════════════════
+
+⚡ MÉTODO RÁPIDO (RECOMENDADO):
+
+1. Abra: https://app.supabase.com
+2. Vá em: SQL Editor → New Query
+3. Copie SQLS_SUPABASE.sql completo
+4. Execute tudo de uma vez
+5. Verifique os resultados na seção 8
+
+═══════════════════════════════════════════════════════════════
+
+🔍 VERIFICAÇÃO RÁPIDA:
+
+Execute isso no SQL Editor para confirmar:
+
+SELECT COUNT(*) as total FROM (
+  SELECT table_name FROM information_schema.tables
+  WHERE table_name IN ('service_order_items', 'service_order_team')
+  
+  UNION ALL
+  
+  SELECT column_name FROM information_schema.columns
+  WHERE table_name = 'service_orders'
+    AND column_name IN ('show_value', 'total_estimated_duration')
+) sub;
+
+✅ RESULTADO ESPERADO: 4
+
+═══════════════════════════════════════════════════════════════
+
+📋 O QUE SERÁ CRIADO:
+
+✅ Bucket "avatars" para fotos
+✅ Tabela service_order_items (itens da OS)
+✅ Tabela service_order_team (equipe da OS)
+✅ Campo users.avatar (foto do perfil)
+✅ Campo service_orders.show_value (ocultar valores)
+✅ Campo service_orders.total_estimated_duration (duração)
+✅ Campo service_orders.generated_contract (contrato)
+✅ Função calculate_service_order_totals()
+✅ 3 Triggers automáticos
+✅ 4 Índices de performance
+✅ Políticas RLS
+
+═══════════════════════════════════════════════════════════════
+
+🆘 PROBLEMAS?
+
+1. Erro "already exists" → Ignore, é normal!
+2. Erro "permission denied" → Use conta admin
+3. Bucket não criado → Crie manual no Dashboard
+4. Leia: GUIA_EXECUTAR_SQLS.md (seção "Resolução")
+
+═══════════════════════════════════════════════════════════════
+
+🚀 APÓS EXECUTAR OS SQLS:
+
+1. Limpe cache do navegador (Ctrl+Shift+R)
+2. Teste upload de foto no perfil
+3. Crie OS com múltiplos serviços
+4. Gere contrato em PDF
+
+═══════════════════════════════════════════════════════════════
+
+💡 DICA: Se tiver dúvidas, execute bloco por bloco seguindo
+o GUIA_EXECUTAR_SQLS.md com instruções detalhadas.
+

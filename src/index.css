@@ -1,0 +1,468 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+
+  h1 {
+    @apply text-2xl font-bold leading-8 tracking-tight;
+  }
+
+  h2 {
+    @apply text-lg font-medium leading-6 tracking-tight;
+  }
+
+  p {
+    @apply leading-6;
+  }
+}
+
+@layer components {
+  /* === SISTEMA DE DESIGN === */
+  
+  /* === CONTAINERS E LAYOUTS === */
+  .app-container {
+    @apply p-3 space-y-4 max-w-full overflow-x-hidden;
+  }
+
+  .app-card {
+    @apply bg-white rounded-xl p-4 shadow-md border border-gray-100 transition-all duration-200;
+  }
+
+  .app-card-compact {
+    @apply bg-white rounded-lg p-3 shadow-sm border border-gray-100;
+  }
+
+  /* === TIPOGRAFIA CONSISTENTE === */
+  .app-title {
+    @apply text-lg font-bold text-gray-900 text-center;
+  }
+
+  .app-subtitle {
+    @apply text-xs text-gray-600 text-center mt-1;
+  }
+
+  .app-section-title {
+    @apply text-base font-semibold text-gray-900 mb-3 text-center;
+  }
+
+  .app-label {
+    @apply text-xs text-gray-500 font-medium;
+  }
+
+  .app-value {
+    @apply text-sm font-medium text-gray-900;
+  }
+
+  .app-value-large {
+    @apply text-lg font-bold;
+  }
+
+  .app-value-xl {
+    @apply text-2xl font-bold;
+  }
+
+  /* === SISTEMA DE CORES === */
+  .app-text-primary {
+    @apply text-blue-600;
+  }
+
+  .app-text-success {
+    @apply text-green-600;
+  }
+
+  .app-text-warning {
+    @apply text-orange-600;
+  }
+
+  .app-text-error {
+    @apply text-red-600;
+  }
+
+  .app-text-purple {
+    @apply text-purple-600;
+  }
+
+  /* === BOTÕES PADRONIZADOS === */
+  .app-button {
+    @apply w-full py-3 px-4 rounded-lg text-base font-medium transition-all duration-200 flex items-center justify-center space-x-2 min-h-[48px];
+  }
+
+  .app-button-primary {
+    @apply app-button bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:shadow-lg active:opacity-90 active:translate-y-0.5;
+  }
+
+  .app-button-secondary {
+    @apply app-button bg-gray-100 text-gray-700 hover:bg-gray-200 active:opacity-90 active:translate-y-0.5;
+  }
+
+  .app-button-success {
+    @apply app-button bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg active:opacity-90 active:translate-y-0.5;
+  }
+
+  .app-button-warning {
+    @apply app-button bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:shadow-lg active:opacity-90 active:translate-y-0.5;
+  }
+
+  .app-button-compact {
+    @apply px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-center space-x-1;
+  }
+
+  .app-button-disabled {
+    @apply opacity-38 cursor-not-allowed shadow-none;
+  }
+
+  /* === INPUTS E FORMULÁRIOS === */
+  .app-input {
+    @apply w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 min-h-[48px];
+  }
+
+  .app-select {
+    @apply app-input appearance-none bg-white;
+  }
+
+  .app-textarea {
+    @apply app-input resize-none;
+  }
+
+  /* === GRIDS E LAYOUTS === */
+  .app-grid-2 {
+    @apply grid grid-cols-2 gap-4;
+  }
+
+  .app-grid-3 {
+    @apply grid grid-cols-3 gap-4;
+  }
+
+  .app-grid-info {
+    @apply grid grid-cols-2 gap-4 text-sm;
+  }
+
+  .app-grid-metrics {
+    @apply flex items-center justify-between;
+  }
+
+  /* === ESPAÇAMENTOS CONSISTENTES === */
+  .app-spacing-xs {
+    @apply space-y-2;
+  }
+
+  .app-spacing-sm {
+    @apply space-y-3;
+  }
+
+  .app-spacing-md {
+    @apply space-y-4;
+  }
+
+  .app-spacing-lg {
+    @apply space-y-6;
+  }
+
+  /* === ESTADOS E FEEDBACK === */
+  .app-status-active {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .app-status-pending {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .app-status-error {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .app-status-info {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .app-badge {
+    @apply px-2 py-1 rounded-full text-xs font-medium;
+  }
+
+  /* === NAVEGAÇÃO E TABS === */
+  .app-tab {
+    @apply flex-1 flex items-center justify-center space-x-2 py-3 px-4 transition-colors;
+  }
+
+  .app-tab-active {
+    @apply app-tab bg-blue-50 text-blue-600 border-b-2 border-blue-600;
+  }
+
+  .app-tab-inactive {
+    @apply app-tab text-gray-600 hover:text-gray-900;
+  }
+
+  /* === MODAIS E OVERLAYS === */
+  .app-modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+  }
+
+  .app-modal-backdrop {
+    @apply absolute inset-0 bg-black/50 backdrop-blur-sm;
+  }
+
+  .app-modal-content {
+    @apply relative bg-white rounded-xl p-4 w-full max-w-sm shadow-2xl max-h-[90vh] overflow-y-auto;
+  }
+
+  .app-modal-header {
+    @apply flex items-center justify-between mb-4;
+  }
+
+  .app-modal-title {
+    @apply text-lg font-bold text-gray-900;
+  }
+
+  /* === LISTAS E CARDS === */
+  .app-list-item {
+    @apply p-4 bg-white rounded-lg shadow-sm border border-gray-100;
+  }
+
+  .app-card-header {
+    @apply flex items-start justify-between mb-3;
+  }
+
+  .app-card-content {
+    @apply space-y-3;
+  }
+
+  .app-card-footer {
+    @apply flex space-x-2 mt-4;
+  }
+
+  /* === ÍCONES E ELEMENTOS VISUAIS === */
+  .app-icon-sm {
+    @apply h-4 w-4;
+  }
+
+  .app-icon-md {
+    @apply h-5 w-5;
+  }
+
+  .app-icon-lg {
+    @apply h-6 w-6;
+  }
+
+  .app-icon-container {
+    @apply w-10 h-10 rounded-lg flex items-center justify-center;
+  }
+
+  .app-icon-container-lg {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center;
+  }
+
+  /* === ANIMAÇÕES E TRANSIÇÕES === */
+  .app-transition {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  .app-hover-lift {
+    @apply hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200;
+  }
+
+  .app-scale-press {
+    @apply active:scale-95 transition-transform duration-150;
+  }
+
+  /* === RESPONSIVIDADE === */
+  @media (max-width: 640px) {
+    .app-responsive-text {
+      @apply text-sm;
+    }
+    
+    .app-responsive-padding {
+      @apply p-3;
+    }
+    
+    .app-responsive-margin {
+      @apply m-2;
+    }
+
+    .app-responsive-grid {
+      @apply grid-cols-1 gap-3;
+    }
+  }
+
+  /* === HIERARQUIA VISUAL === */
+  .app-hierarchy-primary {
+    @apply text-gray-900 font-semibold;
+  }
+
+  .app-hierarchy-secondary {
+    @apply text-gray-700 font-medium;
+  }
+
+  .app-hierarchy-tertiary {
+    @apply text-gray-600;
+  }
+
+  .app-hierarchy-muted {
+    @apply text-gray-500;
+  }
+
+  /* === LAYOUT ESPECÍFICOS === */
+  .app-header-centered {
+    @apply text-center mb-3;
+  }
+
+  .app-scroll-smooth {
+    @apply overflow-y-auto;
+  }
+
+  .app-text-truncate {
+    @apply truncate;
+  }
+
+  .app-text-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .app-text-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* === SIDEBAR MOBILE === */
+  .mobile-sidebar-overlay {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300;
+  }
+
+  .mobile-sidebar {
+    @apply fixed left-0 top-0 h-full w-[280px] bg-white border-r border-gray-200 shadow-lg z-50 flex flex-col transition-transform duration-300;
+  }
+}
+
+/* === SCROLLBAR PERSONALIZADA === */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+/* === ANIMAÇÕES PERSONALIZADAS === */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* === OTIMIZAÇÕES PARA TOUCH === */
+@media (hover: none) and (pointer: coarse) {
+  .app-button {
+    @apply min-h-[48px];
+  }
+  
+  .app-interactive {
+    @apply active:bg-gray-100 transition-colors;
+  }
+  
+  .app-card {
+    @apply active:scale-[0.98] transition-transform;
+  }
+}
+
+/* === PREVENÇÃO DE SCROLL HORIZONTAL === */
+body {
+  overflow-x: hidden;
+}
+
+.app-container {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.app-content {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* === TEMA CLARO/ESCURO === */
+:root {
+  --color-primary: #2196F3;
+  --color-secondary: #FFC107;
+  --color-error: #F44336;
+  --color-success: #4CAF50;
+  --color-background: #FFFFFF;
+  --color-surface: #F5F5F5;
+  --color-text: #212121;
+}
+
+.dark-theme {
+  --color-primary: #90CAF9;
+  --color-secondary: #FFE082;
+  --color-error: #EF9A9A;
+  --color-success: #A5D6A7;
+  --color-background: #121212;
+  --color-surface: #1E1E1E;
+  --color-text: #FFFFFF;
+}
