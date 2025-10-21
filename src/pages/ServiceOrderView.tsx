@@ -3,9 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, CircleAlert as AlertCircle, Eye } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
-import { generateServiceOrderPDFProfessional } from '../utils/generateServiceOrderPDFProfessional'
+import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import ContractViewModal from '../components/ContractViewModal'
 import ProposalViewModal from '../components/ProposalViewModal'
+import ServiceOrderViewGiartech from '../components/ServiceOrderViewGiartech'
 
 const ServiceOrderView = () => {
   const { id } = useParams()
@@ -17,6 +18,7 @@ const ServiceOrderView = () => {
   const [deleting, setDeleting] = useState(false)
   const [showContractModal, setShowContractModal] = useState(false)
   const [showProposalModal, setShowProposalModal] = useState(false)
+  const [showGiartechModal, setShowGiartechModal] = useState(false)
   const [bankAccounts, setBankAccounts] = useState<any[]>([])
   const [companySettings, setCompanySettings] = useState<any>(null)
 
@@ -245,11 +247,74 @@ const ServiceOrderView = () => {
         notes: order.notes || ''
       }
 
-      await generateServiceOrderPDFProfessional(orderData, companyInfo)
+      await generateServiceOrderPDFGiartech(prepareGiartechData())
       alert('PDF gerado com sucesso!')
     } catch (error) {
       console.error('Erro ao gerar PDF:', error)
       alert('Erro ao gerar PDF!')
+    }
+  }
+
+  const prepareGiartechData = () => {
+    if (!order || !customer) return null
+
+    const customerAddr = customer.customer_addresses?.[0]
+
+    return {
+      order_number: order.order_number || 'N/A',
+      date: order.created_at || new Date().toISOString(),
+      title: order.title || order.description || '',
+      client: {
+        name: order.client_name || customer.nome_razao || customer.name || 'Cliente',
+        company_name: order.client_company_name || customer.nome_fantasia || '',
+        cnpj: order.client_cnpj || customer.cnpj || '',
+        cpf: order.client_cpf || customer.cpf || '',
+        address: order.client_address || (customerAddr ? `${customerAddr.logradouro}${customerAddr.numero ? ', ' + customerAddr.numero : ''}` : ''),
+        city: order.client_city || customerAddr?.cidade || '',
+        state: order.client_state || customerAddr?.estado || '',
+        cep: order.client_cep || customerAddr?.cep || '',
+        email: order.client_email || customer.email || '',
+        phone: order.client_phone || customer.telefone || customer.phone || ''
+      },
+      basic_info: {
+        deadline: order.prazo_execucao_dias ? `${order.prazo_execucao_dias} dias` : '15 dias',
+        brand: order.brand || '',
+        model: order.model || '',
+        equipment: order.equipment || ''
+      },
+      items: (order.items || []).map((item: any) => ({
+        description: item.service_name || item.descricao || item.description || 'Serviço',
+        scope: item.scope || item.escopo || '',
+        unit: item.unit || item.unidade || 'un.',
+        unit_price: item.unit_price || item.preco_unitario || 0,
+        quantity: item.quantity || item.quantidade || 1,
+        total_price: item.total_price || item.preco_total || 0
+      })),
+      subtotal: order.subtotal || order.total_value || 0,
+      discount: order.discount_amount || order.desconto_valor || 0,
+      total: order.final_total || order.total_value || 0,
+      payment: {
+        methods: order.payment_methods || 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
+        pix: order.payment_pix || order.client_cnpj || order.client_cpf || '',
+        bank_details: order.payment_bank ? {
+          bank: order.payment_bank,
+          agency: order.payment_agency || '0001',
+          account: order.payment_account || '',
+          account_type: order.payment_account_type || 'Corrente',
+          holder: order.payment_holder || order.client_cnpj || order.client_cpf || ''
+        } : undefined,
+        conditions: order.payment_conditions || 'Sinal de 50% e o valor restante após a conclusão.'
+      },
+      warranty: {
+        period: order.warranty_period ? `${order.warranty_period} ${order.warranty_type === 'days' ? 'dias' : order.warranty_type === 'months' ? 'meses' : 'anos'}` : '12 meses',
+        conditions: order.warranty_terms || `Garantias referentes à sistemas de novo em tubulações antigas, só serão válidas, com os processos de descontaminação das tubulações antigas.
+
+Garantia de (EQUIPAMENTOS NOVOS) que podem ser de 5 a 10 anos, só são válidas com manutenção semestral comprovada COM LAUDO TÉCNICO.
+
+Garantias extendidas pela nossa empresa, são concedidas em caso de compra das máquinas conosco, as mesmas deixam de ter validade legal de 3 meses e podem ter até 12 meses de acordo com o tipo e capacidade do sistema, mediante a manutenção dos equipamentos realizadas conosco nos prazos estipulados pelo fabricante...`
+      },
+      contract_clauses: order.contract_clauses ? JSON.parse(order.contract_clauses) : [],
+      additional_info: order.additional_info || 'Trabalhamos para que seus projetos, se tornem realidade.. Obrigado pela confiança'
     }
   }
 
@@ -326,6 +391,20 @@ const ServiceOrderView = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
+            onClick={() => setShowGiartechModal(true)}
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center gap-2 shadow-lg"
+          >
+            <Eye className="h-4 w-4" />
+            Ver Orçamento
+          </button>
+          <button
+            onClick={handleGeneratePDF}
+            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 flex items-center gap-2 shadow-lg"
+          >
+            <FileDown className="h-4 w-4" />
+            Gerar PDF OS
+          </button>
+          <button
             onClick={() => setShowProposalModal(true)}
             className="px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg hover:from-teal-700 hover:to-teal-800 flex items-center gap-2 shadow-lg"
           >
@@ -338,13 +417,6 @@ const ServiceOrderView = () => {
           >
             <FileText className="h-4 w-4" />
             Ver Contrato
-          </button>
-          <button
-            onClick={handleGeneratePDF}
-            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 flex items-center gap-2 shadow-lg"
-          >
-            <FileDown className="h-4 w-4" />
-            Gerar PDF OS
           </button>
           <button
             onClick={() => navigate(`/service-orders?edit=${id}`)}
@@ -678,104 +750,109 @@ const ServiceOrderView = () => {
       />
 
       {order && customer && (
-        <ProposalViewModal
-          isOpen={showProposalModal}
-          onClose={() => setShowProposalModal(false)}
-          data={{
-            order_number: order.order_number || 'N/A',
-            date: order.created_at || new Date().toISOString(),
-            title: order.description || '',
-            client: {
-              name: customer.nome_razao || customer.name || 'Cliente',
-              company_name: customer.nome_razao,
-              cnpj: customer.cnpj_cpf,
-              address: (() => {
-                // Buscar endereço da relação customer_addresses
-                const addr = customer.customer_addresses?.[0]
-                if (addr) {
-                  return `${addr.logradouro}${addr.numero ? ', ' + addr.numero : ''}${addr.complemento ? ' - ' + addr.complemento : ''}`
-                }
-                // Fallback para campos diretos do cliente
-                return customer.address_street
-                  ? `${customer.address_street}${customer.address_number ? ', ' + customer.address_number : ''}${customer.address_complement ? ' - ' + customer.address_complement : ''}`
-                  : (customer.endereco || customer.address)
-              })(),
-              city: (() => {
-                const addr = customer.customer_addresses?.[0]
-                return addr?.cidade || customer.address_city || customer.cidade || customer.city
-              })(),
-              state: (() => {
-                const addr = customer.customer_addresses?.[0]
-                return addr?.estado || customer.address_state || customer.estado || customer.state
-              })(),
-              cep: (() => {
-                const addr = customer.customer_addresses?.[0]
-                return addr?.cep || customer.address_zip_code || customer.cep || customer.zip_code
-              })(),
-              email: customer.email,
-              phone: customer.telefone || customer.phone
-            },
-            company: {
-              name: companySettings?.company_name || 'Giartech Soluções',
-              owner: companySettings?.owner_name || 'Tiago Bruno Giaquinto',
-              cnpj: companySettings?.cnpj || '375.098.970',
-              address: companySettings?.address || 'Rua Quito 14, 14',
-              city: companySettings?.city || 'São Paulo',
-              state: companySettings?.state || 'SP',
-              cep: companySettings?.zip_code,
-              email: companySettings?.email || 'giartechsolucoes@gmail.com',
-              phones: companySettings?.phone ? [companySettings.phone] : ['+351 511 966 617', '+351 511 943 985'],
-              social: {
-                instagram: '@tg.arconnection',
-                facebook: '@tgarconnection',
-                website: 'tgarconnection.com.br'
+        <>
+          <ServiceOrderViewGiartech
+            isOpen={showGiartechModal}
+            onClose={() => setShowGiartechModal(false)}
+            data={prepareGiartechData()}
+          />
+
+          <ProposalViewModal
+            isOpen={showProposalModal}
+            onClose={() => setShowProposalModal(false)}
+            data={{
+              order_number: order.order_number || 'N/A',
+              date: order.created_at || new Date().toISOString(),
+              title: order.description || '',
+              client: {
+                name: customer.nome_razao || customer.name || 'Cliente',
+                company_name: customer.nome_razao,
+                cnpj: customer.cnpj_cpf,
+                address: (() => {
+                  const addr = customer.customer_addresses?.[0]
+                  if (addr) {
+                    return `${addr.logradouro}${addr.numero ? ', ' + addr.numero : ''}${addr.complemento ? ' - ' + addr.complemento : ''}`
+                  }
+                  return customer.address_street
+                    ? `${customer.address_street}${customer.address_number ? ', ' + customer.address_number : ''}${customer.address_complement ? ' - ' + customer.address_complement : ''}`
+                    : (customer.endereco || customer.address)
+                })(),
+                city: (() => {
+                  const addr = customer.customer_addresses?.[0]
+                  return addr?.cidade || customer.address_city || customer.cidade || customer.city
+                })(),
+                state: (() => {
+                  const addr = customer.customer_addresses?.[0]
+                  return addr?.estado || customer.address_state || customer.estado || customer.state
+                })(),
+                cep: (() => {
+                  const addr = customer.customer_addresses?.[0]
+                  return addr?.cep || customer.address_zip_code || customer.cep || customer.zip_code
+                })(),
+                email: customer.email,
+                phone: customer.telefone || customer.phone
               },
-              tagline: 'Sua satisfação é o que motiva a nossa dedicação'
-            },
-            basic_info: {
-              deadline: order.estimated_hours ? `${order.estimated_hours} horas` : '3 DIAS',
-              brand: order.equipment_brand,
-              model: order.equipment_model
-            },
-            items: (order.items || []).map((item: any) => ({
-              description: item.service_catalog?.name || item.service_name || item.name || item.descricao || item.description || 'Serviço',
-              scope: item.notes || item.service_catalog?.description || item.scope || item.description || '',
-              unit: item.unit || 'un.',
-              unit_price: item.unit_price || item.preco_unitario || item.price || 0,
-              quantity: item.quantity || item.quantidade || 1,
-              total_price: item.total_price || item.preco_total || ((item.unit_price || item.preco_unitario || item.price || 0) * (item.quantity || item.quantidade || 1))
-            })),
-            subtotal: order.subtotal_value || order.total_value || 0,
-            discount: order.discount_value || order.desconto_valor || 0,
-            total: order.total_value || 0,
-            show_value: order.show_value !== false,
-            relatorio_tecnico: order.relatorio_tecnico,
-            orientacoes_servico: order.orientacoes_servico,
-            escopo_detalhado: order.escopo_detalhado,
-            payment: {
-              methods: order.payment_method === 'dinheiro' ? 'Dinheiro' :
-                      order.payment_method === 'pix' ? 'PIX' :
-                      order.payment_method === 'cartao_credito' ? 'Cartão de Crédito' :
-                      order.payment_method === 'cartao_debito' ? 'Cartão de Débito' :
-                      order.payment_method === 'transferencia' ? 'Transferência Bancária' :
-                      'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
-              pix: bankAccounts[0]?.pix_key || companySettings?.cnpj,
-              bank_details: bankAccounts[0] ? {
-                bank: bankAccounts[0].bank_name,
-                agency: bankAccounts[0].agency,
-                account: bankAccounts[0].account_number,
-                account_type: bankAccounts[0].account_type === 'checking' ? 'Corrente' : 'Poupança',
-                holder: bankAccounts[0].account_holder
-              } : undefined,
-              conditions: order.payment_installments && order.payment_installments > 1
-                ? `Forma de Pagamento: ${order.payment_method === 'dinheiro' ? 'Dinheiro' : order.payment_method === 'pix' ? 'PIX' : order.payment_method === 'cartao_credito' ? 'Cartão de Crédito' : order.payment_method === 'cartao_debito' ? 'Cartão de Débito' : order.payment_method === 'transferencia' ? 'Transferência' : 'Diversos'}\nParcelas: ${order.payment_installments}x\nLINK DE PAGAMENTO EM ${order.payment_installments}X SEM JUROS / DEMAIS PARCELAS INCIDÊNCIA DE JUROS DA MÁQUINA\nÀ VISTA 5% DE DESCONTO`
-                : `Forma de Pagamento: ${order.payment_method === 'dinheiro' ? 'Dinheiro' : order.payment_method === 'pix' ? 'PIX' : order.payment_method === 'cartao_credito' ? 'Cartão de Crédito' : order.payment_method === 'cartao_debito' ? 'Cartão de Débito' : order.payment_method === 'transferencia' ? 'Transferência' : 'À Vista'}\nPagamento à vista com 5% de desconto`
-            },
-            warranty: {
-              period: order.warranty_period ? `${order.warranty_period} ${order.warranty_type === 'days' ? 'dias' : 'meses'}` : '90 dias',
-              conditions: order.warranty_terms || `Garantias referentes à sistemas de novo em tubulações antigas, só serão válidas, com os processos de descontaminação das tubulações antigas.\n\nGarantia de (EQUIPAMENTOS NOVOS) que podem ser de 5 a 10 anos, só são válidas com manutenção semestral comprovada COM LAUDO TÉCNICO.\n\nGarantias extendidas pela nossa empresa, são concedidas em caso de compra das máquinas conosco, as mesmas deixam de ter validade legal de 3 meses e podem ter até 12 meses de acordo com o tipo e capacidade do sistema, mediante a manutenção dos equipamentos realizadas conosco nos prazos estipulados pelo fabricante...`
-            },
-            contract_clauses: `1. Obrigações do Cliente
+              company: {
+                name: companySettings?.company_name || 'Giartech Soluções',
+                owner: companySettings?.owner_name || 'Tiago Bruno Giaquinto',
+                cnpj: companySettings?.cnpj || '375.098.970',
+                address: companySettings?.address || 'Rua Quito 14, 14',
+                city: companySettings?.city || 'São Paulo',
+                state: companySettings?.state || 'SP',
+                cep: companySettings?.zip_code,
+                email: companySettings?.email || 'giartechsolucoes@gmail.com',
+                phones: companySettings?.phone ? [companySettings.phone] : ['+351 511 966 617', '+351 511 943 985'],
+                social: {
+                  instagram: '@tg.arconnection',
+                  facebook: '@tgarconnection',
+                  website: 'tgarconnection.com.br'
+                },
+                tagline: 'Sua satisfação é o que motiva a nossa dedicação'
+              },
+              basic_info: {
+                deadline: order.estimated_hours ? `${order.estimated_hours} horas` : '3 DIAS',
+                brand: order.equipment_brand,
+                model: order.equipment_model
+              },
+              items: (order.items || []).map((item: any) => ({
+                description: item.service_catalog?.name || item.service_name || item.name || item.descricao || item.description || 'Serviço',
+                scope: item.notes || item.service_catalog?.description || item.scope || item.description || '',
+                unit: item.unit || 'un.',
+                unit_price: item.unit_price || item.preco_unitario || item.price || 0,
+                quantity: item.quantity || item.quantidade || 1,
+                total_price: item.total_price || item.preco_total || ((item.unit_price || item.preco_unitario || item.price || 0) * (item.quantity || item.quantidade || 1))
+              })),
+              subtotal: order.subtotal_value || order.total_value || 0,
+              discount: order.discount_value || order.desconto_valor || 0,
+              total: order.total_value || 0,
+              show_value: order.show_value !== false,
+              relatorio_tecnico: order.relatorio_tecnico,
+              orientacoes_servico: order.orientacoes_servico,
+              escopo_detalhado: order.escopo_detalhado,
+              payment: {
+                methods: order.payment_method === 'dinheiro' ? 'Dinheiro' :
+                        order.payment_method === 'pix' ? 'PIX' :
+                        order.payment_method === 'cartao_credito' ? 'Cartão de Crédito' :
+                        order.payment_method === 'cartao_debito' ? 'Cartão de Débito' :
+                        order.payment_method === 'transferencia' ? 'Transferência Bancária' :
+                        'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
+                pix: bankAccounts[0]?.pix_key || companySettings?.cnpj,
+                bank_details: bankAccounts[0] ? {
+                  bank: bankAccounts[0].bank_name,
+                  agency: bankAccounts[0].agency,
+                  account: bankAccounts[0].account_number,
+                  account_type: bankAccounts[0].account_type === 'checking' ? 'Corrente' : 'Poupança',
+                  holder: bankAccounts[0].account_holder
+                } : undefined,
+                conditions: order.payment_installments && order.payment_installments > 1
+                  ? `Forma de Pagamento: ${order.payment_method === 'dinheiro' ? 'Dinheiro' : order.payment_method === 'pix' ? 'PIX' : order.payment_method === 'cartao_credito' ? 'Cartão de Crédito' : order.payment_method === 'cartao_debito' ? 'Cartão de Débito' : order.payment_method === 'transferencia' ? 'Transferência' : 'Diversos'}\nParcelas: ${order.payment_installments}x\nLINK DE PAGAMENTO EM ${order.payment_installments}X SEM JUROS / DEMAIS PARCELAS INCIDÊNCIA DE JUROS DA MÁQUINA\nÀ VISTA 5% DE DESCONTO`
+                  : `Forma de Pagamento: ${order.payment_method === 'dinheiro' ? 'Dinheiro' : order.payment_method === 'pix' ? 'PIX' : order.payment_method === 'cartao_credito' ? 'Cartão de Crédito' : order.payment_method === 'cartao_debito' ? 'Cartão de Débito' : order.payment_method === 'transferencia' ? 'Transferência' : 'À Vista'}\nPagamento à vista com 5% de desconto`
+              },
+              warranty: {
+                period: order.warranty_period ? `${order.warranty_period} ${order.warranty_type === 'days' ? 'dias' : 'meses'}` : '90 dias',
+                conditions: order.warranty_terms || `Garantias referentes à sistemas de novo em tubulações antigas, só serão válidas, com os processos de descontaminação das tubulações antigas.\n\nGarantia de (EQUIPAMENTOS NOVOS) que podem ser de 5 a 10 anos, só são válidas com manutenção semestral comprovada COM LAUDO TÉCNICO.\n\nGarantias extendidas pela nossa empresa, são concedidas em caso de compra das máquinas conosco, as mesmas deixam de ter validade legal de 3 meses e podem ter até 12 meses de acordo com o tipo e capacidade do sistema, mediante a manutenção dos equipamentos realizadas conosco nos prazos estipulados pelo fabricante...`
+              },
+              contract_clauses: `1. Obrigações do Cliente
 1.1. O cliente deve fornecer todas as informações necessárias para a execução adequada dos serviços contratados, incluindo, mas não se limitando a, especificações técnicas, localização e horários preferenciais para a realização dos serviços, como também a planta do imóvel e projeto arquitetônico.
 1.2. O cliente deve garantir o acesso seguro e adequado às instalações onde os serviços serão realizados.
 1.3. O cliente deve comunicar prontamente qualquer problema ou defeito observado nos serviços prestados.
@@ -794,9 +871,10 @@ const ServiceOrderView = () => {
 4.1. Este contrato não cria qualquer relação de parceria, joint venture, emprego ou agência entre as partes.
 4.2. Nenhuma das partes pode ceder ou transferir seus direitos ou obrigações sob este contrato sem o consentimento prévio por escrito da outra parte.
 4.3. Este contrato constitui o acordo completo entre as partes e substitui todos os acordos anteriores, escritos ou orais, relacionados ao seu objeto.`,
-            additional_info: order.notes || 'Trabalhamos para que seus projetos, se tornem realidade.. Obrigado pela confiança\n\nobrigado pela confiança, estaremos à disposição.'
-          }}
-        />
+              additional_info: order.notes || 'Trabalhamos para que seus projetos, se tornem realidade.. Obrigado pela confiança\n\nobrigado pela confiança, estaremos à disposição.'
+            }}
+          />
+        </>
       )}
     </div>
   )

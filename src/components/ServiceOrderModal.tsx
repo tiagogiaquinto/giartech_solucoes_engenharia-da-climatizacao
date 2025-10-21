@@ -76,7 +76,16 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
     contract_notes: '',
     notes: '',
     estimated_hours: 0,
-    actual_hours: 0
+    actual_hours: 0,
+    title: '',
+    brand: '',
+    model: '',
+    equipment: '',
+    prazo_execucao_dias: 15,
+    relatorio_tecnico: '',
+    orientacoes_servico: '',
+    escopo_detalhado: '',
+    additional_info: ''
   })
 
   const [customers, setCustomers] = useState<any[]>([])
@@ -171,7 +180,16 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
           contract_notes: order.contract_notes || '',
           notes: order.notes || '',
           estimated_hours: order.estimated_hours || 0,
-          actual_hours: order.actual_hours || 0
+          actual_hours: order.actual_hours || 0,
+          title: order.title || '',
+          brand: order.brand || '',
+          model: order.model || '',
+          equipment: order.equipment || '',
+          prazo_execucao_dias: order.prazo_execucao_dias || 15,
+          relatorio_tecnico: order.relatorio_tecnico || '',
+          orientacoes_servico: order.orientacoes_servico || '',
+          escopo_detalhado: order.escopo_detalhado || '',
+          additional_info: order.additional_info || ''
         })
 
         // Carregar itens de serviço
@@ -491,7 +509,29 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
         subtotal: totals.subtotal,
         discount_amount: totals.desconto,
         final_total: totals.total,
-        notes: formData.notes
+        notes: formData.notes,
+        client_name: selectedCustomer?.nome_razao || '',
+        client_company_name: selectedCustomer?.nome_fantasia || '',
+        client_cnpj: selectedCustomer?.cnpj || '',
+        client_cpf: selectedCustomer?.cpf || '',
+        client_phone: selectedCustomer?.telefone_1 || '',
+        client_email: selectedCustomer?.email || '',
+        client_address: selectedCustomer?.endereco_logradouro ?
+          `${selectedCustomer.endereco_logradouro}${selectedCustomer.endereco_numero ? ', ' + selectedCustomer.endereco_numero : ''}${selectedCustomer.endereco_complemento ? ' - ' + selectedCustomer.endereco_complemento : ''}${selectedCustomer.endereco_bairro ? ', ' + selectedCustomer.endereco_bairro : ''}` : '',
+        client_city: selectedCustomer?.endereco_cidade || '',
+        client_state: selectedCustomer?.endereco_estado || '',
+        client_cep: selectedCustomer?.endereco_cep || '',
+        payment_methods: 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
+        payment_pix: selectedCustomer?.cnpj || selectedCustomer?.cpf || '',
+        title: (formData as any).title || '',
+        brand: (formData as any).brand || '',
+        model: (formData as any).model || '',
+        equipment: (formData as any).equipment || '',
+        prazo_execucao_dias: (formData as any).prazo_execucao_dias || null,
+        relatorio_tecnico: (formData as any).relatorio_tecnico || '',
+        orientacoes_servico: (formData as any).orientacoes_servico || '',
+        escopo_detalhado: (formData as any).escopo_detalhado || '',
+        additional_info: (formData as any).additional_info || 'Trabalhamos para que seus projetos, se tornem realidade.. Obrigado pela confiança'
       }
 
       let orderIdToUse = orderId
@@ -643,6 +683,75 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
                     <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})}
                       className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" rows={2}
                       placeholder="Notas internas (não aparecem para o cliente)..." />
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3 text-blue-700">📋 Informações do Orçamento</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium mb-1">Título do Projeto</label>
+                      <input type="text" value={formData.title}
+                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ex: climatização apartamento da familia" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Marca</label>
+                      <input type="text" value={formData.brand}
+                        onChange={(e) => setFormData({...formData, brand: e.target.value})}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ex: Midea" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Modelo</label>
+                      <input type="text" value={formData.model}
+                        onChange={(e) => setFormData({...formData, model: e.target.value})}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ex: VRF" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Aparelho/Equipamento</label>
+                      <input type="text" value={formData.equipment}
+                        onChange={(e) => setFormData({...formData, equipment: e.target.value})}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ex: cassete 1 via e hiwall" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Prazo de Execução (dias)</label>
+                      <input type="number" value={formData.prazo_execucao_dias}
+                        onChange={(e) => setFormData({...formData, prazo_execucao_dias: parseInt(e.target.value) || 0})}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="15" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium mb-1">Escopo Detalhado</label>
+                      <textarea value={formData.escopo_detalhado}
+                        onChange={(e) => setFormData({...formData, escopo_detalhado: e.target.value})}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" rows={3}
+                        placeholder="Descrição detalhada do escopo do projeto..." />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium mb-1">Relatório Técnico</label>
+                      <textarea value={formData.relatorio_tecnico}
+                        onChange={(e) => setFormData({...formData, relatorio_tecnico: e.target.value})}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" rows={3}
+                        placeholder="Relatório técnico do serviço..." />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium mb-1">Orientações de Serviço</label>
+                      <textarea value={formData.orientacoes_servico}
+                        onChange={(e) => setFormData({...formData, orientacoes_servico: e.target.value})}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" rows={3}
+                        placeholder="Orientações específicas para execução..." />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium mb-1">Informações Adicionais</label>
+                      <textarea value={formData.additional_info}
+                        onChange={(e) => setFormData({...formData, additional_info: e.target.value})}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" rows={2}
+                        placeholder="Trabalhamos para que seus projetos, se tornem realidade.. Obrigado pela confiança" />
+                    </div>
                   </div>
                 </div>
 
