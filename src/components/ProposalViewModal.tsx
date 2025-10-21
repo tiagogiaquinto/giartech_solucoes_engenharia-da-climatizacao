@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Download, Send, Mail, Phone, MapPin, Calendar, FileText, DollarSign, Shield, Building2, Globe, Instagram, Facebook } from 'lucide-react'
-import { generateProposalPDFV2 } from '../utils/generateProposalPDFV2'
+import { X, Download, Send, Mail, Phone, MapPin, Calendar, FileText, DollarSign, Shield, Building2, Globe, Instagram, Facebook, Printer, Share2 } from 'lucide-react'
+import { generateBudgetPDF } from '../utils/generateBudgetPDF'
 
 interface ProposalItem {
   description: string
@@ -105,12 +105,55 @@ interface ProposalViewModalProps {
 export default function ProposalViewModal({ isOpen, onClose, data }: ProposalViewModalProps) {
   if (!isOpen) return null
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     try {
-      generateProposalPDFV2(data)
+      const budgetData = {
+        order_number: data.order_number,
+        date: data.date,
+        title: data.title,
+        client: data.client,
+        basic_info: data.basic_info,
+        items: data.items,
+        subtotal: data.subtotal,
+        discount: data.discount_amount || data.discount,
+        discount_percentage: data.discount > 0 && data.subtotal > 0
+          ? Math.round((data.discount / data.subtotal) * 100)
+          : undefined,
+        total: data.final_total || data.total,
+        show_value: data.show_value,
+        technical_report: data.relatorio_tecnico,
+        service_instructions: data.orientacoes_servico,
+        detailed_scope: data.escopo_detalhado,
+        payment: data.payment,
+        warranty: data.warranty,
+        additional_info: data.additional_notes || data.additional_info,
+        special_conditions: data.additional_info
+      }
+
+      await generateBudgetPDF(budgetData)
     } catch (error) {
       console.error('Erro ao gerar PDF:', error)
       alert('Erro ao gerar PDF. Por favor, verifique os dados e tente novamente.')
+    }
+  }
+
+  const handlePrint = () => {
+    window.print()
+  }
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Orçamento ${data.order_number}`,
+          text: `Orçamento para ${data.client.name}`,
+          url: window.location.href
+        })
+      } catch (error) {
+        console.log('Compartilhamento cancelado')
+      }
+    } else {
+      alert('Compartilhamento não suportado neste navegador')
     }
   }
 
@@ -139,19 +182,37 @@ export default function ProposalViewModal({ isOpen, onClose, data }: ProposalVie
           <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <FileText className="h-6 w-6 text-white" />
-              <h2 className="text-xl font-bold text-white">Visualizar Proposta</h2>
+              <h2 className="text-xl font-bold text-white">Visualizar Orçamento</h2>
             </div>
             <div className="flex items-center space-x-2">
               <button
                 onClick={handleDownloadPDF}
                 className="px-4 py-2 bg-white text-teal-700 rounded-lg hover:bg-gray-100 flex items-center space-x-2 transition-colors"
+                title="Baixar PDF"
               >
                 <Download className="h-4 w-4" />
-                <span>Baixar PDF</span>
+                <span className="hidden sm:inline">Baixar PDF</span>
+              </button>
+              <button
+                onClick={handlePrint}
+                className="px-4 py-2 bg-white text-teal-700 rounded-lg hover:bg-gray-100 flex items-center space-x-2 transition-colors"
+                title="Imprimir"
+              >
+                <Printer className="h-4 w-4" />
+                <span className="hidden sm:inline">Imprimir</span>
+              </button>
+              <button
+                onClick={handleShare}
+                className="px-4 py-2 bg-white text-teal-700 rounded-lg hover:bg-gray-100 flex items-center space-x-2 transition-colors"
+                title="Compartilhar"
+              >
+                <Share2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Compartilhar</span>
               </button>
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-teal-800 rounded-lg transition-colors"
+                title="Fechar"
               >
                 <X className="h-5 w-5 text-white" />
               </button>
@@ -225,8 +286,16 @@ export default function ProposalViewModal({ isOpen, onClose, data }: ProposalVie
 
               {/* Número do orçamento e título */}
               <div className="bg-teal-700 px-8 py-4">
-                <h2 className="text-2xl font-bold text-white">Orçamento {data.order_number}</h2>
-                {data.title && <p className="text-teal-100">{data.title}</p>}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">Orçamento {data.order_number}</h2>
+                    {data.title && <p className="text-teal-100 mt-1">{data.title}</p>}
+                  </div>
+                  <div className="bg-white px-4 py-2 rounded-lg">
+                    <p className="text-xs text-gray-500">Validade</p>
+                    <p className="text-sm font-semibold text-gray-900">30 dias</p>
+                  </div>
+                </div>
               </div>
 
               {/* Dados do cliente */}
@@ -292,26 +361,36 @@ export default function ProposalViewModal({ isOpen, onClose, data }: ProposalVie
 
               {/* Serviços */}
               <div className="px-8 py-6 border-b border-gray-200">
-                <h3 className="text-lg font-bold text-teal-900 mb-4">Serviços</h3>
-                <div className="space-y-6">
+                <h3 className="text-lg font-bold text-teal-900 mb-4 flex items-center">
+                  <FileText className="h-5 w-5 mr-2" />
+                  Serviços e Produtos
+                </h3>
+                <div className="space-y-4">
                   {data.items.map((item, index) => (
-                    <div key={index} className="bg-gray-50 rounded-lg p-4">
+                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className={`grid ${data.show_value !== false ? 'grid-cols-12' : 'grid-cols-8'} gap-4 mb-3`}>
                         <div className={data.show_value !== false ? 'col-span-5' : 'col-span-6'}>
-                          <p className="font-semibold text-gray-900 mb-1">{item.description}</p>
-                          {item.scope && (
-                            <div className="text-sm text-gray-600 whitespace-pre-line mt-2">
-                              {item.scope}
+                          <div className="flex items-start">
+                            <span className="bg-teal-100 text-teal-700 text-xs font-semibold px-2 py-1 rounded mr-2">
+                              {index + 1}
+                            </span>
+                            <div>
+                              <p className="font-semibold text-gray-900 mb-1">{item.description}</p>
+                              {item.scope && (
+                                <div className="text-sm text-gray-600 whitespace-pre-line mt-2 bg-gray-50 p-2 rounded">
+                                  {item.scope}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </div>
                         <div className="col-span-1 text-center">
                           <p className="text-xs text-gray-500 mb-1">Unidade</p>
-                          <p className="text-sm text-gray-700">{item.unit}</p>
+                          <p className="text-sm font-medium text-gray-700">{item.unit}</p>
                         </div>
                         <div className="col-span-1 text-center">
                           <p className="text-xs text-gray-500 mb-1">Qtd.</p>
-                          <p className="text-sm text-gray-700">{item.quantity}</p>
+                          <p className="text-sm font-medium text-gray-700">{item.quantity}</p>
                         </div>
                         {data.show_value !== false && (
                           <>
@@ -320,8 +399,8 @@ export default function ProposalViewModal({ isOpen, onClose, data }: ProposalVie
                               <p className="text-sm font-medium text-gray-900">{formatCurrency(item.unit_price)}</p>
                             </div>
                             <div className="col-span-2 text-right">
-                              <p className="text-xs text-gray-500 mb-1">Preço</p>
-                              <p className="text-sm font-bold text-teal-700">{formatCurrency(item.total_price)}</p>
+                              <p className="text-xs text-gray-500 mb-1">Total</p>
+                              <p className="text-base font-bold text-teal-700">{formatCurrency(item.total_price)}</p>
                             </div>
                           </>
                         )}
@@ -330,11 +409,28 @@ export default function ProposalViewModal({ isOpen, onClose, data }: ProposalVie
                   ))}
                 </div>
 
-                {/* Total */}
+                {/* Resumo financeiro */}
                 {data.show_value !== false && (
-                  <div className="mt-6 bg-teal-700 text-white px-6 py-4 rounded-lg flex items-center justify-between">
-                    <span className="text-lg font-bold">Total</span>
-                    <span className="text-2xl font-bold">{formatCurrency(data.total || data.final_total || 0)}</span>
+                  <div className="mt-6 space-y-3">
+                    <div className="bg-gray-50 px-6 py-3 rounded-lg flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Subtotal</span>
+                      <span className="text-base font-semibold text-gray-900">{formatCurrency(data.subtotal)}</span>
+                    </div>
+                    {data.discount > 0 && (
+                      <div className="bg-red-50 px-6 py-3 rounded-lg flex items-center justify-between">
+                        <span className="text-sm font-medium text-red-700">
+                          Desconto {data.discount > 0 && data.subtotal > 0 ? `(${Math.round((data.discount / data.subtotal) * 100)}%)` : ''}
+                        </span>
+                        <span className="text-base font-semibold text-red-700">- {formatCurrency(data.discount_amount || data.discount)}</span>
+                      </div>
+                    )}
+                    <div className="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-4 rounded-lg flex items-center justify-between shadow-lg">
+                      <div>
+                        <p className="text-sm opacity-90">Valor Total</p>
+                        <span className="text-2xl font-bold">TOTAL</span>
+                      </div>
+                      <span className="text-3xl font-bold">{formatCurrency(data.total || data.final_total || 0)}</span>
+                    </div>
                   </div>
                 )}
               </div>
