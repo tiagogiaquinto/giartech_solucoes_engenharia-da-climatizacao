@@ -24,9 +24,11 @@ import {
   CheckCircle,
   Info,
   AlertTriangle,
-  User
+  User,
+  Shield
 } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
+import { supabase } from '../lib/supabase'
 
 interface Document {
   id: string
@@ -35,115 +37,189 @@ interface Document {
   category: 'manual' | 'corporate' | 'educational'
   subcategory: string
   fileUrl: string
+  file_url?: string
   fileSize: string
+  file_size?: number
   fileType: string
+  file_type?: string
   uploadDate: string
+  created_at?: string
   lastViewed?: string
   author?: string
   tags: string[]
   isDownloaded: boolean
   isFavorite: boolean
   thumbnailUrl?: string
+  category_name?: string
+  virus_scan_status?: string
+  is_verified?: boolean
+  view_count?: number
+  download_count?: number
 }
 
 const DigitalLibrary = () => {
   const { isPremium, isAdmin } = useUser()
-  const [documents, setDocuments] = useState<Document[]>([
-    {
-      id: '1',
-      title: 'Manual de Instalação - Split 12.000 BTUs',
-      description: 'Guia completo para instalação de ar condicionado split 12.000 BTUs',
-      category: 'manual',
-      subcategory: 'Instalação',
-      fileUrl: '/documents/manual_instalacao_split.pdf',
-      fileSize: '2.5 MB',
-      fileType: 'PDF',
-      uploadDate: '2024-01-10',
-      lastViewed: '2024-01-15',
-      author: 'Equipe Técnica',
-      tags: ['ar condicionado', 'split', 'instalação', '12000 BTUs'],
-      isDownloaded: true,
-      isFavorite: true,
-      thumbnailUrl: 'https://images.pexels.com/photos/4489734/pexels-photo-4489734.jpeg?auto=compress&cs=tinysrgb&w=150'
-    },
-    {
-      id: '2',
-      title: 'Manual Técnico - Dual Inverter',
-      description: 'Especificações técnicas e procedimentos de manutenção para ar condicionado Dual Inverter',
-      category: 'manual',
-      subcategory: 'Manutenção',
-      fileUrl: '/documents/manual_tecnico_dual_inverter.pdf',
-      fileSize: '3.1 MB',
-      fileType: 'PDF',
-      uploadDate: '2024-01-08',
-      author: 'Departamento Técnico',
-      tags: ['ar condicionado', 'dual inverter', 'manutenção'],
-      isDownloaded: false,
-      isFavorite: false
-    },
-    {
-      id: '3',
-      title: 'Política de Segurança da Informação',
-      description: 'Documento corporativo com diretrizes de segurança da informação',
-      category: 'corporate',
-      subcategory: 'Políticas',
-      fileUrl: '/documents/politica_seguranca_informacao.pdf',
-      fileSize: '1.2 MB',
-      fileType: 'PDF',
-      uploadDate: '2023-12-15',
-      lastViewed: '2024-01-05',
-      author: 'Departamento de TI',
-      tags: ['segurança', 'política', 'corporativo'],
-      isDownloaded: true,
-      isFavorite: false
-    },
-    {
-      id: '4',
-      title: 'Apostila de Treinamento - Refrigeração Básica',
-      description: 'Material didático para treinamento de novos técnicos',
-      category: 'educational',
-      subcategory: 'Treinamento',
-      fileUrl: '/documents/apostila_refrigeracao_basica.pdf',
-      fileSize: '5.8 MB',
-      fileType: 'PDF',
-      uploadDate: '2023-11-20',
-      author: 'Departamento de Treinamento',
-      tags: ['refrigeração', 'treinamento', 'básico'],
-      isDownloaded: false,
-      isFavorite: true
-    },
-    {
-      id: '5',
-      title: 'Procedimento Operacional - Atendimento ao Cliente',
-      description: 'Procedimentos padrão para atendimento ao cliente em chamados técnicos',
-      category: 'corporate',
-      subcategory: 'Procedimentos',
-      fileUrl: '/documents/procedimento_atendimento_cliente.pdf',
-      fileSize: '1.5 MB',
-      fileType: 'PDF',
-      uploadDate: '2023-12-05',
-      author: 'Departamento de Qualidade',
-      tags: ['atendimento', 'cliente', 'procedimento'],
-      isDownloaded: true,
-      isFavorite: false
-    },
-    {
-      id: '6',
-      title: 'Guia de Manutenção Preventiva',
-      description: 'Procedimentos para manutenção preventiva de equipamentos de ar condicionado',
-      category: 'manual',
-      subcategory: 'Manutenção',
-      fileUrl: '/documents/guia_manutencao_preventiva.pdf',
-      fileSize: '4.2 MB',
-      fileType: 'PDF',
-      uploadDate: '2023-10-15',
-      lastViewed: '2024-01-12',
-      author: 'Equipe Técnica',
-      tags: ['manutenção', 'preventiva', 'ar condicionado'],
-      isDownloaded: true,
-      isFavorite: true
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [loading, setLoading] = useState(true)
+  const [realDbDocs, setRealDbDocs] = useState<any[]>([])
+
+  // Carregar documentos do banco de dados REAL
+  useEffect(() => {
+    loadRealDocuments()
+  }, [])
+
+  const loadRealDocuments = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('digital_library')
+        .select(`
+          *,
+          category:library_categories(name, icon)
+        `)
+        .eq('is_public', true)
+        .eq('virus_scan_status', 'clean')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      if (data) {
+        setRealDbDocs(data)
+        // Converter para formato antigo + adicionar dados reais
+        const converted = data.map(d => ({
+          id: d.id,
+          title: d.title,
+          description: d.description || '',
+          category: 'manual' as const,
+          subcategory: d.category?.name || 'Geral',
+          fileUrl: d.file_url,
+          file_url: d.file_url,
+          fileSize: formatFileSize(d.file_size),
+          file_size: d.file_size,
+          fileType: getFileExtension(d.file_type),
+          file_type: d.file_type,
+          uploadDate: d.created_at,
+          created_at: d.created_at,
+          tags: d.tags || [],
+          isDownloaded: false,
+          isFavorite: false,
+          category_name: d.category?.name,
+          virus_scan_status: d.virus_scan_status,
+          is_verified: d.is_verified,
+          view_count: d.view_count || 0,
+          download_count: d.download_count || 0
+        }))
+        setDocuments(converted)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar documentos:', error)
+    } finally {
+      setLoading(false)
     }
-  ])
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return '0 B'
+    if (bytes < 1024) return bytes + ' B'
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'
+    return (bytes / 1048576).toFixed(1) + ' MB'
+  }
+
+  const getFileExtension = (type: string) => {
+    if (type.includes('pdf')) return 'PDF'
+    if (type.includes('word')) return 'DOCX'
+    if (type.includes('excel') || type.includes('spreadsheet')) return 'XLSX'
+    if (type.includes('powerpoint') || type.includes('presentation')) return 'PPTX'
+    if (type.includes('image')) return 'IMG'
+    return 'FILE'
+  }
+
+  // Adicionar documentos demo se não houver documentos reais
+  useEffect(() => {
+    if (!loading && documents.length === 0) {
+      setDocuments([
+        {
+          id: '1',
+          title: 'Manual de Instalação - Split 12.000 BTUs',
+          description: 'Guia completo para instalação de ar condicionado split 12.000 BTUs',
+          category: 'manual',
+          subcategory: 'Instalação',
+          fileUrl: '/documents/manual_instalacao_split.pdf',
+          file_url: '/documents/manual_instalacao_split.pdf',
+          fileSize: '2.5 MB',
+          file_size: 2621440,
+          fileType: 'PDF',
+          file_type: 'application/pdf',
+          uploadDate: '2024-01-10',
+          created_at: '2024-01-10',
+          lastViewed: '2024-01-15',
+          author: 'Equipe Técnica',
+          tags: ['ar condicionado', 'split', 'instalação', '12000 BTUs'],
+          isDownloaded: true,
+          isFavorite: true,
+          thumbnailUrl: 'https://images.pexels.com/photos/4489734/pexels-photo-4489734.jpeg?auto=compress&cs=tinysrgb&w=150'
+        },
+        {
+          id: '2',
+          title: 'Manual Técnico - Dual Inverter',
+          description: 'Especificações técnicas e procedimentos de manutenção para ar condicionado Dual Inverter',
+          category: 'manual',
+          subcategory: 'Manutenção',
+          fileUrl: '/documents/manual_tecnico_dual_inverter.pdf',
+          file_url: '/documents/manual_tecnico_dual_inverter.pdf',
+          fileSize: '3.1 MB',
+          file_size: 3250585,
+          fileType: 'PDF',
+          file_type: 'application/pdf',
+          uploadDate: '2024-01-08',
+          created_at: '2024-01-08',
+          author: 'Departamento Técnico',
+          tags: ['ar condicionado', 'dual inverter', 'manutenção'],
+          isDownloaded: false,
+          isFavorite: false
+        },
+        {
+          id: '3',
+          title: 'Política de Segurança da Informação',
+          description: 'Documento corporativo com diretrizes de segurança da informação',
+          category: 'corporate',
+          subcategory: 'Políticas',
+          fileUrl: '/documents/politica_seguranca_informacao.pdf',
+          file_url: '/documents/politica_seguranca_informacao.pdf',
+          fileSize: '1.2 MB',
+          file_size: 1258291,
+          fileType: 'PDF',
+          file_type: 'application/pdf',
+          uploadDate: '2023-12-15',
+          created_at: '2023-12-15',
+          lastViewed: '2024-01-05',
+          author: 'Departamento de TI',
+          tags: ['segurança', 'política', 'corporativo'],
+          isDownloaded: true,
+          isFavorite: false
+        },
+        {
+          id: '4',
+          title: 'Apostila de Treinamento - Refrigeração Básica',
+          description: 'Material didático para treinamento de novos técnicos',
+          category: 'educational',
+          subcategory: 'Treinamento',
+          fileUrl: '/documents/apostila_refrigeracao_basica.pdf',
+          file_url: '/documents/apostila_refrigeracao_basica.pdf',
+          fileSize: '5.8 MB',
+          file_size: 6082560,
+          fileType: 'PDF',
+          file_type: 'application/pdf',
+          uploadDate: '2023-11-20',
+          created_at: '2023-11-20',
+          author: 'Departamento de Treinamento',
+          tags: ['refrigeração', 'treinamento', 'básico'],
+          isDownloaded: false,
+          isFavorite: true
+        }
+      ])
+    }
+  }, [loading, documents.length])
   
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
