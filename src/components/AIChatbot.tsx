@@ -115,7 +115,7 @@ export function AIChatbot() {
         }}
         className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-300 hover:scale-110"
         style={{ zIndex: 9999 }}
-        title="Assistente IA"
+        title="Thomaz - Seu Assistente Inteligente"
       >
         <MessageCircle size={24} />
       </button>
@@ -128,8 +128,8 @@ export function AIChatbot() {
         <div className="flex items-center gap-2">
           <MessageCircle size={20} />
           <div>
-            <h3 className="font-semibold">Assistente IA</h3>
-            <p className="text-xs text-blue-100">Online</p>
+            <h3 className="font-semibold">🤖 Thomaz</h3>
+            <p className="text-xs text-blue-100">Seu assistente inteligente • Online</p>
           </div>
         </div>
         <button

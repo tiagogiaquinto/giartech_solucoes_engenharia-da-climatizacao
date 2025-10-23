@@ -177,97 +177,99 @@ class ChatbotService {
 
   private getGreetingResponse(): { text: string } {
     const greetings = [
-      '👋 Olá! Como posso ajudar você hoje?',
-      '😊 Oi! Estou aqui para ajudar. O que você precisa?',
-      '🤖 Olá! Pronto para responder suas perguntas!'
+      '👋 E aí! Sou o Thomaz, seu assistente inteligente!',
+      '😊 Olá! Thomaz aqui, pronto pra te ajudar!',
+      '🤖 Fala! Thomaz na área! Como posso ajudar?',
+      '✨ Opa! Thomaz aqui! Bora trabalhar?',
+      '💼 Salve! Sou o Thomaz, seu parceiro de negócios!'
     ]
     const greeting = greetings[Math.floor(Math.random() * greetings.length)]
 
     return {
-      text: `${greeting}\n\n💡 **Dica:** Você pode me perguntar sobre:\n\n` +
-        `📋 **Ordens de Serviço**\n` +
-        `   • "OS abertas" ou "Ordens pendentes"\n` +
-        `   • "OS atrasadas" ou "Serviços com atraso"\n` +
-        `   • "Faturamento de OS"\n\n` +
-        `📦 **Estoque**\n` +
-        `   • "Estoque baixo" ou "O que está acabando"\n` +
-        `   • "Buscar material [nome]"\n` +
-        `   • "Valor do estoque"\n\n` +
-        `💰 **Financeiro**\n` +
-        `   • "Contas vencidas" ou "O que preciso pagar"\n` +
-        `   • "Faturamento do mês"\n` +
-        `   • "Lucro do mês"\n\n` +
-        `👥 **Clientes**\n` +
-        `   • "Melhores clientes"\n` +
-        `   • "Buscar cliente [nome]"\n` +
-        `   • "Clientes inativos"\n\n` +
-        `📅 **Agenda**\n` +
-        `   • "Agenda hoje" ou "O que tenho hoje"\n` +
-        `   • "Próximos eventos"\n\n` +
-        `Digite "ajuda completa" para ver todos os comandos disponíveis! 🚀`
+      text: `${greeting}\n\n` +
+        `Pode me perguntar qualquer coisa sobre seu negócio! Entendo linguagem natural. 😉\n\n` +
+        `💡 **Exemplos do que posso fazer:**\n\n` +
+        `💬 **Fale naturalmente:**\n` +
+        `   • "E aí, como tá indo?"  \n` +
+        `   • "Tamo lucrando?"  \n` +
+        `   • "Quem deve dinheiro?"  \n` +
+        `   • "Tá faltando material?"\n\n` +
+        `📊 **Análises:**\n` +
+        `   • "Quanto faturei esse mês?"  \n` +
+        `   • "Quais os melhores clientes?"  \n` +
+        `   • "Como está a margem de lucro?"  \n` +
+        `   • "Comparar este mês com o anterior"\n\n` +
+        `📚 **Biblioteca:**\n` +
+        `   • "Buscar manual de [assunto]"  \n` +
+        `   • "Quais documentos tenho?"  \n` +
+        `   • "Procurar na biblioteca"\n\n` +
+        `Digite "ajuda" pra ver tudo que sei fazer! Ou "quem é você" pra me conhecer melhor! 🚀`
     }
   }
 
   private getExtendedHelp(): { text: string } {
     return {
-      text: '🤖 **GUIA COMPLETO DO ASSISTENTE IA**\n\n' +
+      text: '🤖 **THOMAZ - SEU ASSISTENTE INTELIGENTE**\n\n' +
         '═══════════════════════════════════\n\n' +
-        '📋 **ORDENS DE SERVIÇO**\n' +
+        '💬 **LINGUAGEM COLOQUIAL (Fale como quiser!)**\n' +
+        '• "E aí, como tá indo?" / "Como anda a coisa?"\n' +
+        '• "Tamo lucrando?" / "Tá dando dinheiro?"\n' +
+        '• "Quem deve?" / "Quem tá devendo?"\n' +
+        '• "Tá faltando grana?" / "Caixa tá baixo?"\n' +
+        '• "Quem paga em dia?" / "Clientes certinhos"\n\n' +
+        '📋 **ORDENS DE SERVIÇO (Acesso Total)**\n' +
+        '• "Todas as OS" / "Lista completa de ordens"\n' +
         '• "OS abertas" / "Ordens pendentes"\n' +
-        '• "Quantas OS" / "Total de ordens"\n' +
         '• "OS atrasadas" / "Serviços com atraso"\n' +
-        '• "OS do cliente [nome]"\n' +
-        '• "Faturamento de OS"\n' +
-        '• "Últimas vendas"\n\n' +
-        '📦 **ESTOQUE & MATERIAIS**\n' +
-        '• "Estoque baixo" / "O que está acabando"\n' +
-        '• "Buscar material [nome]"\n' +
-        '• "Materiais mais caros"\n' +
-        '• "Valor do estoque" / "Capital em estoque"\n' +
-        '• "Materiais mais usados"\n' +
-        '• "Materiais por categoria"\n\n' +
-        '💰 **FINANCEIRO**\n' +
-        '• "Resumo financeiro" / "Situação financeira"\n' +
-        '• "Contas vencidas" / "O que preciso pagar"\n' +
-        '• "Contas hoje" / "Vence hoje"\n' +
-        '• "Faturamento do mês"\n' +
-        '• "Despesas do mês" / "Quanto gastei"\n' +
-        '• "Lucro do mês" / "Resultado do mês"\n' +
-        '• "Maiores despesas"\n\n' +
-        '👥 **CLIENTES**\n' +
-        '• "Buscar cliente [nome]"\n' +
-        '• "Clientes inativos" / "Quem não compra"\n' +
+        '• "OS do cliente [nome]" / "Histórico do cliente"\n' +
+        '• "Faturamento de OS" / "Quanto faturei em OS"\n\n' +
+        '💰 **FINANCEIRO COMPLETO**\n' +
+        '• "ROI" / "Retorno sobre investimento"\n' +
+        '• "Ticket médio" / "Valor médio por venda"\n' +
+        '• "Margem de lucro" / "Análise de margens"\n' +
+        '• "Comparar meses" / "Este mês vs anterior"\n' +
+        '• "Previsão de faturamento" / "Projeção"\n' +
+        '• "Clientes inadimplentes" / "Quem deve"\n\n' +
+        '👥 **CLIENTES (Dados Completos)**\n' +
+        '• "Todos os clientes" / "Lista completa"\n' +
+        '• "Buscar cliente [nome]" / "Dados do cliente"\n' +
         '• "Melhores clientes" / "Top clientes"\n' +
-        '• "Novos clientes" / "Cadastros recentes"\n' +
-        '• "Total de clientes"\n\n' +
-        '📅 **AGENDA**\n' +
-        '• "Agenda hoje" / "O que tenho hoje"\n' +
-        '• "Próximos eventos" / "Agenda da semana"\n' +
-        '• "Eventos do mês"\n\n' +
-        '👨‍💼 **EQUIPE**\n' +
-        '• "Funcionários" / "Listar equipe"\n' +
-        '• "Funcionários por função"\n' +
-        '• "Custo de folha" / "Folha de pagamento"\n\n' +
-        '🏭 **FORNECEDORES**\n' +
-        '• "Fornecedores" / "Lista de fornecedores"\n' +
-        '• "Fornecedores por categoria"\n\n' +
-        '📊 **ESTATÍSTICAS**\n' +
-        '• "Dashboard" / "Resumo geral"\n' +
-        '• "Performance do mês"\n' +
-        '• "Serviços mais vendidos"\n\n' +
+        '• "Clientes inativos" / "Quem não compra"\n\n' +
+        '📦 **ESTOQUE**\n' +
+        '• "Estoque baixo" / "O que tá acabando"\n' +
+        '• "Buscar material [nome]"\n' +
+        '• "Valor do estoque" / "Capital investido"\n' +
+        '• "Materiais mais usados"\n\n' +
+        '📚 **BIBLIOTECA DE DOCUMENTOS**\n' +
+        '• "Buscar documento [assunto]"\n' +
+        '• "Procurar manual de [tema]"\n' +
+        '• "Lista de documentos" / "O que tem na biblioteca"\n' +
+        '• "Manuais disponíveis"\n\n' +
+        '📊 **DASHBOARDS E INDICADORES**\n' +
+        '• "Dashboard de vendas" / "Painel de vendas"\n' +
+        '• "Dashboard financeiro completo"\n' +
+        '• "Tendência de vendas" / "Vendas crescendo?"\n' +
+        '• "Serviços mais lucrativos"\n\n' +
+        '👨‍💼 **EQUIPE E PRODUTIVIDADE**\n' +
+        '• "Quem trabalha mais?" / "Ranking de funcionários"\n' +
+        '• "Equipe disponível" / "Quem está livre?"\n' +
+        '• "Custo por OS" / "Despesa por serviço"\n\n' +
+        '🔧 **EQUIPAMENTOS**\n' +
+        '• "Lista de equipamentos"\n' +
+        '• "Equipamentos em manutenção"\n\n' +
         '═══════════════════════════════════\n\n' +
-        '💡 **DICAS:**\n' +
-        '• Fale naturalmente, eu entendo variações!\n' +
-        '• Use sinônimos, gírias ou termos técnicos\n' +
-        '• Pergunte de forma direta ou detalhada\n' +
-        '• Combine termos para buscas específicas\n\n' +
-        '**Exemplos de perguntas que entendo:**\n' +
-        '✓ "Quanto faturei esse mês?"\n' +
-        '✓ "Quais materiais estão acabando?"\n' +
-        '✓ "Mostre os melhores clientes"\n' +
-        '✓ "O que tenho para fazer hoje?"\n' +
-        '✓ "Quem são meus maiores devedores?"\n\n' +
-        'Experimente e descubra mais! 🚀'
+        '💡 **EU ENTENDO VOCÊ!**\n' +
+        '• Fale do seu jeito, use gírias brasileiras\n' +
+        '• Pergunte como se estivesse conversando\n' +
+        '• Use "tá", "pra", "né", eu entendo tudo!\n' +
+        '• Seja direto ou detalhado, como preferir\n\n' +
+        '**Exemplos reais que funcionam:**\n' +
+        '✓ "E aí, tá tudo certo com as contas?"\n' +
+        '✓ "Cadê aquele cliente Silva?"\n' +
+        '✓ "Tô precisando de um manual sobre..."\n' +
+        '✓ "Mostra os cara que mais gastam aqui"\n' +
+        '✓ "Tá sobrando dinheiro ou tá curto?"\n\n' +
+        '**Sou o Thomaz, seu parceiro digital! 🚀**'
     }
   }
 
@@ -507,8 +509,8 @@ class ChatbotService {
             .gte('payment_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
             .lt('payment_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`)
 
-          const totalRevenue = revenues?.reduce((sum, r) => sum + (r.amount || 0), 0) || 0
-          return { data: [{ total_revenue: totalRevenue }] }
+          const totalRevenueFat = revenues?.reduce((sum, r) => sum + (r.amount || 0), 0) || 0
+          return { data: [{ total_revenue: totalRevenueFat }] }
 
         case 'despesas_mes':
           const month = new Date().getMonth() + 1
@@ -695,6 +697,138 @@ class ChatbotService {
 
           const perfRevenue = completedOrders?.reduce((sum, o) => sum + (o.total_value || 0), 0) || 0
           return { data: [{ orders_completed: completedOrders?.length || 0, revenue: perfRevenue }] }
+
+        case 'quem_sou_eu':
+          return { data: [{
+            message: '👋 Oi! Sou o **Thomaz**, seu assistente inteligente!\n\n' +
+              '🤖 Fui criado para te ajudar com TUDO relacionado ao seu negócio:\n\n' +
+              '✅ Consulto dados em tempo real\n' +
+              '✅ Entendo linguagem natural (fala do seu jeito!)\n' +
+              '✅ Analiso indicadores e métricas\n' +
+              '✅ Busco documentos na biblioteca\n' +
+              '✅ Faço cálculos e comparações\n' +
+              '✅ Te mantenho informado sobre tudo\n\n' +
+              '💬 Pode me perguntar qualquer coisa! Use gírias, abreviações, perguntas diretas... Eu entendo tudo!\n\n' +
+              '🚀 Bora trabalhar juntos?'
+          }] }
+
+        case 'listar_todos_clientes':
+          return await supabase
+            .from('customers')
+            .select('name, email, phone, city, state, cpf_cnpj')
+            .order('name', { ascending: true })
+            .limit(50)
+
+        case 'todas_os':
+          return await supabase
+            .from('service_orders')
+            .select('order_number, customer_name, status, total_value, created_at')
+            .order('created_at', { ascending: false })
+            .limit(50)
+
+        case 'listar_equipamentos':
+          return await supabase
+            .from('equipments')
+            .select('name, brand, model, serial_number')
+            .eq('active', true)
+            .order('name', { ascending: true })
+            .limit(30)
+
+        case 'listar_documentos':
+          const { data: docs } = await supabase
+            .from('documents')
+            .select('id, title, type, category, created_at')
+            .order('created_at', { ascending: false })
+            .limit(30)
+          return { data: docs || [] }
+
+        case 'buscar_documento':
+          if (!param) return { data: [] }
+          const { data: searchDocs } = await supabase
+            .from('documents')
+            .select('id, title, type, category, description')
+            .or(`title.ilike.%${param}%,description.ilike.%${param}%,category.ilike.%${param}%`)
+            .limit(10)
+          return { data: searchDocs || [] }
+
+        case 'indicadores_roi':
+        case 'ticket_medio':
+          const { data: allCompletedOrders } = await supabase
+            .from('service_orders')
+            .select('total_value, cost_total')
+            .eq('status', 'completed')
+
+          const totalRevenueROI = allCompletedOrders?.reduce((sum, o) => sum + (o.total_value || 0), 0) || 0
+          const totalCostROI = allCompletedOrders?.reduce((sum, o) => sum + (o.cost_total || 0), 0) || 0
+          const countROI = allCompletedOrders?.length || 1
+          const profitROI = totalRevenueROI - totalCostROI
+          const roiCalc = totalCostROI > 0 ? ((profitROI / totalCostROI) * 100) : 0
+          const ticketMedioCalc = totalRevenueROI / countROI
+
+          return { data: [{
+            total_revenue: totalRevenueROI,
+            total_cost: totalCostROI,
+            profit: profitROI,
+            roi: roiCalc,
+            ticket_medio: ticketMedioCalc,
+            orders_count: countROI
+          }] }
+
+        case 'como_ta_indo':
+        case 'tamo_lucrando':
+        case 'ta_ruim':
+          const mesAtual = new Date().getMonth() + 1
+          const anoAtual = new Date().getFullYear()
+
+          const { data: receitaMes } = await supabase
+            .from('finance_entries')
+            .select('amount')
+            .eq('type', 'revenue')
+            .eq('status', 'paid')
+            .gte('payment_date', `${anoAtual}-${mesAtual.toString().padStart(2, '0')}-01`)
+
+          const { data: despesaMes } = await supabase
+            .from('finance_entries')
+            .select('amount')
+            .eq('type', 'expense')
+            .eq('status', 'paid')
+            .gte('payment_date', `${anoAtual}-${mesAtual.toString().padStart(2, '0')}-01`)
+
+          const { data: osCompletas } = await supabase
+            .from('service_orders')
+            .select('total_value')
+            .eq('status', 'completed')
+            .gte('completed_at', `${anoAtual}-${mesAtual.toString().padStart(2, '0')}-01`)
+
+          const receitaTotal = (receitaMes?.reduce((s, r) => s + (r.amount || 0), 0) || 0) +
+                               (osCompletas?.reduce((s, o) => s + (o.total_value || 0), 0) || 0)
+          const despesaTotal = despesaMes?.reduce((s, d) => s + (d.amount || 0), 0) || 0
+          const lucroMes = receitaTotal - despesaTotal
+
+          return { data: [{
+            receita: receitaTotal,
+            despesa: despesaTotal,
+            lucro: lucroMes,
+            status: lucroMes > 0 ? 'positivo' : 'negativo',
+            orders_completed: osCompletas?.length || 0
+          }] }
+
+        case 'clientes_inadimplentes':
+        case 'quem_paga_em_dia':
+          const { data: contasClientes } = await supabase
+            .from('finance_entries')
+            .select('description, amount, due_date, status, payment_date')
+            .eq('type', 'revenue')
+
+          const inadimplentes = contasClientes?.filter(c =>
+            c.status === 'pending' && new Date(c.due_date) < new Date()
+          ) || []
+
+          const pontuals = contasClientes?.filter(c =>
+            c.status === 'paid' && c.payment_date && new Date(c.payment_date) <= new Date(c.due_date)
+          ) || []
+
+          return { data: intentName === 'clientes_inadimplentes' ? inadimplentes : pontuals }
 
         default:
           return { data: [] }
@@ -1028,6 +1162,126 @@ class ChatbotService {
           `✅ OS Concluídas: ${perf.orders_completed}\n` +
           `💰 Faturamento: R$ ${this.formatMoney(perf.revenue)}\n` +
           `📈 Ticket médio: R$ ${this.formatMoney(perf.revenue / (perf.orders_completed || 1))}`
+        break
+
+      case 'quem_sou_eu':
+        responseText = data[0].message
+        break
+
+      case 'listar_todos_clientes':
+        responseText = `👥 **Lista Completa de Clientes (${count}):**\n\n`
+        responseText += data.map((client: any) =>
+          `👤 **${client.name}**\n` +
+          `   ${client.cpf_cnpj ? `📄 ${client.cpf_cnpj}\n` : ''}` +
+          `   📧 ${client.email || 'Sem email'}\n` +
+          `   📱 ${client.phone || 'Sem telefone'}\n` +
+          `   📍 ${client.city || 'Sem cidade'}${client.state ? ` - ${client.state}` : ''}`
+        ).join('\n\n')
+        break
+
+      case 'todas_os':
+        responseText = `📋 **Histórico Completo de OS (${count}):**\n\n`
+        responseText += data.map((os: any) =>
+          `**OS ${os.order_number}** - ${os.customer_name}\n` +
+          `   Status: ${this.translateStatus(os.status)} | R$ ${this.formatMoney(os.total_value)}\n` +
+          `   Data: ${this.formatDate(os.created_at)}`
+        ).join('\n\n')
+        break
+
+      case 'indicadores_roi':
+        const roi = data[0]
+        responseText = `📊 **Indicadores de Rentabilidade:**\n\n` +
+          `💰 Faturamento Total: R$ ${this.formatMoney(roi.total_revenue)}\n` +
+          `💸 Custo Total: R$ ${this.formatMoney(roi.total_cost)}\n` +
+          `💚 Lucro: R$ ${this.formatMoney(roi.profit)}\n` +
+          `📈 ROI: ${roi.roi.toFixed(2)}%\n` +
+          `🎯 Ticket Médio: R$ ${this.formatMoney(roi.ticket_medio)}\n` +
+          `📋 OS Analisadas: ${roi.orders_count}\n\n` +
+          `${roi.roi > 20 ? '✅ ROI Excelente!' : roi.roi > 10 ? '👍 ROI Bom' : '⚠️ ROI Precisa Melhorar'}`
+        break
+
+      case 'ticket_medio':
+        const ticket = data[0]
+        responseText = `🎯 **Ticket Médio:**\n\n` +
+          `• Valor médio por venda: **R$ ${this.formatMoney(ticket.ticket_medio)}**\n` +
+          `• Total de vendas: ${ticket.orders_count}\n` +
+          `• Faturamento total: R$ ${this.formatMoney(ticket.total_revenue)}`
+        break
+
+      case 'como_ta_indo':
+      case 'tamo_lucrando':
+      case 'ta_ruim':
+        const status = data[0]
+        const emoji = status.lucro > 0 ? '💚' : status.lucro < 0 ? '🔴' : '⚠️'
+        const statusMsg = status.lucro > 5000 ? 'Tá indo muito bem!' :
+                          status.lucro > 1000 ? 'Tá indo legal!' :
+                          status.lucro > 0 ? 'No azul, mas pode melhorar' :
+                          'Tá apertado, precisa atenção!'
+
+        responseText = `${emoji} **Status do Negócio:**\n\n` +
+          `📈 Receita do mês: R$ ${this.formatMoney(status.receita)}\n` +
+          `📉 Despesa do mês: R$ ${this.formatMoney(status.despesa)}\n` +
+          `💰 Lucro: R$ ${this.formatMoney(status.lucro)}\n` +
+          `✅ OS Concluídas: ${status.orders_completed}\n\n` +
+          `**${statusMsg}**`
+        break
+
+      case 'clientes_inadimplentes':
+        if (count === 0) {
+          responseText = '✅ Ótimo! Não há clientes inadimplentes no momento!'
+        } else {
+          responseText = `⚠️ **${count} Cliente(s) Inadimplente(s):**\n\n`
+          responseText += data.map((conta: any) =>
+            `🔴 **${conta.description}**\n` +
+            `   Valor: R$ ${this.formatMoney(conta.amount)}\n` +
+            `   Vencimento: ${this.formatDate(conta.due_date)}`
+          ).join('\n\n')
+        }
+        break
+
+      case 'quem_paga_em_dia':
+        responseText = `✅ **Clientes Pontuais (${count}):**\n\n`
+        if (count === 0) {
+          responseText = 'Ainda não há histórico de pagamentos pontuais.'
+        } else {
+          responseText += data.slice(0, 10).map((conta: any) =>
+            `✅ **${conta.description}**: R$ ${this.formatMoney(conta.amount)} - Pago em dia`
+          ).join('\n')
+        }
+        break
+
+      case 'listar_equipamentos':
+        responseText = `🔧 **Equipamentos Cadastrados (${count}):**\n\n`
+        responseText += data.map((eq: any) =>
+          `🔧 **${eq.name}**\n` +
+          `   Marca: ${eq.brand || 'Não informada'}\n` +
+          `   Modelo: ${eq.model || 'Não informado'}\n` +
+          `   Serial: ${eq.serial_number || 'Não informado'}`
+        ).join('\n\n')
+        break
+
+      case 'listar_documentos':
+        responseText = `📚 **Biblioteca de Documentos (${count}):**\n\n`
+        responseText += data.map((doc: any) =>
+          `📄 **${doc.title}**\n` +
+          `   Tipo: ${doc.type || 'Não especificado'}\n` +
+          `   Categoria: ${doc.category || 'Geral'}\n` +
+          `   Data: ${this.formatDate(doc.created_at)}`
+        ).join('\n\n')
+        break
+
+      case 'buscar_documento':
+        if (count === 0) {
+          responseText = '🔍 Não encontrei documentos com esse critério.\n\nTente usar outras palavras-chave!'
+        } else {
+          responseText = `📚 **Documentos Encontrados (${count}):**\n\n`
+          responseText += data.map((doc: any) =>
+            `📄 **${doc.title}**\n` +
+            `   Tipo: ${doc.type}\n` +
+            `   Categoria: ${doc.category}\n` +
+            `   ${doc.description ? `📝 ${doc.description}` : ''}`
+          ).join('\n\n')
+        }
         break
 
       default:
