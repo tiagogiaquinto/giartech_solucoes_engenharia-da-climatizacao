@@ -830,6 +830,34 @@ class ChatbotService {
 
           return { data: intentName === 'clientes_inadimplentes' ? inadimplentes : pontuals }
 
+        case 'ajuda_sistema':
+          if (!param) {
+            return await supabase
+              .from('system_manuals')
+              .select('*')
+              .eq('active', true)
+              .order('"order"', { ascending: true })
+              .limit(10)
+          }
+
+          const { data: manualsSearch } = await supabase
+            .from('system_manuals')
+            .select('*')
+            .eq('active', true)
+            .or(`title.ilike.%${param}%,topic.ilike.%${param}%,content.ilike.%${param}%`)
+            .order('"order"', { ascending: true })
+            .limit(5)
+
+          return { data: manualsSearch || [] }
+
+        case 'listar_manuais':
+          return await supabase
+            .from('system_manuals')
+            .select('id, title, category, topic, keywords')
+            .eq('active', true)
+            .order('category, "order"', { ascending: true })
+            .limit(30)
+
         default:
           return { data: [] }
       }
@@ -1282,6 +1310,53 @@ class ChatbotService {
             `   ${doc.description ? `📝 ${doc.description}` : ''}`
           ).join('\n\n')
         }
+        break
+
+      case 'ajuda_sistema':
+        if (count === 0) {
+          responseText = '🤔 Não encontrei um manual específico sobre isso.\n\n' +
+            'Tente perguntar de outra forma ou digite "lista de manuais" para ver todos os tutoriais disponíveis!'
+        } else {
+          responseText = `📖 **Manual do Sistema:**\n\n`
+
+          data.forEach((manual: any) => {
+            responseText += `# ${manual.title}\n\n`
+            responseText += `**Categoria:** ${manual.category} • **Tópico:** ${manual.topic}\n\n`
+            responseText += `${manual.content}\n\n`
+            responseText += `─────────────────────\n\n`
+          })
+
+          responseText += `\n💡 **Precisa de mais ajuda?**\n`
+          responseText += `• Digite "lista de manuais" para ver todos os tutoriais\n`
+          responseText += `• Pergunte algo específico, tipo: "como criar cliente?"`
+        }
+        break
+
+      case 'listar_manuais':
+        responseText = `📚 **Manuais do Sistema Disponíveis (${count}):**\n\n`
+
+        const manualsByCategory = data.reduce((acc: any, manual: any) => {
+          if (!acc[manual.category]) {
+            acc[manual.category] = []
+          }
+          acc[manual.category].push(manual)
+          return acc
+        }, {})
+
+        Object.entries(manualsByCategory).forEach(([category, manuals]: [string, any]) => {
+          responseText += `\n**${category}:**\n`
+          manuals.forEach((manual: any) => {
+            responseText += `   📖 ${manual.title}\n`
+            responseText += `      ${manual.topic}\n`
+          })
+        })
+
+        responseText += `\n\n💡 **Como usar:**\n`
+        responseText += `Pergunte ao Thomaz! Exemplos:\n`
+        responseText += `• "Como criar uma OS?"\n`
+        responseText += `• "Como cadastrar cliente?"\n`
+        responseText += `• "Explica como dar entrada no estoque"\n`
+        responseText += `• "Tutorial de lançar receita"`
         break
 
       default:
