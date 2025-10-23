@@ -359,6 +359,11 @@ class ChatbotService {
       return this.getExtendedHelp()
     }
 
+    // Se for pergunta sobre "como fazer", busca na base de conhecimento
+    if (intent.intent_name === 'ajuda_sistema') {
+      return await this.searchKnowledge(userMessage)
+    }
+
     try {
       const param = this.extractParameter(userMessage, intent)
       let query = intent.query_template
@@ -368,6 +373,11 @@ class ChatbotService {
       }
 
       if (!query) {
+        // Tenta buscar na base de conhecimento como fallback
+        const knowledgeResult = await this.searchKnowledge(userMessage)
+        if (knowledgeResult.text !== 'Não encontrei informações específicas sobre isso.') {
+          return knowledgeResult
+        }
         return { text: 'Desculpe, não consegui processar esse comando ainda.' }
       }
 
@@ -377,6 +387,71 @@ class ChatbotService {
     } catch (error) {
       console.error('Erro no processamento:', error)
       return { text: 'Desculpe, ocorreu um erro ao processar sua solicitação.' }
+    }
+  }
+
+  // Busca inteligente na base de conhecimento
+  private async searchKnowledge(query: string): Promise<{ text: string; metadata?: any }> {
+    try {
+      const { data, error } = await supabase.rpc('search_knowledge', {
+        p_query: query,
+        p_limit: 3
+      })
+
+      if (error || !data || data.length === 0) {
+        return {
+          text: 'Não encontrei informações específicas sobre isso. Mas posso buscar os dados reais do sistema pra você! O que você gostaria de saber?'
+        }
+      }
+
+      // Pega o resultado mais relevante
+      const bestMatch = data[0]
+
+      let response = `📚 **${bestMatch.title}**\n\n`
+      response += `📁 Categoria: ${bestMatch.category_name}\n\n`
+
+      // Se o conteúdo for muito grande, mostra resumo + preview
+      if (bestMatch.content.length > 800) {
+        response += `${bestMatch.summary}\n\n`
+        response += `📖 **Preview:**\n${bestMatch.content.substring(0, 600)}...\n\n`
+        response += `💡 *Há mais conteúdo disponível! Quer que eu continue explicando?*`
+      } else {
+        response += bestMatch.content
+      }
+
+      // Registra busca no histórico
+      await supabase.from('knowledge_search_history').insert({
+        search_query: query,
+        results_found: data.length,
+        article_clicked: bestMatch.id,
+        was_helpful: null
+      })
+
+      // Incrementa visualizações
+      try {
+        await supabase
+          .from('knowledge_base')
+          .update({ view_count: bestMatch.view_count + 1 })
+          .eq('id', bestMatch.id)
+      } catch {
+        // Ignora erro
+      }
+
+      return {
+        text: response,
+        metadata: {
+          source: 'knowledge_base',
+          article_id: bestMatch.id,
+          category: bestMatch.category_name,
+          more_results: data.length - 1
+        }
+      }
+
+    } catch (error) {
+      console.error('Erro ao buscar conhecimento:', error)
+      return {
+        text: 'Vou buscar essas informações pra você! Um momento... 📚'
+      }
     }
   }
 
