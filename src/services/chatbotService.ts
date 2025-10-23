@@ -162,7 +162,7 @@ class ChatbotService {
       return await this.executeIntent(matchedIntent, userMessage)
     }
 
-    return this.getIntelligentFallback(normalizedMessage)
+    return await this.useAIResponse(userMessage, normalizedMessage)
   }
 
   private isGreeting(message: string): boolean {
@@ -1390,6 +1390,62 @@ class ChatbotService {
     }
 
     return responses[intentName] || 'Não encontrei resultados para sua busca.'
+  }
+
+  private async useAIResponse(userMessage: string, normalizedMessage: string): Promise<{ text: string; metadata?: any }> {
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/thomaz-ai`
+
+      const businessContext = await this.getBusinessContext()
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          context: 'Conversa em andamento com usuário do sistema',
+          systemData: businessContext
+        })
+      })
+
+      if (response.ok) {
+        const { response: aiResponse } = await response.json()
+        return {
+          text: `🤖 ${aiResponse}\n\n💡 **Dica:** Para comandos específicos, experimente:\n` +
+            `• "OS abertas", "Clientes", "Estoque baixo"\n` +
+            `• "Como criar OS?", "Como cadastrar cliente?"\n` +
+            `• Digite "ajuda" para ver tudo!`,
+          metadata: { source: 'ai' }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao usar IA:', error)
+    }
+
+    return this.getIntelligentFallback(normalizedMessage)
+  }
+
+  private async getBusinessContext(): Promise<any> {
+    try {
+      const { data: osCount } = await supabase
+        .from('service_orders')
+        .select('id', { count: 'exact', head: true })
+
+      const { data: clientsCount } = await supabase
+        .from('customers')
+        .select('id', { count: 'exact', head: true })
+
+      return {
+        total_orders: osCount || 0,
+        total_clients: clientsCount || 0,
+        system: 'Sistema de Gestão Empresarial'
+      }
+    } catch {
+      return {}
+    }
   }
 
   private getIntelligentFallback(message: string): { text: string } {
