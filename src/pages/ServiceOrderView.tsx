@@ -116,9 +116,12 @@ const ServiceOrderView = () => {
             return {
               id: item.id,
               service_catalog_id: item.service_catalog_id,
-              description: item.notes || item.descricao || item.service_catalog?.description || item.service_catalog?.name || '',
+              description: item.descricao || item.notes || item.service_catalog?.description || item.service_catalog?.name || '',
               name: item.service_catalog?.name || item.descricao || '',
               descricao: item.descricao || item.notes || item.service_catalog?.name || '',
+              escopo: item.escopo_detalhado || item.escopo || '',
+              escopo_detalhado: item.escopo_detalhado || item.escopo || '',
+              scope: item.escopo_detalhado || item.escopo || '',
               quantity: item.quantity || item.quantidade || 1,
               quantidade: item.quantidade || item.quantity || 1,
               unit_price: item.unit_price || item.preco_unitario || 0,
@@ -283,8 +286,8 @@ const ServiceOrderView = () => {
         equipment: order.equipment || ''
       },
       items: (order.items || []).map((item: any) => ({
-        description: item.service_name || item.descricao || item.description || 'Serviço',
-        scope: item.scope || item.escopo || '',
+        description: item.descricao || item.service_name || item.description || item.name || 'Serviço',
+        scope: item.escopo_detalhado || item.escopo || item.scope || '',
         unit: item.unit || item.unidade || 'un.',
         unit_price: item.unit_price || item.preco_unitario || 0,
         quantity: item.quantity || item.quantidade || 1,
@@ -523,9 +526,10 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
                         <h3 className="font-semibold text-gray-900 mb-1">
                           {item.descricao || item.description || item.service_name || 'Serviço'}
                         </h3>
-                        {(item.scope || item.escopo) && (
+                        {(item.escopo_detalhado || item.escopo || item.scope) && (
                           <p className="text-sm text-gray-600 whitespace-pre-line mt-2">
-                            {item.scope || item.escopo}
+                            <span className="font-medium">Escopo: </span>
+                            {item.escopo_detalhado || item.escopo || item.scope}
                           </p>
                         )}
                       </div>

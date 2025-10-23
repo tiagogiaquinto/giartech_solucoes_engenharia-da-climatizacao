@@ -8,7 +8,11 @@ import { getCompanyInfo } from '../utils/companyData'
 
 interface ServiceItem {
   id: string
+  service_catalog_id?: string
+  nome?: string
   descricao: string
+  escopo?: string
+  escopo_detalhado?: string
   quantidade: number
   preco_unitario: number
   preco_total: number
@@ -560,7 +564,9 @@ const ServiceOrderCreate = () => {
           .from('service_order_items')
           .insert([{
             service_order_id: order.id,
-            descricao: item.descricao,
+            service_catalog_id: item.service_catalog_id || null,
+            descricao: item.descricao || item.nome || '',
+            escopo_detalhado: item.escopo || item.escopo_detalhado || '',
             quantidade: item.quantidade,
             preco_unitario: item.preco_unitario,
             preco_total: item.preco_total,
@@ -578,6 +584,7 @@ const ServiceOrderCreate = () => {
 
         if (item.materiais.length > 0) {
           const materiaisData = item.materiais.map(m => ({
+            service_order_id: order.id,
             service_order_item_id: itemData.id,
             material_id: m.material_id,
             nome_material: m.nome,
@@ -598,6 +605,7 @@ const ServiceOrderCreate = () => {
 
         if (item.funcionarios.length > 0) {
           const funcionariosData = item.funcionarios.map(f => ({
+            service_order_id: order.id,
             service_order_item_id: itemData.id,
             staff_id: f.staff_id,
             nome_funcionario: f.nome,
