@@ -71,7 +71,35 @@ const ServiceOrderCreate = () => {
   const [sendingEmail, setSendingEmail] = useState(false)
   const [orderNumber, setOrderNumber] = useState('')
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    customer_id: string
+    description: string
+    scheduled_at: string
+    prazo_execucao_dias: number
+    data_inicio_execucao: string
+    desconto_percentual: number
+    desconto_valor: number
+    show_material_costs: boolean
+    show_value: boolean
+    relatorio_tecnico: string
+    orientacoes_servico: string
+    escopo_detalhado: string
+    payment_method: string
+    payment_installments: number
+    payment_conditions: string
+    warranty_period: number
+    warranty_type: string
+    warranty_terms: string
+    bank_account_id: string
+    contract_template_id: string
+    contract_notes: string
+    notes: string
+    custo_deslocamento: number
+    custo_estacionamento: number
+    custo_pedagio: number
+    custo_outros: number
+    descricao_outros: string
+  }>({
     customer_id: '',
     description: '',
     scheduled_at: '',
@@ -86,6 +114,7 @@ const ServiceOrderCreate = () => {
     escopo_detalhado: '',
     payment_method: 'dinheiro',
     payment_installments: 1,
+    payment_conditions: 'Sinal de 50% e o valor restante após a conclusão.',
     warranty_period: 90,
     warranty_type: 'days',
     warranty_terms: '',
@@ -162,6 +191,7 @@ const ServiceOrderCreate = () => {
           escopo_detalhado: orderData.escopo_detalhado || '',
           payment_method: orderData.payment_method || 'dinheiro',
           payment_installments: orderData.payment_installments || 1,
+          payment_conditions: orderData.payment_conditions || 'Sinal de 50% e o valor restante após a conclusão.',
           warranty_period: orderData.warranty_period || 90,
           warranty_type: orderData.warranty_type || 'days',
           warranty_terms: orderData.warranty_terms || '',
@@ -1171,6 +1201,30 @@ const ServiceOrderCreate = () => {
                       formData.warranty_type === 'days' ? 86400000 :
                       formData.warranty_type === 'months' ? 2592000000 : 31536000000
                     ))).toLocaleDateString('pt-BR')})`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 shadow-md border-2 border-green-300">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              💳 Condições de Pagamento
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Condições de Pagamento</label>
+                <textarea
+                  value={formData.payment_conditions}
+                  onChange={(e) => setFormData({...formData, payment_conditions: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                  rows={3}
+                  placeholder="Ex: Sinal de 50% e o valor restante após a conclusão, Pagamento à vista com 10% de desconto, Parcelado em 3x sem juros, etc."
+                />
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800">
+                  <strong>💡 Dica:</strong> Estas condições aparecerão no PDF da ordem de serviço e na proposta enviada ao cliente.
                 </p>
               </div>
             </div>
