@@ -62,14 +62,19 @@ const DigitalLibrary = () => {
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [realDbDocs, setRealDbDocs] = useState<any[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   // Carregar documentos do banco de dados REAL
   useEffect(() => {
-    loadRealDocuments()
+    loadRealDocuments().catch(err => {
+      console.error('Erro crítico ao carregar:', err)
+      setError(err.message)
+    })
   }, [])
 
   const loadRealDocuments = async () => {
     setLoading(true)
+    setError(null)
     try {
       const { data, error } = await supabase
         .from('digital_library')
@@ -81,7 +86,10 @@ const DigitalLibrary = () => {
         .eq('virus_scan_status', 'clean')
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Erro do Supabase:', error)
+        throw error
+      }
 
       if (data) {
         setRealDbDocs(data)
@@ -111,8 +119,9 @@ const DigitalLibrary = () => {
         }))
         setDocuments(converted)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar documentos:', error)
+      setError(error?.message || 'Erro desconhecido')
     } finally {
       setLoading(false)
     }
@@ -432,6 +441,18 @@ const DigitalLibrary = () => {
     }
   }
 
+  // Loading inicial
+  if (loading && documents.length === 0 && !error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Carregando Biblioteca Digital...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 space-y-4">
       {/* Header */}
@@ -460,6 +481,23 @@ const DigitalLibrary = () => {
           </div>
         </div>
       </motion.div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
+          <div className="flex-1">
+            <h3 className="font-semibold text-red-900 mb-1">Erro ao Carregar Biblioteca</h3>
+            <p className="text-red-700 text-sm">{error}</p>
+            <button
+              onClick={() => loadRealDocuments()}
+              className="mt-2 text-sm text-red-600 hover:text-red-800 font-medium"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="bg-white rounded-xl p-4 md:p-6 shadow-lg border border-gray-100">

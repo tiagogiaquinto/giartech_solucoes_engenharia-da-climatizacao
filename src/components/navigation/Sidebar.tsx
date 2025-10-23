@@ -65,7 +65,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'reports', path: '/reports', icon: PieChart, label: 'Relatórios', description: 'Análises e dashboards' },
   { id: 'whatsapp-crm', path: '/whatsapp-crm', icon: MessageCircle, label: 'WhatsApp CRM', description: 'Gestão de conversas' },
   { id: 'email', path: '/email/inbox', icon: Mail, label: 'Email Corporativo', description: 'Enviar e receber emails' },
-  { id: 'library', path: '/library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos' },
+  { id: 'library', path: '/digital-library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos' },
   { id: 'funcionarios', path: '/funcionarios', icon: UserCog, label: 'Funcionários', description: 'Gestão de funcionários' },
   { id: 'users', path: '/users', icon: Users, label: 'Usuários', description: 'Gerenciar usuários' },
   { id: 'access', path: '/access-management', icon: Key, label: 'Gestão de Acessos', description: 'Controle de permissões' },
