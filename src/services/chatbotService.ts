@@ -25,22 +25,49 @@ export interface ChatIntent {
 
 class ChatbotService {
   private removeAccents(str: string): string {
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ç/g, 'c')
+      .replace(/Ç/g, 'C')
   }
 
   private tokenize(text: string): string[] {
-    return this.removeAccents(text.toLowerCase())
+    const normalized = this.removeAccents(text.toLowerCase())
+      // Remove pontuação mas mantém palavras
       .replace(/[^\w\s]/g, ' ')
-      .split(/\s+/)
-      .filter(token => token.length > 2)
+      // Normaliza espaços
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    const tokens = normalized.split(' ')
+
+    // Retorna tokens de pelo menos 2 caracteres
+    // Mas mantém palavras importantes de 2 letras como "os", "me", etc
+    return tokens.filter(token => token.length >= 2)
   }
 
   private calculateSimilarity(tokens1: string[], tokens2: string[]): number {
+    if (tokens1.length === 0 || tokens2.length === 0) return 0
+
     const set1 = new Set(tokens1)
     const set2 = new Set(tokens2)
     const intersection = new Set([...set1].filter(x => set2.has(x)))
     const union = new Set([...set1, ...set2])
-    return union.size > 0 ? intersection.size / union.size : 0
+
+    // Similaridade de Jaccard
+    const jaccard = union.size > 0 ? intersection.size / union.size : 0
+
+    // Bonus se tokens importantes estão presentes
+    const importantWords = ['os', 'cliente', 'estoque', 'financeiro', 'lucro', 'receita']
+    let bonus = 0
+    for (const word of importantWords) {
+      if (set1.has(word) && set2.has(word)) {
+        bonus += 0.1
+      }
+    }
+
+    return Math.min(jaccard + bonus, 1.0)
   }
 
   async createConversation(title: string = 'Nova Conversa'): Promise<ChatConversation | null> {
@@ -278,16 +305,43 @@ class ChatbotService {
     let bestScore = 0
 
     const messageTokens = this.tokenize(message)
+    const messageLower = message.toLowerCase()
 
     for (const intent of intents) {
       for (const keyword of intent.keywords) {
-        const keywordTokens = this.tokenize(keyword)
+        const keywordLower = keyword.toLowerCase()
 
-        if (message.includes(keyword.toLowerCase())) {
+        // Match exato tem prioridade máxima
+        if (messageLower === keywordLower) {
           return intent
         }
 
-        const similarity = this.calculateSimilarity(messageTokens, keywordTokens)
+        // Match parcial forte (contém a keyword completa)
+        if (messageLower.includes(keywordLower)) {
+          return intent
+        }
+
+        // Match de palavras individuais (pelo menos 2 palavras em comum)
+        const keywordTokens = this.tokenize(keywordLower)
+        let matchCount = 0
+
+        for (const token of keywordTokens) {
+          if (messageLower.includes(token) && token.length > 2) {
+            matchCount++
+          }
+        }
+
+        // Se tem 2+ palavras em comum, considera um match forte
+        if (matchCount >= 2 && keywordTokens.length <= 3) {
+          return intent
+        }
+
+        if (matchCount >= 3 && keywordTokens.length > 3) {
+          return intent
+        }
+
+        // Similaridade por tokens
+        const similarity = this.calculateSimilarity(messageTokens, this.tokenize(keywordLower))
 
         if (similarity > bestScore && similarity > 0.3) {
           bestScore = similarity
@@ -296,7 +350,8 @@ class ChatbotService {
       }
     }
 
-    return bestScore > 0.4 ? bestMatch : null
+    // Threshold mais baixo para aceitar matches
+    return bestScore > 0.3 ? bestMatch : null
   }
 
   private async executeIntent(intent: ChatIntent, userMessage: string): Promise<{ text: string; metadata?: any }> {
