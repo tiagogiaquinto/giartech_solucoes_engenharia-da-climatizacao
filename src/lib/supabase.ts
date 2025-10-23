@@ -420,9 +420,9 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder | nu
       supabase.from('customers').select('*'),
       supabase.from('customer_addresses').select('*'),
       supabase.from('service_order_items').select('*, service_catalog:service_catalog_id(id, name, description, base_price)').eq('service_order_id', id),
-      supabase.from('service_order_materials').select('*, material:material_id(name, unit_of_measure)').eq('service_order_id', id),
-      supabase.from('service_order_labor').select('*, employee:staff_id(id, nome, nome_completo)').eq('service_order_id', id),
-      supabase.from('service_order_team').select('*, employee:employee_id(id, nome, nome_completo, especialidade)').eq('service_order_id', id)
+      supabase.from('service_order_materials').select('*, material:material_id(name, unit)').eq('service_order_id', id),
+      supabase.from('service_order_labor').select('*, employee:staff_id(id, name)').eq('service_order_id', id),
+      supabase.from('service_order_team').select('*, employee:employee_id(id, name)').eq('service_order_id', id)
     ])
 
     const customers = (customersResult.data || []) as DBCustomer[]

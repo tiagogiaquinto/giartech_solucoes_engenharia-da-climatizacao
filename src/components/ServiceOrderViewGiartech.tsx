@@ -103,7 +103,14 @@ export default function ServiceOrderViewGiartech({ isOpen, onClose, data }: Prop
         console.log('Compartilhamento cancelado')
       }
     } else {
-      alert('Compartilhamento não suportado neste navegador')
+      // Fallback: copiar link para clipboard
+      try {
+        await navigator.clipboard.writeText(window.location.href)
+        alert('Link copiado para a área de transferência!')
+      } catch (error) {
+        console.error('Erro ao copiar link:', error)
+        alert('Não foi possível copiar o link. URL: ' + window.location.href)
+      }
     }
   }
 
