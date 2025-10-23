@@ -65,6 +65,7 @@ import Documents from './pages/Documents'
 import EmailSettings from './pages/EmailSettings'
 import EmailInbox from './pages/EmailInbox'
 import EmailCompose from './pages/EmailCompose'
+import { AIChatbot } from './components/AIChatbot'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -607,6 +608,9 @@ function App() {
         {showPremiumBanner && (
           <PremiumBanner feature={premiumFeature} />
         )}
+
+        {/* Chatbot IA */}
+        <AIChatbot />
       </AnimatePresence>
     </UserProvider>
   )
