@@ -67,7 +67,7 @@ const ServiceOrderView = () => {
           .from('service_order_materials')
           .select(`
             *,
-            material:material_id(name, unit_of_measure)
+            material:material_id(name, unit)
           `)
           .eq('service_order_id', id!)
 
@@ -76,7 +76,7 @@ const ServiceOrderView = () => {
           .from('service_order_labor')
           .select(`
             *,
-            employee:staff_id(id, nome, nome_completo)
+            employee:staff_id(id, name)
           `)
           .eq('service_order_id', id!)
 
@@ -85,7 +85,7 @@ const ServiceOrderView = () => {
           .from('service_order_team')
           .select(`
             *,
-            employee:employee_id(id, nome, nome_completo, especialidade)
+            employee:employee_id(id, name)
           `)
           .eq('service_order_id', id!)
 
@@ -98,7 +98,7 @@ const ServiceOrderView = () => {
             ).map((m: any) => ({
               nome: m.material_name || m.nome_material || m.material?.name || 'Material',
               quantidade: m.quantity || m.quantidade || 0,
-              unidade_medida: m.material_unit || m.material?.unit_of_measure || 'un',
+              unidade_medida: m.material_unit || m.material?.unit || 'un',
               preco_unitario: m.unit_price || m.preco_venda || 0,
               valor_total: m.total_price || m.valor_total || 0
             }))
@@ -107,7 +107,7 @@ const ServiceOrderView = () => {
             const itemLabor = (laborData || []).filter(
               (l: any) => l.service_order_item_id === item.id
             ).map((l: any) => ({
-              nome: l.nome_funcionario || l.employee?.nome || l.employee?.nome_completo || 'Funcionário',
+              nome: l.nome_funcionario || l.employee?.name || 'Funcionário',
               tempo_minutos: l.tempo_minutos || (l.hours ? l.hours * 60 : 0) || 0,
               custo_hora: l.custo_hora || l.hourly_rate || 0,
               custo_total: l.custo_total || l.total_cost || 0
@@ -138,8 +138,8 @@ const ServiceOrderView = () => {
             team: (teamData || []).map((t: any) => ({
               id: t.id,
               employee_id: t.employee_id,
-              nome: t.employee?.nome || t.employee?.nome_completo || 'Funcionário',
-              role: t.role || t.employee?.especialidade || '',
+              nome: t.employee?.name || 'Funcionário',
+              role: t.role || '',
               assigned_at: t.assigned_at
             }))
           } as any)
