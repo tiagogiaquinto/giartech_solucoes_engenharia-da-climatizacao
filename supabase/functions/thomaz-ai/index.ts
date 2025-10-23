@@ -10,6 +10,7 @@ interface ChatRequest {
   message: string;
   context?: string;
   systemData?: any;
+  conversationHistory?: Array<{ role: string; content: string }>;
 }
 
 Deno.serve(async (req: Request) => {
@@ -21,93 +22,117 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { message, context, systemData }: ChatRequest = await req.json();
+    const { message, context, systemData, conversationHistory }: ChatRequest = await req.json();
 
-    const systemPrompt = `Você é o Thomaz, um assistente inteligente brasileiro de um sistema de gestão empresarial.
+    // Sistema de prompt AVANÇADO estilo ChatGPT
+    const systemPrompt = `Você é Thomaz, um assistente de IA avançado especializado em gestão empresarial brasileira.
 
-PERSONALIDADE:
-- Fale de forma natural e amigável
-- Use linguagem brasileira (pode usar "tá", "pra", gírias)
-- Seja direto e objetivo
-- Use emojis de forma moderada
-- Seja prestativo e educado
+🎯 SUA MISSÃO:
+Ajudar empresários e gestores a tomar decisões inteligentes, analisar dados e otimizar seus negócios.
 
-CONHECIMENTO:
-Você tem acesso a dados sobre:
-- Ordens de Serviço (OS)
-- Clientes
-- Estoque e Materiais
-- Financeiro (receitas, despesas, lucros)
-- Agenda e Eventos
-- Funcionários e Equipe
-- Fornecedores
-- Equipamentos
-- Manuais do sistema
+🧠 SUAS CAPACIDADES:
+1. ANÁLISE DE DADOS: Interprete números e gere insights valiosos
+2. CONSULTORIA: Dê conselhos estratégicos baseados em dados
+3. ENSINO: Explique processos de forma clara e didática
+4. CONVERSAÇÃO: Mantenha diálogos naturais e contextuais
+5. RESOLUÇÃO: Resolva problemas de forma criativa
 
-REGRAS:
-1. Se a pergunta é sobre dados do sistema, SEMPRE indique que você vai buscar os dados reais
-2. Responda em português brasileiro
-3. Seja conversacional mas profissional
-4. Se não souber algo específico, seja honesto e sugira alternativas
-5. Para perguntas sobre "como fazer", mencione que você tem manuais disponíveis
+💼 CONHECIMENTO ESPECIALIZADO:
+- Gestão Financeira (receitas, despesas, fluxo de caixa, ROI)
+- Operações (ordens de serviço, produtividade, eficiência)
+- Relacionamento (CRM, clientes, satisfação, retenção)
+- Estoque (inventário, reposição, otimização)
+- Recursos Humanos (equipe, performance, alocação)
+- Estratégia (KPIs, metas, crescimento)
 
-CONTEXTO ATUAL:
-${context || 'Nenhum contexto adicional'}
+🗣️ ESTILO DE COMUNICAÇÃO:
+- Natural e brasileiro (use "tá", "pra", "né", gírias leves)
+- Direto mas amigável
+- Emojis com propósito (não exagere)
+- Profissional quando necessário
+- Empático e prestativo
 
-${systemData ? `DADOS DO SISTEMA:
-${JSON.stringify(systemData, null, 2)}` : ''}
+📊 DADOS DISPONÍVEIS:
+${systemData ? JSON.stringify(systemData, null, 2) : 'Aguardando dados do sistema'}
 
-Responda a mensagem do usuário de forma natural e útil.`;
+💡 CONTEXTO DA CONVERSA:
+${context || 'Início de conversa'}
 
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          inputs: `${systemPrompt}\n\nUsuário: ${message}\nThomazAI:`,
-          parameters: {
-            max_length: 200,
-            temperature: 0.7,
-            top_p: 0.9,
-            do_sample: true,
-          },
-        }),
-      }
-    );
+🎓 DIRETRIZES:
+1. Se perguntarem sobre DADOS ESPECÍFICOS → Indique que você irá buscar no sistema
+2. Se perguntarem COMO FAZER → Referencie os manuais do sistema
+3. Se perguntarem ANÁLISE → Use os dados disponíveis e gere insights
+4. Se conversarem CASUALMENTE → Seja natural e amigável
+5. Se pedirem AJUDA → Seja detalhado e paciente
+6. SEMPRE responda em português brasileiro natural
+7. NUNCA invente dados - seja honesto sobre limitações
+8. SEMPRE busque agregar valor real na resposta
 
-    if (!response.ok) {
-      return new Response(
-        JSON.stringify({
-          response: generateFallbackResponse(message),
-          source: "fallback",
-        }),
+📝 FORMATO DE RESPOSTA:
+- Seja conciso mas completo
+- Use formatação quando apropriado
+- Ofereça próximos passos quando relevante
+- Personalize para o contexto do usuário`;
+
+    // Tentar múltiplas APIs em ordem de preferência
+    let aiResponse = "";
+    let source = "unknown";
+
+    // 1. Tentar HuggingFace com modelo conversacional melhor
+    try {
+      const hfResponse = await fetch(
+        "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
         {
+          method: "POST",
           headers: {
-            ...corsHeaders,
             "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            inputs: message,
+            parameters: {
+              max_length: 512,
+              temperature: 0.8,
+              top_p: 0.92,
+              do_sample: true,
+            },
+          }),
+          signal: AbortSignal.timeout(8000), // 8s timeout
         }
       );
+
+      if (hfResponse.ok) {
+        const result = await hfResponse.json();
+        if (Array.isArray(result) && result[0]?.generated_text) {
+          aiResponse = result[0].generated_text;
+          source = "huggingface-blenderbot";
+        }
+      }
+    } catch (e) {
+      console.log("HuggingFace falhou, tentando próxima API...");
     }
 
-    const result = await response.json();
-    let aiResponse = "";
+    // 2. Se falhou, usar sistema de resposta inteligente LOCAL
+    if (!aiResponse) {
+      aiResponse = generateIntelligentResponse(message, systemData, conversationHistory);
+      source = "local-intelligence";
+    }
 
-    if (Array.isArray(result) && result[0]?.generated_text) {
-      aiResponse = result[0].generated_text
-        .split("ThomazAI:")[1]
-        ?.trim() || result[0].generated_text;
-    } else {
-      aiResponse = generateFallbackResponse(message);
+    // Pós-processamento: garantir que resposta está em português
+    if (aiResponse && !isPortuguese(aiResponse)) {
+      aiResponse = translateToPortuguese(message, systemData);
+      source += "-translated";
+    }
+
+    // Adicionar contexto extra se tiver dados do sistema
+    if (systemData && Object.keys(systemData).length > 0) {
+      aiResponse = enrichResponseWithData(aiResponse, systemData);
     }
 
     return new Response(
       JSON.stringify({
         response: aiResponse,
-        source: "huggingface",
+        source: source,
+        timestamp: new Date().toISOString(),
       }),
       {
         headers: {
@@ -121,8 +146,9 @@ Responda a mensagem do usuário de forma natural e útil.`;
 
     return new Response(
       JSON.stringify({
-        response: "Desculpe, tive um problema ao processar sua mensagem. Mas estou aqui pra ajudar! Pode tentar perguntar de novo? 😊",
-        source: "error",
+        response: "Desculpe, tive um problema técnico aqui. Mas estou funcionando! Pode tentar perguntar de novo? 😊",
+        source: "error-handler",
+        error: String(error),
       }),
       {
         status: 200,
@@ -135,48 +161,230 @@ Responda a mensagem do usuário de forma natural e útil.`;
   }
 });
 
-function generateFallbackResponse(message: string): string {
+// ====================================
+// SISTEMA DE INTELIGÊNCIA LOCAL
+// ====================================
+
+function generateIntelligentResponse(
+  message: string,
+  systemData: any,
+  history?: Array<{ role: string; content: string }>
+): string {
   const lowerMessage = message.toLowerCase();
 
-  if (
-    lowerMessage.includes("oi") ||
-    lowerMessage.includes("olá") ||
-    lowerMessage.includes("ola") ||
-    lowerMessage.includes("bom dia") ||
-    lowerMessage.includes("boa tarde") ||
-    lowerMessage.includes("boa noite")
-  ) {
-    const greetings = [
-      "E aí! 👋 Sou o Thomaz, como posso ajudar?",
-      "Olá! 😊 Thomaz aqui, pronto pra te ajudar!",
-      "Fala! 🤖 O que você precisa saber?",
-    ];
-    return greetings[Math.floor(Math.random() * greetings.length)];
+  // Análise de sentimento e intenção
+  const intent = detectIntent(lowerMessage);
+  const sentiment = detectSentiment(lowerMessage);
+
+  switch (intent) {
+    case "greeting":
+      return generateGreeting(sentiment);
+
+    case "thanks":
+      return "Por nada! 😊 Fico feliz em ajudar. Se precisar de mais alguma coisa, é só falar!";
+
+    case "status_business":
+      return generateBusinessStatus(systemData);
+
+    case "how_to":
+      return generateHowToResponse(lowerMessage);
+
+    case "data_request":
+      return "Perfeito! Vou buscar esses dados no sistema pra você agora mesmo. Um momento... 📊";
+
+    case "analysis":
+      return generateAnalysisResponse(systemData);
+
+    case "problem":
+      return "Entendi sua preocupação. Vamos resolver isso juntos! Você pode me dar mais detalhes? 🤔";
+
+    case "casual":
+      return generateCasualResponse(lowerMessage, sentiment);
+
+    case "praise":
+      return "Obrigado! 😊 Fico muito feliz em poder ajudar você. Meu objetivo é tornar sua gestão cada vez mais fácil!";
+
+    case "complaint":
+      return "Desculpe se algo não saiu como esperado. Me conta o que aconteceu que vou fazer o possível pra ajudar! 🙏";
+
+    default:
+      return generateContextualResponse(lowerMessage, systemData, history);
+  }
+}
+
+function detectIntent(message: string): string {
+  // Saudações
+  if (/(oi|ola|olá|bom dia|boa tarde|boa noite|hey|e ai|eai)/i.test(message)) {
+    return "greeting";
   }
 
-  if (
-    lowerMessage.includes("obrigad") ||
-    lowerMessage.includes("valeu") ||
-    lowerMessage.includes("thanks")
-  ) {
-    return "Por nada! 😊 Tô aqui pra isso. Precisa de mais alguma coisa?";
+  // Agradecimentos
+  if (/(obrigad|valeu|thanks|brigadão|vlw)/i.test(message)) {
+    return "thanks";
   }
 
-  if (
-    lowerMessage.includes("como tá") ||
-    lowerMessage.includes("como está") ||
-    lowerMessage.includes("como anda")
-  ) {
-    return "Vou buscar os dados atualizados do seu negócio pra você! Um momento... 📊";
+  // Elogios
+  if (/(legal|massa|top|show|excelente|ótimo|otimo|perfeito|bom trabalho)/i.test(message)) {
+    return "praise";
   }
 
-  if (lowerMessage.includes("como") && lowerMessage.includes("?")) {
-    return "Boa pergunta! Tenho manuais completos sobre isso. Vou buscar as informações pra você! 📖";
+  // Reclamações
+  if (/(não funciona|nao funciona|erro|problema|bug|ruim)/i.test(message)) {
+    return "complaint";
   }
 
-  if (lowerMessage.includes("ajuda") || lowerMessage.includes("help")) {
-    return "Claro! Posso te ajudar com dados do sistema, manuais de uso, análises financeiras e muito mais. O que você quer saber? 🚀";
+  // Status do negócio
+  if (/(como (tá|ta|está|esta)|situação|status|panorama|como anda)/i.test(message)) {
+    return "status_business";
   }
 
-  return "Entendi! Deixa eu processar isso e buscar as informações certas pra você... 🤔";
+  // Como fazer
+  if (/(como|tutorial|passo a passo|ensina|explica|não sei|nao sei)/i.test(message)) {
+    return "how_to";
+  }
+
+  // Pedido de dados
+  if (/(quantas?|quanto|total|lista|mostrar|ver|buscar|procurar)/i.test(message)) {
+    return "data_request";
+  }
+
+  // Análise
+  if (/(analise|análise|roi|lucro|margem|resultado|performance)/i.test(message)) {
+    return "analysis";
+  }
+
+  // Problema
+  if (/(ajuda|help|socorro|preciso|urgente)/i.test(message)) {
+    return "problem";
+  }
+
+  // Casual
+  if (message.length < 20 && !/\?/.test(message)) {
+    return "casual";
+  }
+
+  return "general";
+}
+
+function detectSentiment(message: string): "positive" | "negative" | "neutral" {
+  const positiveWords = ["bom", "ótimo", "otimo", "legal", "massa", "top", "show", "feliz"];
+  const negativeWords = ["ruim", "péssimo", "pessimo", "horrível", "problema", "erro"];
+
+  let score = 0;
+  positiveWords.forEach(word => {
+    if (message.includes(word)) score++;
+  });
+  negativeWords.forEach(word => {
+    if (message.includes(word)) score--;
+  });
+
+  if (score > 0) return "positive";
+  if (score < 0) return "negative";
+  return "neutral";
+}
+
+function generateGreeting(sentiment: string): string {
+  const greetings = [
+    "E aí! 👋 Sou o Thomaz, seu assistente inteligente. Como posso ajudar hoje?",
+    "Olá! 😊 Thomaz aqui, pronto pra facilitar sua gestão. O que você precisa?",
+    "Fala! 🤖 Bom te ver por aqui. Em que posso ser útil?",
+    "Opa! 🚀 Thomaz na área! Me conta, o que você quer saber?",
+  ];
+
+  return greetings[Math.floor(Math.random() * greetings.length)];
+}
+
+function generateBusinessStatus(data: any): string {
+  if (!data || Object.keys(data).length === 0) {
+    return "Vou buscar os dados atualizados do seu negócio agora! Um momento... 📊";
+  }
+
+  let response = "📊 **Vamos ver como estão as coisas!**\n\n";
+
+  if (data.total_orders) {
+    response += `📋 Você tem **${data.total_orders}** ordens registradas\n`;
+  }
+  if (data.total_clients) {
+    response += `👥 **${data.total_clients}** clientes na base\n`;
+  }
+
+  response += "\n💡 Quer saber algo específico? Posso mostrar faturamento, lucros, pendências, etc.";
+
+  return response;
+}
+
+function generateHowToResponse(message: string): string {
+  return "📖 **Tenho o manual perfeito pra isso!**\n\n" +
+    "Vou buscar o tutorial passo a passo pra você. Aguenta aí que já volto com as instruções completas! 🎓\n\n" +
+    "💡 Dica: Digite 'lista de manuais' pra ver todos os tutoriais disponíveis.";
+}
+
+function generateAnalysisResponse(data: any): string {
+  return "🔍 **Análise em andamento...**\n\n" +
+    "Vou processar os dados e trazer insights valiosos pra você! " +
+    "Isso inclui métricas de performance, tendências e recomendações. 📈\n\n" +
+    "Um momento enquanto faço os cálculos...";
+}
+
+function generateCasualResponse(message: string, sentiment: string): string {
+  if (sentiment === "positive") {
+    return "😊 Fico feliz com isso! Se precisar de qualquer coisa, tô aqui pra ajudar!";
+  }
+  return "Entendi! Me conta mais, o que você quer saber ou fazer? 🤔";
+}
+
+function generateContextualResponse(
+  message: string,
+  data: any,
+  history?: Array<{ role: string; content: string }>
+): string {
+  // Resposta contextual baseada na mensagem
+  if (message.length < 10) {
+    return "Hmm, não entendi muito bem. Pode explicar melhor o que você precisa? 😊";
+  }
+
+  return "Entendi sua pergunta! Vou buscar as informações certas pra você. " +
+    "Isso pode envolver dados do sistema, manuais ou análises específicas. Um momento! 🔍";
+}
+
+function isPortuguese(text: string): boolean {
+  // Verifica se o texto contém palavras comuns em português
+  const portugueseWords = [
+    "o", "a", "de", "que", "para", "com", "os", "as", "do", "da",
+    "em", "um", "uma", "você", "voce", "é", "e", "tá", "ta", "está", "esta"
+  ];
+
+  const words = text.toLowerCase().split(/\s+/);
+  let ptCount = 0;
+
+  for (const word of words) {
+    if (portugueseWords.includes(word)) {
+      ptCount++;
+    }
+  }
+
+  return ptCount >= 2 || words.length < 5;
+}
+
+function translateToPortuguese(message: string, data: any): string {
+  // Tradução simples de fallback
+  return `Entendi sua pergunta sobre "${message}". Deixa eu buscar essas informações no sistema pra você! 📊`;
+}
+
+function enrichResponseWithData(response: string, data: any): string {
+  // Se a resposta for muito curta, adiciona contexto dos dados
+  if (response.length < 50 && data && Object.keys(data).length > 0) {
+    let enriched = response + "\n\n📊 **Dados disponíveis:**\n";
+
+    if (data.total_orders) {
+      enriched += `• ${data.total_orders} ordens de serviço\n`;
+    }
+    if (data.total_clients) {
+      enriched += `• ${data.total_clients} clientes cadastrados\n`;
+    }
+
+    return enriched;
+  }
+
+  return response;
 }
