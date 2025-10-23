@@ -397,6 +397,24 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
       email: data.email || formData.email,
       telefone: data.telefone || formData.telefone
     })
+
+    if (data.logradouro && data.cidade && data.estado) {
+      const novoEndereco = {
+        id: `new-${Date.now()}`,
+        tipo: 'comercial' as const,
+        nome_identificacao: 'Sede',
+        cep: data.cep || '',
+        logradouro: data.logradouro || '',
+        numero: data.numero || '',
+        complemento: data.complemento || '',
+        bairro: data.bairro || '',
+        cidade: data.cidade || '',
+        estado: data.estado || '',
+        principal: addresses.length === 0
+      }
+
+      setAddresses([...addresses, novoEndereco])
+    }
   }
 
   if (!isOpen) return null
