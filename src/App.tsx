@@ -608,10 +608,10 @@ function App() {
         {showPremiumBanner && (
           <PremiumBanner feature={premiumFeature} />
         )}
-
-        {/* Chatbot IA */}
-        <AIChatbot />
       </AnimatePresence>
+
+      {/* Chatbot IA */}
+      <AIChatbot />
     </UserProvider>
   )
 }
