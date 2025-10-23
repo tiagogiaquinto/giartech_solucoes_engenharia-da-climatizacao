@@ -465,7 +465,7 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder | nu
           materialsByItem.get(itemId).push({
             nome: mat.material_name || mat.nome_material || mat.material?.name || 'Material',
             quantidade: mat.quantity || mat.quantidade || 0,
-            unidade_medida: mat.material_unit || mat.material?.unit_of_measure || 'un',
+            unidade_medida: mat.material_unit || mat.material?.unit || 'un',
             preco_unitario: mat.unit_sale_price || mat.preco_venda || mat.unit_price || 0,
             valor_total: mat.total_sale_price || mat.valor_total || mat.total_price || 0
           })
@@ -477,7 +477,7 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder | nu
         if (itemId) {
           if (!laborByItem.has(itemId)) laborByItem.set(itemId, [])
           laborByItem.get(itemId).push({
-            nome: lab.nome_funcionario || lab.employee?.nome || lab.employee?.nome_completo || 'Funcionário',
+            nome: lab.nome_funcionario || lab.employee?.name || 'Funcionário',
             tempo_minutos: lab.tempo_minutos || (lab.hours ? lab.hours * 60 : 0) || 0,
             custo_hora: lab.custo_hora || lab.hourly_rate || 0,
             custo_total: lab.custo_total || lab.total_cost || 0
@@ -530,8 +530,8 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder | nu
         id: member.id,
         service_order_id: member.service_order_id,
         employee_id: member.employee_id,
-        nome: member.employee?.nome || member.employee?.nome_completo || member.employee?.name || 'Funcionário',
-        name: member.employee?.nome || member.employee?.nome_completo || member.employee?.name || 'Funcionário',
+        nome: member.employee?.name || 'Funcionário',
+        name: member.employee?.name || 'Funcionário',
         role: member.role || member.employee?.especialidade || member.employee?.role || '',
         assigned_at: member.assigned_at,
         created_at: member.created_at
