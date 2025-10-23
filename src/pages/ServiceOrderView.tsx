@@ -298,13 +298,13 @@ const ServiceOrderView = () => {
       total: order.final_total || order.total_value || 0,
       payment: {
         methods: order.payment_methods || 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
-        pix: order.payment_pix || order.client_cnpj || order.client_cpf || '',
-        bank_details: order.payment_bank ? {
-          bank: order.payment_bank,
-          agency: order.payment_agency || '0001',
-          account: order.payment_account || '',
-          account_type: order.payment_account_type || 'Corrente',
-          holder: order.payment_holder || order.client_cnpj || order.client_cpf || ''
+        pix: order.payment_pix || companySettings?.pix_key || order.client_cnpj || order.client_cpf || '',
+        bank_details: bankAccounts[0] ? {
+          bank: bankAccounts[0].bank_name || 'Banco',
+          agency: bankAccounts[0].agency || '0001',
+          account: bankAccounts[0].account_number || '',
+          account_type: bankAccounts[0].account_type === 'checking' ? 'Corrente' : bankAccounts[0].account_type === 'savings' ? 'Poupança' : 'Corrente',
+          holder: bankAccounts[0].account_holder || companySettings?.company_name || ''
         } : undefined,
         conditions: order.payment_conditions || 'Sinal de 50% e o valor restante após a conclusão.'
       },

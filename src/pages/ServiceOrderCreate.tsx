@@ -751,12 +751,12 @@ const ServiceOrderCreate = () => {
         payment: {
           methods: 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
           pix: customer.cnpj || customer.cpf || '',
-          bank_details: bankAccounts.find(b => b.id === formData.bank_account_id) ? {
-            bank: bankAccounts.find(b => b.id === formData.bank_account_id)?.bank_name || '',
-            agency: bankAccounts.find(b => b.id === formData.bank_account_id)?.agency || '',
-            account: bankAccounts.find(b => b.id === formData.bank_account_id)?.account_number || '',
-            account_type: 'Corrente',
-            holder: bankAccounts.find(b => b.id === formData.bank_account_id)?.account_holder || ''
+          bank_details: bankAccounts.find(b => b.is_default) ? {
+            bank: bankAccounts.find(b => b.is_default)?.bank_name || '',
+            agency: bankAccounts.find(b => b.is_default)?.agency || '',
+            account: bankAccounts.find(b => b.is_default)?.account_number || '',
+            account_type: bankAccounts.find(b => b.is_default)?.account_type === 'checking' ? 'Corrente' : 'Poupança',
+            holder: bankAccounts.find(b => b.is_default)?.account_holder || ''
           } : undefined,
           conditions: 'Sinal de 50% e o valor restante após a conclusão.'
         },
@@ -830,6 +830,13 @@ const ServiceOrderCreate = () => {
         payment: {
           methods: 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
           pix: customer?.cnpj || customer?.cpf || '',
+          bank_details: bankAccounts.find(b => b.is_default) ? {
+            bank: bankAccounts.find(b => b.is_default)?.bank_name || '',
+            agency: bankAccounts.find(b => b.is_default)?.agency || '',
+            account: bankAccounts.find(b => b.is_default)?.account_number || '',
+            account_type: bankAccounts.find(b => b.is_default)?.account_type === 'checking' ? 'Corrente' : 'Poupança',
+            holder: bankAccounts.find(b => b.is_default)?.account_holder || ''
+          } : undefined,
           conditions: 'Sinal de 50% e o valor restante após a conclusão.'
         },
         warranty: {
@@ -899,6 +906,13 @@ const ServiceOrderCreate = () => {
         payment: {
           methods: 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
           pix: customer?.cnpj || customer?.cpf || '',
+          bank_details: bankAccounts.find(b => b.is_default) ? {
+            bank: bankAccounts.find(b => b.is_default)?.bank_name || '',
+            agency: bankAccounts.find(b => b.is_default)?.agency || '',
+            account: bankAccounts.find(b => b.is_default)?.account_number || '',
+            account_type: bankAccounts.find(b => b.is_default)?.account_type === 'checking' ? 'Corrente' : 'Poupança',
+            holder: bankAccounts.find(b => b.is_default)?.account_holder || ''
+          } : undefined,
           conditions: 'Sinal de 50% e o valor restante após a conclusão.'
         },
         warranty: {

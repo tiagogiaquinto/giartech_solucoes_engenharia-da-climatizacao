@@ -355,21 +355,22 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
   ;(doc as any).autoTable({
     startY: yPos,
-    head: [['Descrição', 'Unidade', 'Preço unitário', 'Qtd.', 'Preço']],
+    head: [['Descrição do Serviço', 'Unidade', 'Preço Unit.', 'Qtd.', 'Total']],
     body: tableBody,
     theme: 'plain',
     styles: {
       fontSize: 9,
-      cellPadding: 3,
+      cellPadding: { top: 4, right: 3, bottom: 4, left: 3 },
       textColor: darkGray,
-      lineColor: [200, 200, 200],
-      lineWidth: 0.1
+      lineColor: [255, 255, 255],
+      lineWidth: 0
     },
     headStyles: {
-      fillColor: [255, 255, 255],
-      textColor: darkGray,
+      fillColor: lightBlue,
+      textColor: primaryBlue,
       fontStyle: 'bold',
-      halign: 'left'
+      halign: 'left',
+      lineWidth: 0
     },
     columnStyles: {
       0: { cellWidth: 85 },
@@ -379,6 +380,9 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
       4: { cellWidth: 30, halign: 'right' }
     },
     margin: { left: margin, right: margin },
+    alternateRowStyles: {
+      fillColor: [250, 250, 250]
+    },
     didParseCell: function(data: any) {
       if (data.row.index === tableBody.length && data.section === 'body') {
         data.cell.styles.fontStyle = 'bold'
