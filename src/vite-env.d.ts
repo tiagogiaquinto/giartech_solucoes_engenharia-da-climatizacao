@@ -8,3 +8,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// jsPDF AutoTable types
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF
+  }
+}
