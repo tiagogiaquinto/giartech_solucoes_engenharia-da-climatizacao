@@ -3,9 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Plus, Trash2, Save, X, User, Calendar, FileText, Package, Users, Clock, DollarSign, TrendingUp, CircleAlert as AlertCircle, Check, Printer, Send, Download, Eye, FileDown, Search } from 'lucide-react'
 import { supabase, getServiceOrderById } from '../lib/supabase'
-import { generateServiceOrderPDF } from '../utils/generateServiceOrderPDF'
-import { generateServiceOrderPDFProfessional } from '../utils/generateServiceOrderPDFProfessional'
-import { generateServiceOrderPDFUltraPro } from '../utils/generateServiceOrderPDFUltraPro'
+import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { getCompanyInfo } from '../utils/companyData'
 
 interface ServiceItem {
@@ -708,7 +706,61 @@ const ServiceOrderCreate = () => {
         }
       }
 
-      generateServiceOrderPDFUltraPro(orderData, companyInfo)
+      // Preparar dados no formato Giartech
+      const giartechData = {
+        order_number: orderNumber || 'NOVA-OS',
+        date: new Date().toISOString(),
+        title: formData.description || 'Ordem de Serviço',
+        client: {
+          name: customer.nome_razao || customer.name || 'Cliente',
+          company_name: customer.nome_fantasia || '',
+          cnpj: customer.cnpj || '',
+          cpf: customer.cpf || '',
+          address: fullAddress || '',
+          city: customerAddress.cidade || '',
+          state: customerAddress.estado || '',
+          cep: customerAddress.cep || '',
+          email: customer.email || '',
+          phone: customer.telefone || customer.phone || ''
+        },
+        basic_info: {
+          deadline: `${formData.prazo_execucao_dias} dias`,
+          brand: '',
+          model: '',
+          equipment: ''
+        },
+        items: serviceItems.map(item => ({
+          description: item.descricao,
+          scope: '',
+          unit: 'un.',
+          unit_price: item.preco_unitario,
+          quantity: item.quantidade,
+          total_price: item.preco_total
+        })),
+        subtotal: totals.subtotal,
+        discount: totals.desconto,
+        total: totals.total,
+        payment: {
+          methods: 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
+          pix: customer.cnpj || customer.cpf || '',
+          bank_details: bankAccounts.find(b => b.id === formData.bank_account_id) ? {
+            bank: bankAccounts.find(b => b.id === formData.bank_account_id)?.bank_name || '',
+            agency: bankAccounts.find(b => b.id === formData.bank_account_id)?.agency || '',
+            account: bankAccounts.find(b => b.id === formData.bank_account_id)?.account_number || '',
+            account_type: 'Corrente',
+            holder: bankAccounts.find(b => b.id === formData.bank_account_id)?.account_holder || ''
+          } : undefined,
+          conditions: 'Sinal de 50% e o valor restante após a conclusão.'
+        },
+        warranty: {
+          period: `${formData.warranty_period} ${formData.warranty_type === 'days' ? 'dias' : formData.warranty_type === 'months' ? 'meses' : 'anos'}`,
+          conditions: formData.warranty_terms || 'Garantias referentes à sistemas de novo em tubulações antigas.'
+        },
+        contract_clauses: [],
+        additional_info: formData.notes || 'Trabalhamos para que seus projetos, se tornem realidade.'
+      }
+
+      await generateServiceOrderPDFGiartech(giartechData)
       alert('PDF gerado com sucesso!')
     } catch (error) {
       console.error('Erro ao gerar PDF:', error)
@@ -732,19 +784,55 @@ const ServiceOrderCreate = () => {
       if (!orderData) throw new Error('OS não encontrada')
 
       const customer = customers.find(c => c.id === (orderData as any).customer_id)
-      const companyData = await supabase.from('company_settings').select('*').maybeSingle()
 
-      const pdfData = {
-        ...orderData,
+      // Preparar dados no formato Giartech
+      const giartechData = {
+        order_number: (orderData as any).order_number || 'N/A',
+        date: (orderData as any).created_at || new Date().toISOString(),
+        title: (orderData as any).description || 'Ordem de Serviço',
         client: {
-          name: customer?.nome_razao || 'Cliente não encontrado',
+          name: customer?.nome_razao || customer?.name || 'Cliente',
+          company_name: customer?.nome_fantasia || '',
+          cnpj: customer?.cnpj || '',
+          cpf: customer?.cpf || '',
+          address: customer?.endereco || '',
+          city: customer?.cidade || '',
+          state: customer?.estado || '',
+          cep: customer?.cep || '',
           email: customer?.email || '',
-          phone: customer?.telefone || '',
-          address: customer?.endereco || ''
-        }
+          phone: customer?.telefone || ''
+        },
+        basic_info: {
+          deadline: '15 dias',
+          brand: '',
+          model: '',
+          equipment: ''
+        },
+        items: ((orderData as any).items || []).map((item: any) => ({
+          description: item.descricao || item.description || 'Serviço',
+          scope: '',
+          unit: 'un.',
+          unit_price: item.preco_unitario || item.unit_price || 0,
+          quantity: item.quantidade || item.quantity || 1,
+          total_price: item.preco_total || item.total_price || 0
+        })),
+        subtotal: (orderData as any).subtotal || (orderData as any).total_value || 0,
+        discount: (orderData as any).discount_amount || 0,
+        total: (orderData as any).total_value || 0,
+        payment: {
+          methods: 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
+          pix: customer?.cnpj || customer?.cpf || '',
+          conditions: 'Sinal de 50% e o valor restante após a conclusão.'
+        },
+        warranty: {
+          period: '12 meses',
+          conditions: 'Garantias referentes à sistemas de novo em tubulações antigas.'
+        },
+        contract_clauses: [],
+        additional_info: 'Trabalhamos para que seus projetos, se tornem realidade.'
       }
 
-      await generateServiceOrderPDF(pdfData as any, companyData?.data || {})
+      await generateServiceOrderPDFGiartech(giartechData)
     } catch (error) {
       console.error('Error printing:', error)
       alert('Erro ao gerar PDF!')
@@ -765,19 +853,55 @@ const ServiceOrderCreate = () => {
       if (!orderData) throw new Error('OS não encontrada')
 
       const customer = customers.find(c => c.id === (orderData as any).customer_id)
-      const companyData = await supabase.from('company_settings').select('*').maybeSingle()
 
-      const pdfData = {
-        ...orderData,
+      // Preparar dados no formato Giartech
+      const giartechData = {
+        order_number: (orderData as any).order_number || 'N/A',
+        date: (orderData as any).created_at || new Date().toISOString(),
+        title: (orderData as any).description || 'Ordem de Serviço',
         client: {
-          name: customer?.nome_razao || 'Cliente não encontrado',
+          name: customer?.nome_razao || customer?.name || 'Cliente',
+          company_name: customer?.nome_fantasia || '',
+          cnpj: customer?.cnpj || '',
+          cpf: customer?.cpf || '',
+          address: customer?.endereco || '',
+          city: customer?.cidade || '',
+          state: customer?.estado || '',
+          cep: customer?.cep || '',
           email: customer?.email || '',
-          phone: customer?.telefone || '',
-          address: customer?.endereco || ''
-        }
+          phone: customer?.telefone || ''
+        },
+        basic_info: {
+          deadline: '15 dias',
+          brand: '',
+          model: '',
+          equipment: ''
+        },
+        items: ((orderData as any).items || []).map((item: any) => ({
+          description: item.descricao || item.description || 'Serviço',
+          scope: '',
+          unit: 'un.',
+          unit_price: item.preco_unitario || item.unit_price || 0,
+          quantity: item.quantidade || item.quantity || 1,
+          total_price: item.preco_total || item.total_price || 0
+        })),
+        subtotal: (orderData as any).subtotal || (orderData as any).total_value || 0,
+        discount: (orderData as any).discount_amount || 0,
+        total: (orderData as any).total_value || 0,
+        payment: {
+          methods: 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
+          pix: customer?.cnpj || customer?.cpf || '',
+          conditions: 'Sinal de 50% e o valor restante após a conclusão.'
+        },
+        warranty: {
+          period: '12 meses',
+          conditions: 'Garantias referentes à sistemas de novo em tubulações antigas.'
+        },
+        contract_clauses: [],
+        additional_info: 'Trabalhamos para que seus projetos, se tornem realidade.'
       }
 
-      await generateServiceOrderPDF(pdfData as any, companyData?.data || {})
+      await generateServiceOrderPDFGiartech(giartechData)
     } catch (error) {
       console.error('Error downloading:', error)
       alert('Erro ao baixar PDF!')
