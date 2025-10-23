@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import thomazAdvanced from './thomazAdvancedService'
 
 export interface ChatMessage {
   id: string
@@ -1524,8 +1525,52 @@ class ChatbotService {
 
   private async useAIResponse(userMessage: string, normalizedMessage: string): Promise<{ text: string; metadata?: any }> {
     try {
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/thomaz-ai`
+      // MODO SUPERINTELIGÊNCIA ATIVADO! 🧠
+      console.log('🧠 Thomaz Superinteligência Ativada!')
 
+      // 1. Obter histórico da conversa para contexto
+      const conversationHistory = [] // TODO: passar histórico real
+
+      // 2. Usar sistema avançado com raciocínio em cadeia
+      const advanced = await thomazAdvanced.getAdvancedResponse(userMessage, conversationHistory)
+
+      if (advanced && advanced.confidence >= 0.60) {
+        console.log(`✅ Resposta avançada gerada com confiança: ${(advanced.confidence * 100).toFixed(0)}%`)
+        console.log(`📊 Fontes usadas: ${advanced.sources.length}`)
+        console.log(`🌐 Resultados web: ${advanced.webResults.length}`)
+
+        let responseText = advanced.response
+
+        // Adicionar informações de raciocínio se disponível
+        if (advanced.reasoning && advanced.reasoning.steps.length > 0) {
+          responseText += `\n\n🔍 **Processo de Raciocínio:**\n`
+          advanced.reasoning.steps.slice(0, 3).forEach(step => {
+            responseText += `${step.step}. ${step.description}\n`
+          })
+        }
+
+        // Adicionar fontes se houver
+        if (advanced.sources.length > 0) {
+          responseText += `\n\n📚 **Fontes consultadas:**\n`
+          advanced.sources.slice(0, 3).forEach((source, i) => {
+            responseText += `${i + 1}. ${source}\n`
+          })
+        }
+
+        return {
+          text: responseText,
+          metadata: {
+            source: 'advanced_ai',
+            confidence: advanced.confidence,
+            reasoning_steps: advanced.reasoning?.total_steps || 0,
+            web_results: advanced.webResults.length,
+            sources: advanced.sources
+          }
+        }
+      }
+
+      // 3. Fallback para Edge Function se sistema avançado não tiver confiança
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/thomaz-ai`
       const businessContext = await this.getBusinessContext()
 
       const response = await fetch(apiUrl, {
