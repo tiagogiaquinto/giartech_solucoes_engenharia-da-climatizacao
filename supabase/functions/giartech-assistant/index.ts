@@ -7,6 +7,27 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 }
 
+const SYSTEM_IDENTITY = `
+# Assistente Giartech - Inteligência Corporativa
+
+Você é o **Assistente Giartech**, criado por Tiago Bruno Giaquinto para a Giartech Soluções em Climatização.
+Atua como consultor estratégico e operacional, transformando dados em decisões inteligentes.
+
+## Missão
+Apoiar nas áreas: Operacional (OS, técnicos, VRF), Financeira (DRE, fluxo de caixa), Comercial (CRM, contratos) e Estratégica (KPIs, metas).
+
+## Estilo
+Tom corporativo, empático e focado em ação. Sempre estruture:
+📊 RESUMO EXECUTIVO - pontos-chave
+📈 ANÁLISE - dados e tendências
+💡 RECOMENDAÇÕES - ações práticas
+⚠️ RISCOS - pontos de atenção
+🎯 PRÓXIMOS PASSOS - cronograma
+📚 FONTES - origem dos dados
+
+Você é o elo entre dados e decisão!
+`
+
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
@@ -321,32 +342,61 @@ async function generateResponse(
 
 // Análise financeira
 async function analyzeFinancialData(message: string, data: any): Promise<string> {
-  let response = '💰 **Análise Financeira**\n\n'
+  let response = '🧾 **ANÁLISE FINANCEIRA GIARTECH**\n\n'
 
+  // RESUMO EXECUTIVO
   if (data.financialSummary) {
     const summary = data.financialSummary
-    response += `📈 **Resumo Atual:**\n`
-    response += `• Receitas: R$ ${summary.total_revenue?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}\n`
-    response += `• Despesas: R$ ${summary.total_expenses?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}\n`
-    response += `• Lucro Líquido: R$ ${summary.net_profit?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}\n`
-    response += `• Margem: ${summary.profit_margin?.toFixed(2) || '0'}%\n\n`
+    const revenue = summary.total_revenue || 0
+    const expenses = summary.total_expenses || 0
+    const profit = revenue - expenses
+    const margin = revenue > 0 ? (profit / revenue * 100) : 0
+
+    response += '📊 **RESUMO EXECUTIVO**\n'
+    response += `• Receita Total: R$ ${revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `• Despesas: R$ ${expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `• Lucro Líquido: R$ ${profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `• Margem: ${margin.toFixed(2)}%\n\n`
   }
 
+  // ANÁLISE E DIAGNÓSTICO
   if (data.finance && data.finance.length > 0) {
     const pendingPayments = data.finance.filter((f: any) => f.status === 'pending' && f.type === 'expense')
     const pendingReceivables = data.finance.filter((f: any) => f.status === 'pending' && f.type === 'income')
+    const totalPayable = pendingPayments.reduce((sum: number, f: any) => sum + (f.amount || 0), 0)
+    const totalReceivable = pendingReceivables.reduce((sum: number, f: any) => sum + (f.amount || 0), 0)
 
-    response += `📊 **Pendências:**\n`
-    response += `• Contas a pagar: ${pendingPayments.length}\n`
-    response += `• Contas a receber: ${pendingReceivables.length}\n\n`
+    response += '📈 **ANÁLISE E DIAGNÓSTICO**\n'
+    response += `• Contas a Pagar: ${pendingPayments.length} (R$ ${totalPayable.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})\n`
+    response += `• Contas a Receber: ${pendingReceivables.length} (R$ ${totalReceivable.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})\n`
+    response += `• Saldo Projetado: R$ ${(totalReceivable - totalPayable).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`
 
-    response += `💡 **Recomendação:**\n`
-    if (pendingPayments.length > 5) {
-      response += `Há ${pendingPayments.length} despesas pendentes. Priorize pagamentos próximos do vencimento para evitar juros.\n`
+    // RECOMENDAÇÕES
+    response += '💡 **RECOMENDAÇÕES ESTRATÉGICAS**\n'
+    if (totalPayable > totalReceivable) {
+      response += `⚠️ Contas a pagar excedem recebíveis em R$ ${(totalPayable - totalReceivable).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+      response += '• Ação 1: Intensificar cobranças de valores em aberto\n'
+      response += '• Ação 2: Negociar prazos com fornecedores quando possível\n'
+      response += '• Ação 3: Priorizar recebimentos de maior valor\n'
+    } else {
+      response += '✅ Fluxo de caixa positivo no período\n'
+      response += '• Manter controle rigoroso de pagamentos\n'
+      response += '• Considerar investimento em estoque ou equipamentos\n'
     }
-    if (pendingReceivables.length > 10) {
-      response += `${pendingReceivables.length} recebíveis pendentes. Considere ações de cobrança ativa.\n`
-    }
+    response += '\n'
+
+    // PRÓXIMOS PASSOS
+    response += '🎯 **PRÓXIMOS PASSOS**\n'
+    response += '1. Revisar todas contas vencidas (hoje)\n'
+    response += '2. Atualizar DRE do mês (semanal)\n'
+    response += '3. Reunião financeira com equipe (mensal)\n\n'
+
+    // FONTES
+    response += '📚 **FONTES**\n'
+    response += '• finance_entries (últimos lançamentos)\n'
+    response += '• financial_summary (consolidado)\n'
+  } else {
+    response += '⚠️ **OBSERVAÇÃO:** Nenhum lançamento financeiro encontrado no período.\n'
   }
 
   return response
@@ -354,7 +404,7 @@ async function analyzeFinancialData(message: string, data: any): Promise<string>
 
 // Análise de ordens de serviço
 async function analyzeServiceOrders(message: string, data: any): Promise<string> {
-  let response = '🔧 **Análise de Ordens de Serviço**\n\n'
+  let response = '⚙️ **ANÁLISE DE ORDENS DE SERVIÇO**\n\n'
 
   if (data.serviceOrders && data.serviceOrders.length > 0) {
     const orders = data.serviceOrders
@@ -366,24 +416,52 @@ async function analyzeServiceOrders(message: string, data: any): Promise<string>
       cancelled: orders.filter((o: any) => o.status === 'cancelled').length
     }
 
-    response += `📊 **Status Atual:**\n`
-    response += `• Pendentes: ${byStatus.pending}\n`
-    response += `• Em andamento: ${byStatus.in_progress}\n`
-    response += `• Concluídas: ${byStatus.completed}\n`
-    response += `• Canceladas: ${byStatus.cancelled}\n\n`
+    const totalValue = orders.reduce((sum: number, o: any) => sum + (o.total_amount || o.total_value || 0), 0)
+    const avgValue = totalValue / orders.length
 
-    const totalValue = orders.reduce((sum: number, o: any) => sum + (o.total_amount || 0), 0)
-    response += `💵 **Valor Total:** R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`
+    // RESUMO EXECUTIVO
+    response += '📊 **RESUMO EXECUTIVO**\n'
+    response += `• Total de OSs: ${orders.length}\n`
+    response += `• Em Execução: ${byStatus.pending + byStatus.in_progress}\n`
+    response += `• Valor Total: R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `• Ticket Médio: R$ ${avgValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`
 
-    response += `💡 **Insights:**\n`
+    // ANÁLISE POR STATUS
+    response += '📈 **ANÁLISE E DIAGNÓSTICO**\n'
+    response += `• Pendentes: ${byStatus.pending} OSs\n`
+    response += `• Em Andamento: ${byStatus.in_progress} OSs\n`
+    response += `• Concluídas: ${byStatus.completed} OSs\n`
+    response += `• Taxa de Conclusão: ${((byStatus.completed / orders.length) * 100).toFixed(1)}%\n\n`
+
+    // RECOMENDAÇÕES
+    response += '💡 **RECOMENDAÇÕES ESTRATÉGICAS**\n'
     if (byStatus.pending > 10) {
-      response += `• Alto volume de OSs pendentes (${byStatus.pending}). Considere redistribuir a equipe.\n`
+      response += `⚠️ ${byStatus.pending} OSs pendentes - alocar mais técnicos\n`
+      response += '• Ação 1: Redistribuir carga entre equipe\n'
+      response += '• Ação 2: Priorizar por valor e urgência\n'
     }
-    if (byStatus.in_progress > 20) {
-      response += `• Muitas OSs em andamento simultaneamente. Foque em conclusão para melhorar fluxo de caixa.\n`
+    if (byStatus.in_progress > 15) {
+      response += `⚠️ ${byStatus.in_progress} OSs em execução - focar em conclusão\n`
+      response += '• Ação 1: Revisar OSs paradas há mais de 7 dias\n'
+      response += '• Ação 2: Agilizar fechamento para liberar equipe\n'
     }
+    if (byStatus.completed > byStatus.pending + byStatus.in_progress) {
+      response += '✅ Boa performance de conclusão\n'
+      response += '• Manter ritmo atual de produtividade\n'
+    }
+    response += '\n'
+
+    // PRÓXIMOS PASSOS
+    response += '🎯 **PRÓXIMOS PASSOS**\n'
+    response += '1. Revisar OSs pendentes e alocar recursos (diário)\n'
+    response += '2. Atualizar clientes sobre andamento (a cada 2 dias)\n'
+    response += '3. Reunião de alinhamento com técnicos (semanal)\n\n'
+
+    // FONTES
+    response += '📚 **FONTES**\n'
+    response += `• service_orders (${orders.length} registros analisados)\n`
   } else {
-    response += 'Não há ordens de serviço registradas no período consultado.\n'
+    response += '⚠️ **OBSERVAÇÃO:** Nenhuma ordem de serviço encontrada no período.\n'
   }
 
   return response
