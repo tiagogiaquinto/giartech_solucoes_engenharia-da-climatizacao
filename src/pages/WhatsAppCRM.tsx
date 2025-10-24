@@ -154,9 +154,37 @@ const WhatsAppCRM = () => {
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedContact) return
 
+    // Verificar se está conectado
+    if (accounts.length === 0 || accounts[0].status !== 'connected') {
+      alert('WhatsApp não está conectado! Por favor, conecte primeiro.')
+      return
+    }
+
     try {
       setSending(true)
 
+      // Enviar via API Baileys
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-baileys/send`
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          accountId: accounts[0].id,
+          to: selectedContact.phone,
+          message: messageText.trim()
+        })
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao enviar mensagem')
+      }
+
+      // Salvar mensagem no banco
       const newMessage = {
         contact_id: selectedContact.id,
         message_type: 'text',
@@ -186,7 +214,7 @@ const WhatsAppCRM = () => {
       await loadData()
     } catch (error) {
       console.error('Error sending message:', error)
-      alert('Erro ao enviar mensagem')
+      alert('Erro ao enviar mensagem: ' + error.message)
     } finally {
       setSending(false)
     }
@@ -304,7 +332,7 @@ const WhatsAppCRM = () => {
       setCheckingStatus(true)
       const accountId = accounts[0].id
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-connect/generate-qr`
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-baileys/connect`
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -339,7 +367,7 @@ const WhatsAppCRM = () => {
 
     statusCheckInterval.current = window.setInterval(async () => {
       try {
-        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-connect/status?accountId=${accountId}`
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-baileys/status?accountId=${accountId}`
         const response = await fetch(apiUrl, {
           headers: {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
@@ -384,7 +412,7 @@ const WhatsAppCRM = () => {
     try {
       const accountId = accounts[0].id
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-connect/disconnect`
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-baileys/disconnect`
       await fetch(apiUrl, {
         method: 'POST',
         headers: {
