@@ -103,29 +103,23 @@ const ExecutiveDashboard = () => {
     const now = new Date()
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
 
-    const [currentRevenue, previousRevenue, kpis, customers, inventory] = await Promise.all([
+    const [financialSummary, kpis, customers, inventory] = await Promise.all([
       supabase
-        .from('financial_transactions')
-        .select('amount')
-        .eq('transaction_type', 'income')
-        .eq('status', 'paid')
-        .gte('transaction_date', currentMonthStart.toISOString()),
-      supabase
-        .from('financial_transactions')
-        .select('amount')
-        .eq('transaction_type', 'income')
-        .eq('status', 'paid')
-        .gte('transaction_date', previousMonthStart.toISOString())
-        .lt('transaction_date', previousMonthEnd.toISOString()),
+        .from('v_monthly_financial_summary')
+        .select('*')
+        .order('month', { ascending: false })
+        .limit(2),
       supabase.from('v_business_kpis').select('*').maybeSingle(),
       supabase.from('customers').select('id, created_at'),
       supabase.from('materials').select('unit_cost, unit_price, quantity')
     ])
 
-    const currentRev = currentRevenue.data?.reduce((sum, t) => sum + t.amount, 0) || 0
-    const previousRev = previousRevenue.data?.reduce((sum, t) => sum + t.amount, 0) || 0
+    const currentMonth = financialSummary.data?.[0] || { total_revenue: 0, net_profit: 0, profit_margin: 0 }
+    const previousMonth = financialSummary.data?.[1] || { total_revenue: 0 }
+
+    const currentRev = Number(currentMonth.total_revenue) || 0
+    const previousRev = Number(previousMonth.total_revenue) || 0
     const revenueGrowth = previousRev > 0 ? ((currentRev - previousRev) / previousRev) * 100 : 0
 
     const newCustomers = customers.data?.filter(c =>
@@ -147,8 +141,8 @@ const ExecutiveDashboard = () => {
         growth: revenueGrowth
       },
       profit: {
-        amount: kpis.data?.net_profit || 0,
-        margin: kpis.data?.profit_margin || 0,
+        amount: Number(currentMonth.net_profit) || 0,
+        margin: Number(currentMonth.profit_margin) || 0,
         trend: revenueGrowth
       },
       orders: {
@@ -170,35 +164,20 @@ const ExecutiveDashboard = () => {
   }
 
   const loadChartData = async (): Promise<ChartData> => {
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-
-    const [revenueData, servicesData, customersData, ordersData] = await Promise.all([
+    const [financialSummary, servicesData, customersData, ordersData] = await Promise.all([
       supabase
-        .from('financial_transactions')
-        .select('transaction_date, amount, transaction_type')
-        .eq('status', 'paid')
-        .gte('transaction_date', sixMonthsAgo.toISOString()),
-      supabase.from('v_service_performance').select('*').order('total_revenue', { ascending: false }).limit(5),
-      supabase.from('v_customer_profitability').select('*').order('total_revenue', { ascending: false }).limit(5),
+        .from('v_monthly_financial_summary')
+        .select('*')
+        .order('month', { ascending: true })
+        .limit(6),
+      supabase.from('v_top_services_by_revenue').select('*').limit(5),
+      supabase.from('v_top_customers_by_revenue').select('*').limit(5),
       supabase.from('service_orders').select('status')
     ])
 
-    const monthlyRevenue = new Map<string, { income: number; expense: number }>()
-    revenueData.data?.forEach(t => {
-      const month = new Date(t.transaction_date).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
-      if (!monthlyRevenue.has(month)) {
-        monthlyRevenue.set(month, { income: 0, expense: 0 })
-      }
-      const data = monthlyRevenue.get(month)!
-      if (t.transaction_type === 'income') data.income += t.amount
-      else data.expense += t.amount
-    })
-
-    const months = Array.from(monthlyRevenue.keys()).slice(-6)
-    const revenues = months.map(m => monthlyRevenue.get(m)?.income || 0)
-    const expenses = months.map(m => monthlyRevenue.get(m)?.expense || 0)
-    const profits = months.map((m, i) => revenues[i] - expenses[i])
+    const months = financialSummary.data?.map(m => m.month_label) || []
+    const revenues = financialSummary.data?.map(m => Number(m.total_revenue)) || []
+    const profits = financialSummary.data?.map(m => Number(m.net_profit)) || []
 
     const statusCount = new Map<string, number>()
     ordersData.data?.forEach(o => {
@@ -215,12 +194,12 @@ const ExecutiveDashboard = () => {
         data: profits
       },
       topServices: {
-        labels: servicesData.data?.map(s => s.service_name) || [],
-        data: servicesData.data?.map(s => s.total_revenue) || []
+        labels: servicesData.data?.map(s => s.service_name || 'Sem nome') || [],
+        data: servicesData.data?.map(s => Number(s.total_revenue)) || []
       },
       topCustomers: {
-        labels: customersData.data?.map(c => c.customer_name) || [],
-        data: customersData.data?.map(c => c.total_revenue) || []
+        labels: customersData.data?.map(c => c.customer_name || 'Sem nome') || [],
+        data: customersData.data?.map(c => Number(c.total_revenue)) || []
       },
       orderStatus: {
         labels: Array.from(statusCount.keys()),
