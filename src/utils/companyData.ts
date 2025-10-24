@@ -34,7 +34,7 @@ const DEFAULT_COMPANY_INFO: CompanyInfo = {
   email: 'diretor@giartechsolucoes.com.br',
   website: 'giartechsolucoes.com.br',
   instagram: '@giartech.soluções',
-  pix: '37.509.897/0001-93',
+  pix: '37209897000193',
   owner: 'Tiago Bruno Giaquinto',
   whatsapp: '(35) 1511-9666',
   bank_name: 'CORA',
