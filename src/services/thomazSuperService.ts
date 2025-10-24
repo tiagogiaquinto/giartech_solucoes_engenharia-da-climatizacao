@@ -90,7 +90,26 @@ export class ThomazSuperService {
    */
   private async getIntelligentAnswer(query: string): Promise<string> {
     try {
-      // PRIORIDADE 1: Tentar Growth Machine AI primeiro
+      // PRIORIDADE 0: Respostas Rápidas
+      const { data: quickData } = await supabase.rpc('thomaz_quick_responses', {
+        user_query: query
+      })
+
+      if (quickData && quickData.tipo === 'shortcut') {
+        return `✅ ${quickData.resposta}`
+      }
+
+      if (quickData && quickData.tipo === 'ajuda') {
+        let msg = `${quickData.resposta}\n\n**Opções:**\n`
+        if (Array.isArray(quickData.opcoes)) {
+          quickData.opcoes.forEach((op: string) => {
+            msg += `• ${op}\n`
+          })
+        }
+        return msg
+      }
+
+      // PRIORIDADE 1: Growth Machine AI
       const { data: growthData, error: growthError } = await supabase.rpc('thomaz_growth_machine_ai', {
         user_query: query
       })
@@ -99,7 +118,7 @@ export class ThomazSuperService {
         return this.formatGrowthMachineResponse(growthData)
       }
 
-      // FALLBACK: Resposta contextual padrão
+      // FALLBACK: Resposta contextual
       const { data, error } = await supabase.rpc('thomaz_get_contextual_answer', {
         user_question: query
       })
@@ -506,37 +525,45 @@ export class ThomazSuperService {
   }
 
   /**
+   * Obter sugestões proativas
+   */
+  async getSuggestions(): Promise<any> {
+    try {
+      const { data, error } = await supabase.rpc('thomaz_smart_suggestions')
+      return error ? null : data
+    } catch (error) {
+      return null
+    }
+  }
+
+  /**
    * Processar mensagem principal
    */
   async processMessage(userMessage: string): Promise<string> {
     try {
-      // Adicionar mensagem do usuário ao histórico
       this.conversationHistory.push({
         role: 'user',
         content: userMessage,
         timestamp: new Date()
       })
 
-      // NOVA ABORDAGEM: Tentar resposta inteligente primeiro
+      // ABORDAGEM INTELIGENTE
       const intelligentAnswer = await this.getIntelligentAnswer(userMessage)
 
       if (intelligentAnswer && !intelligentAnswer.includes('não consegui processar')) {
-        // Resposta inteligente bem-sucedida
         this.conversationHistory.push({
           role: 'assistant',
           content: intelligentAnswer,
           timestamp: new Date()
         })
 
-        // Salvar interação
         await this.saveInteraction(userMessage, intelligentAnswer)
         await this.saveConversationContext()
 
         return intelligentAnswer
       }
 
-      // FALLBACK: Usar método original se IA não conseguiu responder
-      // Carregar dados relevantes do sistema
+      // FALLBACK
       await this.loadSystemData(userMessage)
 
       // Gerar resposta humanizada
