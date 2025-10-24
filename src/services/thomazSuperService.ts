@@ -86,10 +86,20 @@ export class ThomazSuperService {
   }
 
   /**
-   * Buscar resposta contextual usando IA do Thomaz
+   * Buscar resposta usando Growth Machine AI
    */
   private async getIntelligentAnswer(query: string): Promise<string> {
     try {
+      // PRIORIDADE 1: Tentar Growth Machine AI primeiro
+      const { data: growthData, error: growthError } = await supabase.rpc('thomaz_growth_machine_ai', {
+        user_query: query
+      })
+
+      if (!growthError && growthData) {
+        return this.formatGrowthMachineResponse(growthData)
+      }
+
+      // FALLBACK: Resposta contextual padrão
       const { data, error } = await supabase.rpc('thomaz_get_contextual_answer', {
         user_question: query
       })
@@ -380,6 +390,74 @@ export class ThomazSuperService {
     }
 
     return response
+  }
+
+  /**
+   * Formatar resposta da Growth Machine AI
+   */
+  private formatGrowthMachineResponse(data: any): string {
+    const tipo = data.tipo
+    let mensagem = ''
+
+    // Análise de Crescimento
+    if (tipo === 'analise_crescimento' && data.metricas) {
+      const m = data.metricas
+      mensagem = `📊 **ANÁLISE DE CRESCIMENTO**\n\n`
+      mensagem += `**Receita:**\n`
+      mensagem += `• Mês Atual: R$ ${parseFloat(m.receita_atual).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+      mensagem += `• Mês Anterior: R$ ${parseFloat(m.receita_anterior).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+      mensagem += `• Taxa de Crescimento: ${m.taxa_crescimento}%\n\n`
+      mensagem += `**Avaliação:** ${data.avaliacao}\n\n`
+
+      if (data.recomendacoes && Array.isArray(data.recomendacoes)) {
+        mensagem += `**Recomendações:**\n`
+        data.recomendacoes.forEach((rec: string) => {
+          mensagem += `• ${rec}\n`
+        })
+      }
+    }
+    // Oportunidades
+    else if (tipo === 'oportunidades' && data.oportunidades) {
+      mensagem = `💡 **OPORTUNIDADES IDENTIFICADAS**\n\n`
+      mensagem += `Total: ${data.total} oportunidade(s)\n\n`
+
+      data.oportunidades.forEach((opp: any) => {
+        mensagem += `${opp.icone} **${opp.titulo}**\n`
+        mensagem += `${opp.descricao}\n`
+        mensagem += `Impacto: ${opp.impacto}\n`
+        mensagem += `Ação: ${opp.acao}\n\n`
+      })
+    }
+    // Performance Insights
+    else if (data.insights) {
+      mensagem = `⚡ **INSIGHTS DE PERFORMANCE**\n\n`
+
+      data.insights.forEach((insight: any) => {
+        const statusEmoji = insight.status === 'excelente' ? '🟢' :
+                          insight.status === 'bom' ? '🟡' : '🔴'
+        mensagem += `${statusEmoji} **${insight.metrica}**\n`
+        mensagem += `Valor: ${insight.valor}\n`
+        mensagem += `Benchmark: ${insight.benchmark}\n\n`
+      })
+    }
+    // Análise Completa
+    else if (tipo === 'analise_completa') {
+      mensagem = `🎯 **ANÁLISE COMPLETA - GROWTH MACHINE**\n\n`
+
+      if (data.crescimento) {
+        mensagem += `📈 Crescimento: ${data.crescimento.avaliacao}\n`
+      }
+      if (data.oportunidades) {
+        mensagem += `💡 Oportunidades: ${data.oportunidades.total} identificadas\n`
+      }
+      if (data.performance) {
+        mensagem += `⚡ Performance: ${data.performance.insights.length} insights\n`
+      }
+
+      mensagem += `\n_Para detalhes, pergunte sobre cada área específica!_`
+    }
+
+    return mensagem || 'Análise processada com sucesso!'
   }
 
   /**
