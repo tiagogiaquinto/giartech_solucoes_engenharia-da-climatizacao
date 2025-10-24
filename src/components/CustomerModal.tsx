@@ -184,6 +184,8 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
         customerIdToUse = data.id
       }
 
+      const addressIdMap: Record<string, string> = {}
+
       for (const addr of addresses) {
         if (addr.id.startsWith('new-')) {
           console.log('🔍 ENDEREÇO ORIGINAL:', JSON.stringify(addr, null, 2))
@@ -206,6 +208,11 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
             console.error('❌ ERRO ao inserir endereço:', error)
             alert(`Erro ao salvar endereço: ${error.message}`)
             throw error
+          }
+
+          if (data) {
+            addressIdMap[addr.id] = data
+            console.log(`✅ Endereço criado: ${addr.id} → ${data}`)
           }
         } else {
           const { error } = await supabase.rpc('update_customer_address', {
@@ -274,9 +281,14 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
 
       for (const equip of equipments) {
         if (equip.id.startsWith('new-')) {
+          let realAddressId = equip.customer_address_id
+          if (realAddressId && realAddressId.startsWith('new-')) {
+            realAddressId = addressIdMap[realAddressId] || null
+          }
+
           const dataToInsert = {
             customer_id: customerIdToUse,
-            customer_address_id: equip.customer_address_id || null,
+            customer_address_id: realAddressId || null,
             tipo_equipamento: String(equip.tipo_equipamento || ''),
             marca: String(equip.marca || ''),
             modelo: String(equip.modelo || ''),
@@ -284,6 +296,9 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
             capacidade: String(equip.capacidade || ''),
             data_instalacao: equip.data_instalacao || null
           }
+
+          console.log('🔍 Inserindo equipamento:', dataToInsert)
+
           const { error } = await supabase
             .from('customer_equipment')
             .insert([dataToInsert])
