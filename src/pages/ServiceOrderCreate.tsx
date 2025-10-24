@@ -5,6 +5,10 @@ import { Plus, Trash2, Save, X, User, Calendar, FileText, Package, Users, Clock,
 import { supabase, getServiceOrderById } from '../lib/supabase'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { getCompanyInfo } from '../utils/companyData'
+import { useAutoSave } from '../hooks/useAutoSave'
+import { SmartServiceSearch } from '../components/SmartServiceSearch'
+import { TemplateSelector } from '../components/TemplateSelector'
+import { RealtimeCalculationPanel } from '../components/RealtimeCalculationPanel'
 
 interface ServiceItem {
   id: string
@@ -66,6 +70,7 @@ const ServiceOrderCreate = () => {
   const [serviceCatalog, setServiceCatalog] = useState<any[]>([])
   const [inventory, setInventory] = useState<any[]>([])
   const [showEmailModal, setShowEmailModal] = useState(false)
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [emailRecipient, setEmailRecipient] = useState('')
   const [emailMessage, setEmailMessage] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
@@ -157,6 +162,27 @@ const ServiceOrderCreate = () => {
   })
 
   const [searchStaffTerm, setSearchStaffTerm] = useState<Record<string, string>>({})
+
+  // Auto-Save - Pacote B
+  const { isSaving, lastSaved, error: saveError } = useAutoSave({
+    key: 'service-order-draft',
+    data: { formData, serviceItems, totals },
+    interval: 30000,
+    onSave: async (data) => {
+      if (!isEditMode && formData.customer_id && formData.description) {
+        const { error } = await supabase
+          .from('service_order_drafts')
+          .upsert({
+            user_id: (await supabase.auth.getUser()).data.user?.id,
+            customer_id: formData.customer_id,
+            draft_name: `OS - ${customers.find(c => c.id === formData.customer_id)?.name || 'Cliente'} - ${new Date().toLocaleString('pt-BR')}`,
+            draft_data: data,
+            last_saved_at: new Date().toISOString()
+          })
+        if (error) throw error
+      }
+    }
+  })
 
   useEffect(() => {
     loadData()
@@ -1002,7 +1028,35 @@ const ServiceOrderCreate = () => {
           </h1>
           <p className="text-gray-600 mt-1">Sistema completo com múltiplos serviços, materiais e funcionários</p>
         </div>
+        {!isEditMode && (
+          <div className="text-sm">
+            {isSaving && <span className="text-blue-600">💾 Salvando...</span>}
+            {!isSaving && lastSaved && <span className="text-green-600">✓ Salvo {new Date(lastSaved).toLocaleTimeString()}</span>}
+            {saveError && <span className="text-red-600">⚠️ Erro ao salvar</span>}
+          </div>
+        )}
       </div>
+
+      {!isEditMode && (
+        <div className="mb-4">
+          <button
+            onClick={() => setShowTemplateModal(true)}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all shadow-lg">
+            <FileText className="h-5 w-5" />
+            📋 Usar Template de OS
+          </button>
+        </div>
+      )}
+
+      <TemplateSelector
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        onSelect={(templateData) => {
+          setFormData({ ...formData, ...(templateData.formData || {}) })
+          if (templateData.serviceItems) setServiceItems(templateData.serviceItems)
+          setShowTemplateModal(false)
+        }}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -1365,53 +1419,47 @@ const ServiceOrderCreate = () => {
               </div>
 
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                  <label className="block text-sm font-medium text-blue-900 mb-2">
-                    🔍 Buscar do Catálogo de Serviços
-                  </label>
-                  <select
-                    onChange={(e) => {
-                      const catalog = serviceCatalog.find(s => s.id === e.target.value)
-                      if (catalog) {
-                        const catalogMaterials = catalog.service_catalog_materials || []
+                <div className="mb-4">
+                  <SmartServiceSearch
+                    services={serviceCatalog.map(s => ({
+                      id: s.id,
+                      name: s.name,
+                      description: s.description,
+                      category: s.category,
+                      base_price: s.base_price
+                    }))}
+                    onSelect={(service) => {
+                      if (service) {
+                        const catalog = serviceCatalog.find(s => s.id === service.id)
+                        if (catalog) {
+                          const catalogMaterials = (catalog as any).service_catalog_materials || []
 
-                        const newMaterials = catalogMaterials.map(cm => ({
-                          id: crypto.randomUUID(),
-                          material_id: cm.material_id || '',
-                          nome: cm.material_name || '',
-                          quantidade: Number(cm.quantity) || 1,
-                          preco_compra: Number(cm.unit_cost_at_time) || 0,
-                          preco_venda: Number(cm.unit_sale_price) || 0,
-                          unidade_medida: cm.material_unit || 'UN',
-                          custo_total: (Number(cm.quantity) || 1) * (Number(cm.unit_cost_at_time) || 0),
-                          valor_total: (Number(cm.quantity) || 1) * (Number(cm.unit_sale_price) || 0),
-                          lucro: ((Number(cm.quantity) || 1) * (Number(cm.unit_sale_price) || 0)) - ((Number(cm.quantity) || 1) * (Number(cm.unit_cost_at_time) || 0))
-                        }))
+                          const newMaterials = catalogMaterials.map((cm: any) => ({
+                            id: crypto.randomUUID(),
+                            material_id: cm.material_id || '',
+                            nome: cm.material_name || '',
+                            quantidade: Number(cm.quantity) || 1,
+                            preco_compra: Number(cm.unit_cost_at_time) || 0,
+                            preco_venda: Number(cm.unit_sale_price) || 0,
+                            unidade_medida: cm.material_unit || 'UN',
+                            preco_compra_unitario: Number(cm.unit_cost_at_time) || 0,
+                            preco_venda_unitario: Number(cm.unit_sale_price) || 0,
+                            custo_total: (Number(cm.quantity) || 1) * (Number(cm.unit_cost_at_time) || 0),
+                            valor_total: (Number(cm.quantity) || 1) * (Number(cm.unit_sale_price) || 0),
+                            lucro: ((Number(cm.quantity) || 1) * (Number(cm.unit_sale_price) || 0)) - ((Number(cm.quantity) || 1) * (Number(cm.unit_cost_at_time) || 0))
+                          }))
 
-                        updateServiceItem(item.id, {
-                          descricao: catalog.name,
-                          preco_unitario: Number(catalog.base_price) || 0,
-                          tempo_estimado_minutos: Number(catalog.estimated_duration) || 0,
-                          materiais: newMaterials,
-                          funcionarios: []
-                        })
-                        e.target.value = ''
+                          updateServiceItem(item.id, {
+                            descricao: catalog.name,
+                            preco_unitario: Number(catalog.base_price) || 0,
+                            tempo_estimado_minutos: Number((catalog as any).estimated_duration) || 0,
+                            materiais: newMaterials,
+                            funcionarios: []
+                          })
+                        }
                       }
                     }}
-                    className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
-                    <option value="">Selecione um serviço do catálogo...</option>
-                    {serviceCatalog.map(s => {
-                      const numMaterials = s.service_catalog_materials?.length || 0
-                      return (
-                        <option key={s.id} value={s.id}>
-                          {s.name} - R$ {Number(s.base_price || 0).toFixed(2)} - {s.estimated_duration || 0} min | {numMaterials} materiais
-                        </option>
-                      )
-                    })}
-                  </select>
-                  <p className="text-xs text-blue-600 mt-1">
-                    ✨ Preenche automaticamente: Descrição, Preço, Tempo e Materiais. Adicione funcionários manualmente abaixo.
-                  </p>
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1795,6 +1843,17 @@ const ServiceOrderCreate = () => {
         </div>
 
         <div className="space-y-6">
+          <RealtimeCalculationPanel
+            subtotal={totals.subtotal}
+            discount={totals.desconto}
+            total={totals.total}
+            costMaterials={totals.custo_total_materiais}
+            costLabor={totals.custo_total_mao_obra}
+            totalCost={totals.custo_total}
+            profit={totals.lucro_total}
+            margin={totals.margem_lucro}
+          />
+
           <div className="bg-white rounded-xl p-6 shadow-sm border sticky top-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-green-600" />

@@ -7,6 +7,10 @@ import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPD
 import ContractViewModal from '../components/ContractViewModal'
 import ProposalViewModal from '../components/ProposalViewModal'
 import ServiceOrderViewGiartech from '../components/ServiceOrderViewGiartech'
+import { OSTimeline } from '../components/OSTimeline'
+import { InlineEdit } from '../components/InlineEdit'
+import { OSAuditLog } from '../components/OSAuditLog'
+import { OSChecklist } from '../components/OSChecklist'
 
 const ServiceOrderView = () => {
   const { id } = useParams()
@@ -19,6 +23,9 @@ const ServiceOrderView = () => {
   const [showContractModal, setShowContractModal] = useState(false)
   const [showProposalModal, setShowProposalModal] = useState(false)
   const [showGiartechModal, setShowGiartechModal] = useState(false)
+  const [showTimelineModal, setShowTimelineModal] = useState(false)
+  const [showAuditModal, setShowAuditModal] = useState(false)
+  const [showChecklistModal, setShowChecklistModal] = useState(false)
   const [bankAccounts, setBankAccounts] = useState<any[]>([])
   const [companySettings, setCompanySettings] = useState<any>(null)
 
@@ -427,6 +434,27 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
           >
             <Edit className="h-4 w-4" />
             Editar
+          </button>
+          <button
+            onClick={() => setShowTimelineModal(true)}
+            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 flex items-center gap-2 shadow-lg"
+          >
+            <Calendar className="h-4 w-4" />
+            Timeline
+          </button>
+          <button
+            onClick={() => setShowChecklistModal(true)}
+            className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-lg hover:from-amber-700 hover:to-amber-800 flex items-center gap-2 shadow-lg"
+          >
+            <FileText className="h-4 w-4" />
+            Checklist
+          </button>
+          <button
+            onClick={() => setShowAuditModal(true)}
+            className="px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 flex items-center gap-2 shadow-lg"
+          >
+            <AlertCircle className="h-4 w-4" />
+            Auditoria
           </button>
           <button
             onClick={handleDeleteClick}
@@ -879,6 +907,51 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
             }}
           />
         </>
+      )}
+
+      {/* Pacote C - Timeline Modal */}
+      {showTimelineModal && id && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white">
+              <h2 className="text-2xl font-bold">Timeline de Status</h2>
+              <button onClick={() => setShowTimelineModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">✕</button>
+            </div>
+            <div className="p-6">
+              <OSTimeline serviceOrderId={id} isOpen={showTimelineModal} onClose={() => setShowTimelineModal(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pacote D - Auditoria Modal */}
+      {showAuditModal && id && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white">
+              <h2 className="text-2xl font-bold">Histórico de Auditoria</h2>
+              <button onClick={() => setShowAuditModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">✕</button>
+            </div>
+            <div className="p-6">
+              <OSAuditLog serviceOrderId={id} isOpen={showAuditModal} onClose={() => setShowAuditModal(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pacote D - Checklist Modal */}
+      {showChecklistModal && id && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white">
+              <h2 className="text-2xl font-bold">Checklist de Execução</h2>
+              <button onClick={() => setShowChecklistModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">✕</button>
+            </div>
+            <div className="p-6">
+              <OSChecklist serviceOrderId={id} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
