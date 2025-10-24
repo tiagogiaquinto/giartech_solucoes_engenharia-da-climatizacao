@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, CircleAlert as AlertCircle, Eye } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
+import { mapServiceItems } from '../utils/serviceOrderDataMapper'
 import ContractViewModal from '../components/ContractViewModal'
 import ProposalViewModal from '../components/ProposalViewModal'
 import ServiceOrderViewGiartech from '../components/ServiceOrderViewGiartech'
@@ -324,37 +325,7 @@ const ServiceOrderView = () => {
         model: order.model || '',
         equipment: order.equipment || ''
       },
-      items: (order.items || []).map((item: any, index: number) => {
-        const catalogData = item.service_catalog || {}
-
-        console.log(`🔧 Mapeando item ${index + 1}:`, {
-          service_name: item.service_name || catalogData.name,
-          has_catalog: !!item.service_catalog,
-          catalog_fields: Object.keys(catalogData),
-          escopo_item: item.escopo_detalhado,
-          escopo_catalog: catalogData.escopo_servico
-        })
-
-        return {
-          service_name: item.service_name || catalogData.name || item.descricao || 'Serviço',
-          description: item.descricao || item.description || catalogData.description || '',
-          scope: item.escopo_detalhado || item.escopo || item.scope || catalogData.escopo_servico || '',
-          service_scope: item.escopo_detalhado || catalogData.escopo_servico || '',
-          technical_requirements: item.requisitos_tecnicos || catalogData.requisitos_tecnicos || '',
-          safety_warnings: item.avisos_seguranca || catalogData.avisos_seguranca || '',
-          execution_steps: item.passos_execucao || catalogData.passos_execucao || '',
-          expected_results: item.resultados_esperados || catalogData.resultados_esperados || '',
-          quality_standards: item.padroes_qualidade || catalogData.padroes_qualidade || '',
-          warranty_info: item.informacoes_garantia || catalogData.informacoes_garantia || '',
-          observations: item.observacoes_tecnicas || catalogData.observacoes_tecnicas || '',
-          unit: item.unit || item.unidade || 'un.',
-          unit_price: item.unit_price || item.preco_unitario || catalogData.base_price || 0,
-          quantity: item.quantity || item.quantidade || 1,
-          total_price: item.total_price || item.preco_total || (item.quantity * item.unit_price) || 0,
-          estimated_duration: item.tempo_estimado_minutos || catalogData.tempo_estimado_minutos || 0,
-          tempo_estimado_minutos: item.tempo_estimado_minutos || catalogData.tempo_estimado_minutos || 0
-        }
-      }),
+      items: mapServiceItems(order.items || []),
       subtotal: order.subtotal || order.total_value || 0,
       discount: order.discount_amount || order.desconto_valor || 0,
       total: order.final_total || order.total_value || 0,

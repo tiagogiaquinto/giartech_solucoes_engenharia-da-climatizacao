@@ -2,16 +2,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Download, Printer, Share2, FileText, Calendar, MapPin, Mail, Phone, Globe } from 'lucide-react'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { getCompanyInfo } from '../utils/companyData'
+import { ServiceItemComplete } from '../utils/serviceOrderDataMapper'
 import { useEffect, useState } from 'react'
 
-interface ServiceItem {
-  description: string
-  scope?: string
-  unit: string
-  unit_price: number
-  quantity: number
-  total_price: number
-}
+type ServiceItem = ServiceItemComplete
 
 interface ServiceOrderData {
   order_number: string
@@ -302,12 +296,12 @@ export default function ServiceOrderViewGiartech({ isOpen, onClose, data }: Prop
                       {data.items.map((item, index) => (
                         <tr key={index} className="border-b border-gray-200">
                           <td className="py-3">
-                            <p className="font-semibold text-gray-900">{item.description}</p>
-                            {item.scope && (
+                            <p className="font-semibold text-gray-900">{item.service_name || item.description}</p>
+                            {(item.scope || item.service_scope || item.escopo_detalhado) && (
                               <p className="text-xs text-gray-600 mt-1 whitespace-pre-line">
                                 ESCOPO:
                                 <br />
-                                {item.scope}
+                                {item.scope || item.service_scope || item.escopo_detalhado}
                               </p>
                             )}
                           </td>

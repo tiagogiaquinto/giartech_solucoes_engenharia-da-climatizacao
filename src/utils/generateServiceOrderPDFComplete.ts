@@ -1,16 +1,9 @@
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 import { getCompanyInfo } from './companyData'
+import { ServiceItemComplete, generateServiceDescription } from './serviceOrderDataMapper'
 
-interface ServiceItem {
-  service_catalog_id?: string
-  service_name: string
-  description?: string
-  unit: string
-  unit_price: number
-  quantity: number
-  total_price: number
-}
+type ServiceItem = ServiceItemComplete
 
 interface Material {
   material_id?: string
