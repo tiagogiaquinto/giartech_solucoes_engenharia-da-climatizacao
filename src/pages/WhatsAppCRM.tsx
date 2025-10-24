@@ -53,9 +53,16 @@ const WhatsAppCRM = () => {
   const [showAddContactModal, setShowAddContactModal] = useState(false)
   const [showEditAccountModal, setShowEditAccountModal] = useState(false)
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false)
   const [editingAccount, setEditingAccount] = useState<WhatsAppAccount | null>(null)
 
+  // WhatsApp Connection
+  const [qrCode, setQrCode] = useState<string | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'qr' | 'connected'>('disconnected')
+  const [checkingStatus, setCheckingStatus] = useState(false)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const statusCheckInterval = useRef<number | null>(null)
 
   const [newContact, setNewContact] = useState({
     name: '',
@@ -287,6 +294,134 @@ const WhatsAppCRM = () => {
     setShowTemplatesModal(false)
   }
 
+  const handleGenerateQRCode = async () => {
+    if (accounts.length === 0) {
+      alert('Nenhuma conta WhatsApp encontrada!')
+      return
+    }
+
+    try {
+      setCheckingStatus(true)
+      const accountId = accounts[0].id
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-connect/generate-qr`
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ accountId })
+      })
+
+      const data = await response.json()
+
+      if (data.qrCode) {
+        setQrCode(data.qrCode)
+        setConnectionStatus('qr')
+        setShowQRModal(true)
+
+        // Iniciar verificação de status
+        startStatusCheck(accountId)
+      }
+    } catch (error) {
+      console.error('Error generating QR code:', error)
+      alert('Erro ao gerar QR Code')
+    } finally {
+      setCheckingStatus(false)
+    }
+  }
+
+  const startStatusCheck = (accountId: string) => {
+    if (statusCheckInterval.current) {
+      clearInterval(statusCheckInterval.current)
+    }
+
+    statusCheckInterval.current = window.setInterval(async () => {
+      try {
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-connect/status?accountId=${accountId}`
+        const response = await fetch(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          }
+        })
+
+        const data = await response.json()
+
+        if (data.status === 'connected') {
+          setConnectionStatus('connected')
+          setQrCode(null)
+          setShowQRModal(false)
+
+          // Atualizar status no banco
+          await supabase
+            .from('whatsapp_accounts')
+            .update({
+              status: 'connected',
+              last_connection: new Date().toISOString()
+            })
+            .eq('id', accountId)
+
+          await loadData()
+
+          if (statusCheckInterval.current) {
+            clearInterval(statusCheckInterval.current)
+          }
+
+          alert('WhatsApp conectado com sucesso!')
+        }
+      } catch (error) {
+        console.error('Error checking status:', error)
+      }
+    }, 2000)
+  }
+
+  const handleDisconnect = async () => {
+    if (!confirm('Deseja desconectar o WhatsApp?')) return
+
+    if (accounts.length === 0) return
+
+    try {
+      const accountId = accounts[0].id
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-connect/disconnect`
+      await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ accountId })
+      })
+
+      setConnectionStatus('disconnected')
+
+      await supabase
+        .from('whatsapp_accounts')
+        .update({ status: 'disconnected' })
+        .eq('id', accountId)
+
+      await loadData()
+
+      if (statusCheckInterval.current) {
+        clearInterval(statusCheckInterval.current)
+      }
+
+      alert('WhatsApp desconectado!')
+    } catch (error) {
+      console.error('Error disconnecting:', error)
+      alert('Erro ao desconectar')
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (statusCheckInterval.current) {
+        clearInterval(statusCheckInterval.current)
+      }
+    }
+  }, [])
+
   const filteredContacts = contacts.filter(contact =>
     contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     contact.phone.includes(searchTerm)
@@ -318,20 +453,50 @@ const WhatsAppCRM = () => {
       {/* Header */}
       <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-4 shadow-lg">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <MessageCircle className="h-8 w-8" />
             <div>
               <h1 className="text-2xl font-bold">WhatsApp CRM</h1>
               <p className="text-sm text-green-100">Sistema de Atendimento Integrado</p>
             </div>
+            {accounts.length > 0 && (
+              <div className="ml-4 px-3 py-1 bg-white/20 rounded-full flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  accounts[0].status === 'connected' ? 'bg-green-300 animate-pulse' : 'bg-gray-300'
+                }`} />
+                <span className="text-sm font-medium">
+                  {accounts[0].status === 'connected' ? 'Conectado' : 'Desconectado'}
+                </span>
+              </div>
+            )}
           </div>
-          <button
-            onClick={() => accounts.length > 0 && handleEditAccount(accounts[0])}
-            className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-          >
-            <Settings className="h-4 w-4" />
-            Configurar Conta
-          </button>
+          <div className="flex items-center gap-2">
+            {accounts.length > 0 && accounts[0].status === 'connected' ? (
+              <button
+                onClick={handleDisconnect}
+                className="bg-red-500/90 hover:bg-red-600 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <X className="h-4 w-4" />
+                Desconectar
+              </button>
+            ) : (
+              <button
+                onClick={handleGenerateQRCode}
+                disabled={checkingStatus}
+                className="bg-white/20 hover:bg-white/30 disabled:opacity-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <MessageCircle className="h-4 w-4" />
+                {checkingStatus ? 'Gerando...' : 'Conectar WhatsApp'}
+              </button>
+            )}
+            <button
+              onClick={() => accounts.length > 0 && handleEditAccount(accounts[0])}
+              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <Settings className="h-4 w-4" />
+              Configurar
+            </button>
+          </div>
         </div>
       </div>
 
@@ -688,6 +853,82 @@ const WhatsAppCRM = () => {
                   <p className="text-sm text-gray-600">{template.text}</p>
                 </button>
               ))}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal QR Code */}
+      {showQRModal && qrCode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-8 w-full max-w-md shadow-2xl"
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Conectar WhatsApp</h2>
+              <p className="text-gray-600 mb-6">Escaneie o QR Code com seu celular</p>
+
+              {/* QR Code */}
+              <div className="bg-white border-4 border-green-500 rounded-xl p-4 mb-6">
+                <img
+                  src={qrCode}
+                  alt="QR Code"
+                  className="w-full h-auto"
+                />
+              </div>
+
+              {/* Instruções */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                  <span className="bg-green-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm mr-2">1</span>
+                  Como conectar:
+                </h3>
+                <ol className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium mt-0.5">1</span>
+                    <span>Abra o WhatsApp no seu celular</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium mt-0.5">2</span>
+                    <span>Toque em <strong>Menu</strong> ou <strong>Configurações</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium mt-0.5">3</span>
+                    <span>Selecione <strong>Aparelhos conectados</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium mt-0.5">4</span>
+                    <span>Toque em <strong>Conectar um aparelho</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium mt-0.5">5</span>
+                    <span>Aponte o celular para esta tela para escanear o código</span>
+                  </li>
+                </ol>
+              </div>
+
+              {/* Status */}
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-600 mb-4">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-green-500"></div>
+                <span>Aguardando conexão...</span>
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowQRModal(false)
+                  if (statusCheckInterval.current) {
+                    clearInterval(statusCheckInterval.current)
+                  }
+                }}
+                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
             </div>
           </motion.div>
         </div>
