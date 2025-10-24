@@ -86,6 +86,71 @@ export class ThomazSuperService {
   }
 
   /**
+   * Buscar resposta contextual usando IA do Thomaz
+   */
+  private async getIntelligentAnswer(query: string): Promise<string> {
+    try {
+      const { data, error } = await supabase.rpc('thomaz_get_contextual_answer', {
+        user_question: query
+      })
+
+      if (error) throw error
+
+      if (data) {
+        // Formatar resposta baseada no tipo
+        const tipo = data.tipo
+        const resposta = data.resposta
+        const dados = data.dados
+
+        let mensagem = resposta + '\n\n'
+
+        if (tipo === 'lucro_mensal' && dados) {
+          mensagem += `💰 Lucro no período ${dados.periodo}:\n`
+          mensagem += `R$ ${parseFloat(dados.lucro_mes_atual).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        } else if (tipo === 'contagem_os' && dados) {
+          mensagem += `📋 Status das Ordens de Serviço:\n\n`
+          mensagem += `• Total: ${dados.total}\n`
+          mensagem += `• Pendentes: ${dados.pendentes}\n`
+          mensagem += `• Em Andamento: ${dados.em_andamento}\n`
+          mensagem += `• Completadas: ${dados.completadas}\n`
+          mensagem += `• Criadas este mês: ${dados.mes_atual}`
+        } else if (tipo === 'contagem_clientes' && dados) {
+          mensagem += `👥 Seus Clientes:\n\n`
+          mensagem += `• Total: ${dados.total} clientes\n`
+          mensagem += `• Pessoas Físicas: ${dados.pf}\n`
+          mensagem += `• Pessoas Jurídicas: ${dados.pj}\n`
+          mensagem += `• Ativos este mês: ${dados.ativos_mes}`
+        } else if (tipo === 'top_clientes' && dados) {
+          mensagem += `🏆 Top 5 Clientes:\n\n`
+          dados.forEach((cliente: any, i: number) => {
+            mensagem += `${i + 1}. ${cliente.nome}\n`
+            mensagem += `   💵 ${parseFloat(cliente.receita_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n`
+            mensagem += `   📦 ${cliente.total_pedidos} pedidos\n\n`
+          })
+        } else if (tipo === 'info_estoque' && dados) {
+          mensagem += `📦 Estoque:\n\n`
+          mensagem += `• Total de itens: ${dados.total_itens}\n`
+          mensagem += `• Valor em estoque: R$ ${parseFloat(dados.valor_estoque).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+          mensagem += `• Itens com baixo estoque: ${dados.itens_baixo_estoque}`
+        } else if (tipo === 'busca_conhecimento' && data.conhecimento) {
+          mensagem += `📚 Encontrei isso:\n\n`
+          data.conhecimento.forEach((item: any) => {
+            mensagem += `• ${item.titulo}\n`
+            if (item.descricao) mensagem += `  ${item.descricao}\n\n`
+          })
+        }
+
+        return mensagem
+      }
+
+      return 'Desculpe, não consegui processar sua pergunta. Pode tentar novamente?'
+    } catch (error) {
+      console.error('Erro ao buscar resposta inteligente:', error)
+      return 'Ops, tive um problema ao processar sua pergunta. Tente novamente!'
+    }
+  }
+
+  /**
    * Buscar dados do sistema baseado no contexto
    */
   private async loadSystemData(query: string): Promise<void> {
@@ -318,6 +383,26 @@ export class ThomazSuperService {
   }
 
   /**
+   * Salvar interação para aprendizado
+   */
+  private async saveInteraction(userMessage: string, response: string) {
+    if (!this.userId) return
+
+    try {
+      await supabase.from('thomaz_interactions').insert({
+        user_id: this.userId,
+        session_id: this.sessionId,
+        user_message: userMessage,
+        thomaz_response: response,
+        context: this.systemData,
+        created_at: new Date().toISOString()
+      })
+    } catch (err) {
+      console.error('Erro ao salvar interação:', err)
+    }
+  }
+
+  /**
    * Salvar contexto da conversa
    */
   private async saveConversationContext() {
@@ -354,6 +439,25 @@ export class ThomazSuperService {
         timestamp: new Date()
       })
 
+      // NOVA ABORDAGEM: Tentar resposta inteligente primeiro
+      const intelligentAnswer = await this.getIntelligentAnswer(userMessage)
+
+      if (intelligentAnswer && !intelligentAnswer.includes('não consegui processar')) {
+        // Resposta inteligente bem-sucedida
+        this.conversationHistory.push({
+          role: 'assistant',
+          content: intelligentAnswer,
+          timestamp: new Date()
+        })
+
+        // Salvar interação
+        await this.saveInteraction(userMessage, intelligentAnswer)
+        await this.saveConversationContext()
+
+        return intelligentAnswer
+      }
+
+      // FALLBACK: Usar método original se IA não conseguiu responder
       // Carregar dados relevantes do sistema
       await this.loadSystemData(userMessage)
 
