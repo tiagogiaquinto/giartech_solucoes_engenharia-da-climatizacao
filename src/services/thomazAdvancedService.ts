@@ -27,11 +27,13 @@ export class ThomazAdvancedService {
   private userId?: string
   private currentContext: any = {}
   private personality: any = null
+  private libraryKnowledge: any[] = []
 
   constructor(userId?: string) {
     this.userId = userId
     this.sessionId = `adv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     this.loadPersonality()
+    this.loadLibraryKnowledge()
   }
 
   /**
@@ -47,6 +49,50 @@ export class ThomazAdvancedService {
       this.personality = data
     } catch (err) {
       console.error('Erro ao carregar personalidade:', err)
+    }
+  }
+
+  /**
+   * Carregar conhecimento da biblioteca digital
+   */
+  private async loadLibraryKnowledge() {
+    try {
+      const { data: library } = await supabase
+        .from('library_items')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100)
+
+      if (library && library.length > 0) {
+        this.libraryKnowledge = library
+
+        // Salvar documentos importantes na memória de longo prazo
+        for (const doc of library.slice(0, 20)) {
+          const tags = doc.tags || []
+          const content = `Documento: ${doc.title}. ${doc.description || ''}`
+
+          await supabase.from('thomaz_long_term_memory').upsert({
+            fact: content,
+            source: `library_${doc.id}`,
+            confidence: 0.95,
+            category: 'library_document',
+            tags: [...tags, doc.type || 'document'],
+            metadata: {
+              document_id: doc.id,
+              title: doc.title,
+              type: doc.type,
+              file_url: doc.file_url
+            }
+          }, {
+            onConflict: 'source',
+            ignoreDuplicates: false
+          })
+        }
+
+        console.log(`📚 Thomaz carregou ${library.length} documentos da biblioteca`)
+      }
+    } catch (err) {
+      console.error('Erro ao carregar biblioteca:', err)
     }
   }
 
@@ -440,13 +486,44 @@ export class ThomazAdvancedService {
    */
   private async readLibraryDocuments(query: string): Promise<string> {
     try {
-      const { data: documents } = await supabase
-        .from('library_items')
-        .select('*')
-        .or(`title.ilike.%${query}%,description.ilike.%${query}%,tags.cs.{${query}}`)
-        .limit(3)
+      // Primeiro, buscar na memória carregada localmente
+      const queryLower = query.toLowerCase()
+      const localMatches = this.libraryKnowledge.filter(doc => {
+        const titleMatch = doc.title?.toLowerCase().includes(queryLower)
+        const descMatch = doc.description?.toLowerCase().includes(queryLower)
+        const tagsMatch = doc.tags?.some((tag: string) => tag.toLowerCase().includes(queryLower))
+        return titleMatch || descMatch || tagsMatch
+      }).slice(0, 3)
 
-      if (!documents || documents.length === 0) {
+      // Se não encontrou localmente, buscar no banco
+      let documents = localMatches
+      if (documents.length === 0) {
+        const { data: dbDocs } = await supabase
+          .from('library_items')
+          .select('*')
+          .or(`title.ilike.%${query}%,description.ilike.%${query}%,tags.cs.{${query}}`)
+          .limit(3)
+
+        documents = dbDocs || []
+      }
+
+      if (documents.length === 0) {
+        // Buscar também na memória de longo prazo
+        const { data: memories } = await supabase
+          .from('thomaz_long_term_memory')
+          .select('*')
+          .eq('category', 'library_document')
+          .ilike('fact', `%${query}%`)
+          .limit(3)
+
+        if (memories && memories.length > 0) {
+          let response = `📚 **Tenho conhecimento sobre isso na minha memória:**\n\n`
+          memories.forEach((mem, index) => {
+            response += `${index + 1}. ${mem.fact}\n\n`
+          })
+          return response
+        }
+
         return null
       }
 
@@ -455,7 +532,7 @@ export class ThomazAdvancedService {
       documents.forEach((doc, index) => {
         response += `${index + 1}. **${doc.title}**\n`
         if (doc.description) {
-          response += `   _${doc.description.substring(0, 100)}${doc.description.length > 100 ? '...' : ''}_\n`
+          response += `   _${doc.description.substring(0, 150)}${doc.description.length > 150 ? '...' : ''}_\n`
         }
         response += `   📁 Tipo: ${doc.type || 'Documento'}\n`
         if (doc.tags && doc.tags.length > 0) {
@@ -509,14 +586,21 @@ export class ThomazAdvancedService {
 
     let greeting = greetings[Math.floor(Math.random() * greetings.length)]
 
+    // Informar sobre biblioteca carregada
+    if (this.libraryKnowledge.length > 0) {
+      greeting += `\n\n📚 Tenho acesso a **${this.libraryKnowledge.length} documentos** da biblioteca digital!`
+    }
+
     greeting += '\n\nPosso conversar normalmente contigo sobre:\n'
-    greeting += '• 📋 Ordens de Serviço\n'
+    greeting += '• 📋 Ordens de Serviço e Projetos\n'
     greeting += '• 📦 Estoque e Materiais\n'
-    greeting += '• 📅 Agenda\n'
-    greeting += '• 💰 Finanças\n'
+    greeting += '• 📅 Agenda e Compromissos\n'
+    greeting += '• 💰 Finanças e Relatórios\n'
     greeting += '• 🌐 Buscar informações na internet\n'
-    greeting += '• 📚 Ler documentos da biblioteca\n'
+    greeting += '• 📚 Consultar documentos da biblioteca\n'
+    greeting += '• 🤖 Aprender com nossas conversas\n'
     greeting += '• E muito mais!\n\n'
+    greeting += '💡 **Dica:** Use o botão 🔄 para reiniciar nossa conversa a qualquer momento!\n\n'
     greeting += 'Como posso te ajudar hoje? 😊'
 
     return greeting

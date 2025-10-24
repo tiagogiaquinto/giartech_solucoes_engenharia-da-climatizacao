@@ -16,7 +16,9 @@ import {
   Loader,
   Copy,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Home,
+  RotateCcw
 } from 'lucide-react'
 import ThomazAdvancedService from '../services/thomazAdvancedService'
 import { format } from 'date-fns'
@@ -133,6 +135,31 @@ export function ThomazSuperChat() {
     await new Promise(resolve => setTimeout(resolve, typingTime))
 
     setIsTyping(false)
+  }
+
+  const handleResetChat = async () => {
+    setMessages([])
+    setInputMessage('')
+    setIsLoading(true)
+
+    // Reinicializar serviço
+    const service = new ThomazAdvancedService()
+    setThomazService(service)
+
+    try {
+      const greeting = await service.getInitialGreeting()
+      const welcomeMessage: Message = {
+        id: `msg_${Date.now()}_welcome`,
+        role: 'assistant',
+        content: greeting,
+        timestamp: new Date()
+      }
+      setMessages([welcomeMessage])
+    } catch (error) {
+      console.error('Erro ao reiniciar chat:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleSendMessage = async (messageText?: string) => {
@@ -271,12 +298,27 @@ export function ThomazSuperChat() {
               <p className="text-xs text-blue-100">Seu assistente inteligente</p>
             </div>
           </div>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {messages.length > 1 && (
+              <motion.button
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleResetChat}
+                className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+                title="Reiniciar conversa"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </motion.button>
+            )}
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Quick Actions */}
