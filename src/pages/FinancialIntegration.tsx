@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { DollarSign, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Wallet, Users, ChartPie as PieChart, ChartBar as BarChart3, Calendar, Download, ListFilter as Filter, ChevronDown, ChevronUp, FileText, Table, ChartLine as LineChart, CircleAlert as AlertCircle, Package } from 'lucide-react'
+import { DollarSign, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Wallet, Users, ChartPie as PieChart, ChartBar as BarChart3, Calendar, Download, ListFilter as Filter, ChevronDown, ChevronUp, FileText, Table, ChartLine as LineChart, CircleAlert as AlertCircle, Package, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import KPIDashboard from '../components/KPIDashboard'
+import { useUser } from '../contexts/UserContext'
 import { Line } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -60,6 +61,9 @@ interface BankAccount {
 }
 
 const FinancialIntegration = () => {
+  const { hasPermission } = useUser()
+  const canViewBankBalances = hasPermission('view_bank_balances')
+
   const [activeTab, setActiveTab] = useState<'overview' | 'dre' | 'cashflow' | 'reports' | 'kpis'>('overview')
   const [entries, setEntries] = useState<FinanceEntry[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -480,8 +484,19 @@ const FinancialIntegration = () => {
               </h3>
               <span className="text-sm text-gray-500">{bankAccounts.length} conta(s)</span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {bankAccounts.map((account, index) => (
+            {!canViewBankBalances ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <Lock className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                <h4 className="text-lg font-semibold text-gray-700 mb-2">Acesso Restrito</h4>
+                <p className="text-sm text-gray-500 max-w-md mx-auto">
+                  Você não tem permissão para visualizar os saldos das contas bancárias.
+                  <br />
+                  Entre em contato com o administrador para solicitar acesso.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {bankAccounts.map((account, index) => (
                 <motion.div
                   key={account.id}
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -529,13 +544,14 @@ const FinancialIntegration = () => {
                   </div>
                 </motion.div>
               ))}
-              {bankAccounts.length === 0 && (
-                <div className="col-span-full text-center py-8 text-gray-400">
-                  <Wallet className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Nenhuma conta bancária cadastrada</p>
-                </div>
-              )}
-            </div>
+                {bankAccounts.length === 0 && (
+                  <div className="col-span-full text-center py-8 text-gray-400">
+                    <Wallet className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nenhuma conta bancária cadastrada</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

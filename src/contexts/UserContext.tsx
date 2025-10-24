@@ -13,6 +13,7 @@ interface UserProfile {
   status: string
   department_id?: string
   phone?: string
+  permissions?: string[]
 }
 
 interface User extends UserProfile {
@@ -29,6 +30,7 @@ interface UserContextType {
   isExternal: boolean
   isPremium: boolean
   isEnterprise: boolean
+  hasPermission: (permission: string) => boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   onPremiumFeature?: (feature: string) => void
@@ -63,7 +65,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       avatar: undefined,
       status: 'active',
       department_id: undefined,
-      phone: undefined
+      phone: undefined,
+      permissions: ['view_dashboard', 'manage_orders', 'view_orders', 'manage_clients', 'view_clients',
+                   'manage_inventory', 'view_inventory', 'manage_financial', 'view_financial',
+                   'view_bank_balances', 'manage_users', 'system_settings']
     }
 
     const mockAuthUser = {
@@ -161,6 +166,11 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const isPremium = isAdmin || isManager
   const isEnterprise = isAdmin
 
+  const hasPermission = (permission: string): boolean => {
+    if (isAdmin) return true
+    return profile?.permissions?.includes(permission) || false
+  }
+
   const login = async (email: string, password: string) => {
     // Login simulado - sempre bem-sucedido
     console.log('Login simulado:', email)
@@ -201,6 +211,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       isExternal,
       isPremium,
       isEnterprise,
+      hasPermission,
       login,
       logout,
       onPremiumFeature

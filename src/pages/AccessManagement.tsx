@@ -67,6 +67,7 @@ const AccessManagement = () => {
     { id: 'view_inventory', name: 'Visualizar Estoque', description: 'Consultar estoque sem alterações', category: 'Estoque' },
     { id: 'manage_financial', name: 'Gerenciar Financeiro', description: 'Acesso total ao módulo financeiro', category: 'Financeiro' },
     { id: 'view_financial', name: 'Visualizar Financeiro', description: 'Relatórios financeiros básicos', category: 'Financeiro' },
+    { id: 'view_bank_balances', name: 'Visualizar Saldos Bancários', description: 'Ver saldos das contas bancárias', category: 'Financeiro' },
     { id: 'manage_users', name: 'Gerenciar Usuários', description: 'Administrar contas de usuário', category: 'Administração' },
     { id: 'system_settings', name: 'Configurações do Sistema', description: 'Alterar configurações globais', category: 'Administração' }
   ])
@@ -86,7 +87,7 @@ const AccessManagement = () => {
       name: 'Gerente',
       description: 'Gestão de operações e equipe',
       level: 8,
-      permissions: ['view_dashboard', 'manage_orders', 'manage_clients', 'manage_inventory', 'view_financial'],
+      permissions: ['view_dashboard', 'manage_orders', 'manage_clients', 'manage_inventory', 'view_financial', 'view_bank_balances'],
       color: 'from-blue-500 to-cyan-500',
       isSystem: true
     },
