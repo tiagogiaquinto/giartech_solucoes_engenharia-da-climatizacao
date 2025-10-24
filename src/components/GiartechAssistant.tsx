@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MessageCircle, Send, X, Minimize2, Maximize2, Sparkles, TrendingUp, DollarSign, Package, Users, FileText } from 'lucide-react'
+import { MessageCircle, Send, X, Minimize2, Maximize2, Sparkles, TrendingUp, DollarSign, Package, Users, FileText, Calendar } from 'lucide-react'
 
 interface Message {
   id: string
@@ -29,7 +29,7 @@ export function GiartechAssistant() {
       setMessages([{
         id: 'welcome',
         role: 'assistant',
-        content: '👋 Olá! Sou o **Assistente Giartech**, sua inteligência corporativa.\n\nPosso ajudá-lo com:\n\n💰 **Financeiro** - Receitas, despesas, DRE e análises\n🔧 **Ordens de Serviço** - Status, análises e insights\n📦 **Estoque** - Inventário e alertas\n👥 **Clientes** - CRM e base de dados\n👨‍💼 **Equipe** - Colaboradores e performance\n📊 **Indicadores** - KPIs e dashboards\n\nComo posso ajudá-lo hoje?',
+        content: '👋 Olá! Sou o **Assistente Giartech**, sua inteligência corporativa.\n\nPosso ajudá-lo com:\n\n💰 **Financeiro** - Receitas, despesas, DRE e análises\n🔧 **Ordens de Serviço** - Status, análises e insights\n📦 **Estoque** - Inventário e alertas\n👥 **Clientes** - CRM e base de dados\n👨‍💼 **Equipe** - Colaboradores e performance\n📊 **Indicadores** - KPIs e dashboards\n📅 **Agenda** - Compromissos e eventos\n\nComo posso ajudá-lo hoje?',
         timestamp: new Date().toISOString()
       }])
     }
@@ -103,8 +103,8 @@ export function GiartechAssistant() {
   const quickQuestions = [
     { icon: DollarSign, text: 'Como está o financeiro?', color: 'text-green-600' },
     { icon: TrendingUp, text: 'Quantas OSs temos hoje?', color: 'text-blue-600' },
-    { icon: Package, text: 'Qual o status do estoque?', color: 'text-orange-600' },
-    { icon: Users, text: 'Quantos clientes novos este mês?', color: 'text-purple-600' }
+    { icon: Calendar, text: 'O que tenho na agenda hoje?', color: 'text-indigo-600' },
+    { icon: Package, text: 'Qual o status do estoque?', color: 'text-orange-600' }
   ]
 
   const handleQuickQuestion = (question: string) => {
@@ -119,6 +119,7 @@ export function GiartechAssistant() {
       case 'clients': return '👥'
       case 'employees': return '👨‍💼'
       case 'analytics': return '📊'
+      case 'calendar': return '📅'
       default: return '🤖'
     }
   }

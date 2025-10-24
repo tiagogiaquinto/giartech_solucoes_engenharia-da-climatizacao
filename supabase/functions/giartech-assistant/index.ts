@@ -87,6 +87,7 @@ async function analyzeIntent(message: string): Promise<any> {
     clients: ['cliente', 'contato', 'crm', 'lead', 'proposta'],
     employees: ['funcionário', 'técnico', 'equipe', 'colaborador', 'rh'],
     analytics: ['análise', 'relatório', 'indicador', 'kpi', 'dashboard', 'desempenho'],
+    calendar: ['agenda', 'evento', 'compromisso', 'agendamento', 'calendário', 'reunião', 'encontro', 'horário', 'hoje', 'amanhã', 'semana'],
     comparison: ['comparar', 'diferença', 'versus', 'vs', 'melhor'],
     prediction: ['previsão', 'tendência', 'projeção', 'futuro', 'próximo']
   }
@@ -197,6 +198,47 @@ async function gatherSystemData(intent: any, supabase: any): Promise<any> {
 
         data.kpis = kpis
         break
+
+      case 'calendar':
+        // Buscar eventos da agenda
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+
+        const nextWeek = new Date(today)
+        nextWeek.setDate(nextWeek.getDate() + 7)
+
+        const { data: agendaEvents } = await supabase
+          .from('agenda_events')
+          .select(`
+            *,
+            customers (name, phone),
+            employees (name, position),
+            service_orders (order_number, status)
+          `)
+          .gte('start_time', today.toISOString())
+          .lte('start_time', nextWeek.toISOString())
+          .order('start_time', { ascending: true })
+
+        data.agendaEvents = agendaEvents || []
+
+        // Buscar eventos de hoje especificamente
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        const { data: todayEvents } = await supabase
+          .from('agenda_events')
+          .select(`
+            *,
+            customers (name, phone),
+            employees (name, position),
+            service_orders (order_number, status)
+          `)
+          .gte('start_time', today.toISOString())
+          .lt('start_time', tomorrow.toISOString())
+          .order('start_time', { ascending: true })
+
+        data.todayEvents = todayEvents || []
+        break
     }
 
     // Sempre buscar dados gerais da empresa
@@ -259,6 +301,10 @@ async function generateResponse(
 
     case 'analytics':
       response += await analyzeKPIs(message, systemData)
+      break
+
+    case 'calendar':
+      response += await analyzeCalendar(message, systemData)
       break
 
     default:
@@ -455,8 +501,141 @@ async function generateGeneralResponse(message: string, data: any): Promise<stri
   response += '📦 Estoque e Materiais\n'
   response += '👥 Clientes e CRM\n'
   response += '👨‍💼 Equipe e Colaboradores\n'
-  response += '📊 Indicadores e Análises\n\n'
+  response += '📊 Indicadores e Análises\n'
+  response += '📅 Agenda e Compromissos\n\n'
   response += 'Basta fazer sua pergunta!'
+
+  return response
+}
+
+// Análise de agenda
+async function analyzeCalendar(message: string, data: any): Promise<string> {
+  let response = '📅 **Análise de Agenda**\n\n'
+
+  const lowerMessage = message.toLowerCase()
+  const isToday = lowerMessage.includes('hoje') || lowerMessage.includes('agora')
+  const isTomorrow = lowerMessage.includes('amanhã')
+  const isWeek = lowerMessage.includes('semana')
+
+  // Eventos de hoje
+  if (data.todayEvents && data.todayEvents.length > 0 && (isToday || !isWeek)) {
+    response += '📆 **Hoje:**\n'
+
+    if (data.todayEvents.length === 0) {
+      response += '✅ Nenhum compromisso agendado para hoje.\n\n'
+    } else {
+      response += `📍 ${data.todayEvents.length} ${data.todayEvents.length === 1 ? 'evento agendado' : 'eventos agendados'}:\n\n`
+
+      data.todayEvents.slice(0, 5).forEach((event: any) => {
+        const startTime = new Date(event.start_time)
+        const timeStr = startTime.toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+
+        response += `⏰ **${timeStr}** - ${event.title}\n`
+
+        if (event.customers?.name) {
+          response += `   👤 Cliente: ${event.customers.name}\n`
+        }
+
+        if (event.employees?.name) {
+          response += `   👨‍🔧 Responsável: ${event.employees.name}\n`
+        }
+
+        if (event.service_orders?.order_number) {
+          response += `   📋 OS: ${event.service_orders.order_number}\n`
+        }
+
+        if (event.location) {
+          response += `   📍 Local: ${event.location}\n`
+        }
+
+        response += '\n'
+      })
+
+      if (data.todayEvents.length > 5) {
+        response += `... e mais ${data.todayEvents.length - 5} eventos.\n\n`
+      }
+    }
+  }
+
+  // Eventos da semana
+  if (data.agendaEvents && data.agendaEvents.length > 0 && (isWeek || !isToday)) {
+    const byDay: { [key: string]: any[] } = {}
+
+    data.agendaEvents.forEach((event: any) => {
+      const date = new Date(event.start_time)
+      const dateKey = date.toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit'
+      })
+
+      if (!byDay[dateKey]) {
+        byDay[dateKey] = []
+      }
+      byDay[dateKey].push(event)
+    })
+
+    response += '📊 **Próximos 7 Dias:**\n'
+    response += `• Total de eventos: ${data.agendaEvents.length}\n`
+    response += `• Dias com agenda: ${Object.keys(byDay).length}\n\n`
+
+    response += '📋 **Resumo por Dia:**\n'
+    Object.entries(byDay).slice(0, 7).forEach(([day, events]) => {
+      response += `• ${day}: ${events.length} ${events.length === 1 ? 'evento' : 'eventos'}\n`
+    })
+    response += '\n'
+  }
+
+  // Estatísticas e insights
+  if (data.agendaEvents && data.agendaEvents.length > 0) {
+    const serviceOrderEvents = data.agendaEvents.filter((e: any) => e.service_order_id)
+    const clientMeetings = data.agendaEvents.filter((e: any) => e.customer_id && !e.service_order_id)
+
+    response += '📈 **Insights:**\n'
+
+    if (serviceOrderEvents.length > 0) {
+      response += `• ${serviceOrderEvents.length} eventos vinculados a OSs\n`
+    }
+
+    if (clientMeetings.length > 0) {
+      response += `• ${clientMeetings.length} reuniões com clientes\n`
+    }
+
+    // Verificar conflitos de horário
+    let hasConflicts = false
+    for (let i = 0; i < data.agendaEvents.length - 1; i++) {
+      const current = data.agendaEvents[i]
+      const next = data.agendaEvents[i + 1]
+
+      const currentEnd = new Date(current.end_time || current.start_time)
+      const nextStart = new Date(next.start_time)
+
+      if (currentEnd > nextStart && current.employee_id === next.employee_id) {
+        hasConflicts = true
+        break
+      }
+    }
+
+    if (hasConflicts) {
+      response += `⚠️ Atenção: Possíveis conflitos de horário detectados\n`
+    }
+
+    response += '\n'
+  }
+
+  // Recomendações
+  if (data.todayEvents && data.todayEvents.length > 5) {
+    response += '💡 **Recomendação:**\n'
+    response += `Dia com ${data.todayEvents.length} compromissos. Considere priorizar e reagendar se necessário.\n`
+  }
+
+  if (!data.todayEvents || data.todayEvents.length === 0) {
+    response += '✨ **Dica:**\n'
+    response += 'Agenda livre hoje! Bom momento para planejamento ou tarefas administrativas.\n'
+  }
 
   return response
 }
