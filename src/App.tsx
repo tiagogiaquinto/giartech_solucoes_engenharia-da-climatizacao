@@ -140,12 +140,12 @@ function App() {
     return () => clearInterval(interval)
   }, [])
 
-  // Solicitar permissão para notificações
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
-  }, [])
+  // Notificações desabilitadas - podem ser habilitadas nas configurações
+  // useEffect(() => {
+  //   if ('Notification' in window && Notification.permission === 'default') {
+  //     Notification.requestPermission()
+  //   }
+  // }, [])
 
   const handlePremiumFeature = (feature: string) => {
     setPremiumFeature(feature)
