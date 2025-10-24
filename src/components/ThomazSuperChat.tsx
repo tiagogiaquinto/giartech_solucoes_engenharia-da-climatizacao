@@ -18,7 +18,7 @@ import {
   ThumbsUp,
   ThumbsDown
 } from 'lucide-react'
-import ThomazSuperService from '../services/thomazSuperService'
+import ThomazAdvancedService from '../services/thomazAdvancedService'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -43,7 +43,7 @@ export function ThomazSuperChat() {
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
-  const [thomazService, setThomazService] = useState<ThomazSuperService | null>(null)
+  const [thomazService, setThomazService] = useState<ThomazAdvancedService | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -103,7 +103,7 @@ export function ThomazSuperChat() {
   }, [isOpen])
 
   const initializeThomazService = async () => {
-    const service = new ThomazSuperService()
+    const service = new ThomazAdvancedService()
     setThomazService(service)
 
     // Obter saudação inicial
