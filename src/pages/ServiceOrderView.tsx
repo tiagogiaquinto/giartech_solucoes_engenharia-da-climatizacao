@@ -11,6 +11,8 @@ import { OSTimeline } from '../components/OSTimeline'
 import { InlineEdit } from '../components/InlineEdit'
 import { OSAuditLog } from '../components/OSAuditLog'
 import { OSChecklist } from '../components/OSChecklist'
+import { ServiceDetailedInfo } from '../components/ServiceDetailedInfo'
+import { ServiceInfoEditModal } from '../components/ServiceInfoEditModal'
 
 const ServiceOrderView = () => {
   const { id } = useParams()
@@ -28,6 +30,8 @@ const ServiceOrderView = () => {
   const [showChecklistModal, setShowChecklistModal] = useState(false)
   const [bankAccounts, setBankAccounts] = useState<any[]>([])
   const [companySettings, setCompanySettings] = useState<any>(null)
+  const [showServiceInfoModal, setShowServiceInfoModal] = useState(false)
+  const [selectedServiceItem, setSelectedServiceItem] = useState<any>(null)
 
   useEffect(() => {
     if (id) {
@@ -542,61 +546,31 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
               transition={{ delay: 0.2 }}
               className="bg-white rounded-xl p-6 shadow-sm border"
             >
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Package className="h-5 w-5 text-blue-600" />
-                Serviços
-              </h2>
-              <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Package className="h-5 w-5 text-blue-600" />
+                  Serviços
+                </h2>
+                <button
+                  onClick={() => {
+                    if (order.items && order.items.length > 0) {
+                      setSelectedServiceItem(order.items[0])
+                      setShowServiceInfoModal(true)
+                    }
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                >
+                  <Edit className="h-4 w-4" />
+                  Editar Informações
+                </button>
+              </div>
+              <div className="space-y-3">
                 {order.items.map((item: any, index: number) => (
-                  <div key={index} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">
-                          {item.descricao || item.description || item.service_name || 'Serviço'}
-                        </h3>
-                        {(item.escopo_detalhado || item.escopo || item.scope) && (
-                          <p className="text-sm text-gray-600 whitespace-pre-line mt-2">
-                            <span className="font-medium">Escopo: </span>
-                            {item.escopo_detalhado || item.escopo || item.scope}
-                          </p>
-                        )}
-                      </div>
-                      <span className="text-lg font-bold text-green-600 ml-4">
-                        {formatCurrency(item.preco_total || item.total_price || ((item.preco_unitario || item.unit_price || 0) * (item.quantidade || item.quantity || 1)))}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-sm text-gray-600 mt-3">
-                      <div>Quantidade: {item.quantidade || item.quantity || 1}</div>
-                      <div>Preço Unit.: {formatCurrency(item.preco_unitario || item.unit_price || 0)}</div>
-                      <div>Tempo: {item.tempo_estimado_minutos || item.estimated_time || 0} min</div>
-                    </div>
-
-                    {item.materiais && item.materiais.length > 0 && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-sm font-medium text-gray-700 mb-2">Materiais:</p>
-                        <ul className="text-sm text-gray-600 space-y-1">
-                          {item.materiais.map((mat: any, i: number) => (
-                            <li key={i}>
-                              • {mat.nome} - {mat.quantidade} {mat.unidade_medida} - {formatCurrency(mat.valor_total)}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {item.funcionarios && item.funcionarios.length > 0 && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-sm font-medium text-gray-700 mb-2">Mão de Obra:</p>
-                        <ul className="text-sm text-gray-600 space-y-1">
-                          {item.funcionarios.map((func: any, i: number) => (
-                            <li key={i}>
-                              • {func.nome} - {func.tempo_minutos} min - {formatCurrency(func.custo_total)}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
+                  <ServiceDetailedInfo
+                    key={item.id || index}
+                    service={item}
+                    isExpanded={false}
+                  />
                 ))}
               </div>
             </motion.div>
@@ -953,6 +927,21 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
           </div>
         </div>
       )}
+
+      {/* Modal de Edição de Informações do Serviço */}
+      <ServiceInfoEditModal
+        isOpen={showServiceInfoModal}
+        onClose={() => {
+          setShowServiceInfoModal(false)
+          setSelectedServiceItem(null)
+        }}
+        serviceItem={selectedServiceItem}
+        onSave={() => {
+          loadOrder()
+          setShowServiceInfoModal(false)
+          setSelectedServiceItem(null)
+        }}
+      />
     </div>
   )
 }
