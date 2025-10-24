@@ -60,12 +60,12 @@ const WhatsAppCRM = () => {
       setLoading(true)
 
       const { data: contactsData, error: contactsError } = await supabase
-        .from('wpp_contacts')
+        .from('whatsapp_contacts')
         .select('*')
         .order('created_at', { ascending: false })
 
       const { data: accountsData, error: accountsError } = await supabase
-        .from('wpp_accounts')
+        .from('whatsapp_accounts')
         .select('*')
         .order('created_at', { ascending: false })
 
@@ -96,7 +96,7 @@ const WhatsAppCRM = () => {
       }
 
       const { error } = await supabase
-        .from('wpp_contacts')
+        .from('whatsapp_contacts')
         .insert([{
           account_id: defaultAccount.id,
           name: newContact.name,
@@ -121,7 +121,7 @@ const WhatsAppCRM = () => {
 
     try {
       const { error } = await supabase
-        .from('wpp_contacts')
+        .from('whatsapp_contacts')
         .delete()
         .eq('id', id)
 
