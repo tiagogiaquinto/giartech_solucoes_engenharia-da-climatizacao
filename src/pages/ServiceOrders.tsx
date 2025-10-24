@@ -142,14 +142,24 @@ const ServiceOrders = () => {
 
     try {
       setDeleting(true)
+
+      // Remover da UI imediatamente para melhor UX
+      setOrders(prev => prev.filter(o => o.id !== orderToDelete.id))
+
+      // Deletar do banco de dados
       await deleteServiceOrder(orderToDelete.id)
-      await loadServiceOrders()
+
+      // Invalidar cache
+      cache.invalidate('service_orders_v2')
+
       setShowDeleteModal(false)
       setOrderToDelete(null)
       alert('Ordem de serviço excluída com sucesso!')
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting order:', err)
-      alert('Erro ao excluir ordem de serviço. Verifique se não há dependências.')
+      // Recarregar lista em caso de erro
+      await loadServiceOrders()
+      alert(`Erro ao excluir ordem de serviço: ${err?.message || 'Erro desconhecido'}`)
     } finally {
       setDeleting(false)
     }
