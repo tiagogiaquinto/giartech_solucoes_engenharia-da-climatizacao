@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import { getCompanyInfo } from './companyData'
 import { ServiceItemComplete, generateServiceDescription } from './serviceOrderDataMapper'
 
@@ -200,7 +200,7 @@ export const generateServiceOrderPDFComplete = async (orderData: ServiceOrderDat
     `R$ ${service.total_price.toFixed(2)}`
   ])
 
-  ;(doc as any).autoTable({
+  autoTable(doc, {
     startY: yPos,
     head: [['Descrição', 'Unidade', 'Preço unitário', 'Qtd.', 'Preço']],
     body: servicesData,
@@ -226,7 +226,7 @@ export const generateServiceOrderPDFComplete = async (orderData: ServiceOrderDat
     margin: { left: margin, right: margin }
   })
 
-  yPos = (doc as any).lastAutoTable.finalY + 10
+  yPos = (doc as any).autoTable.previous.finalY + 10
 
   // =====================================================
   // MATERIAIS
@@ -251,7 +251,7 @@ export const generateServiceOrderPDFComplete = async (orderData: ServiceOrderDat
       `R$ ${material.total_price.toFixed(2)}`
     ])
 
-    ;(doc as any).autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: [['Descrição', 'Unidade', 'Preço unitário', 'Qtd.', 'Preço']],
       body: materialsData,
@@ -277,7 +277,7 @@ export const generateServiceOrderPDFComplete = async (orderData: ServiceOrderDat
       margin: { left: margin, right: margin }
     })
 
-    yPos = (doc as any).lastAutoTable.finalY + 10
+    yPos = (doc as any).autoTable.previous.finalY + 10
   }
 
   // =====================================================

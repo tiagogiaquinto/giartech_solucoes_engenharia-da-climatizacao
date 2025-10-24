@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import { getCompanyInfo } from './companyData'
 import { ServiceItemComplete, generateServiceDescription } from './serviceOrderDataMapper'
 
@@ -349,7 +349,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     ])
   })
 
-  ;(doc as any).autoTable({
+  autoTable(doc, {
     startY: yPos,
     head: [['Descrição do Serviço', 'Unidade', 'Preço Unit.', 'Qtd.', 'Total']],
     body: tableBody,
@@ -386,7 +386,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     }
   })
 
-  yPos = (doc as any).lastAutoTable.finalY + 5
+  yPos = (doc as any).autoTable.previous.finalY + 5
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)

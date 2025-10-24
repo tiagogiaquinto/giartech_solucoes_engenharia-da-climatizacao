@@ -355,7 +355,7 @@ export const generateServiceOrderPDFProfessional = async (
       margin: { left: 20 },
     })
 
-    yPosition = (doc as any).lastAutoTable.finalY + 3
+    yPosition = (doc as any).autoTable.previous.finalY + 3
 
     if (item.materiais && item.materiais.length > 0) {
       doc.setFontSize(9)
@@ -394,7 +394,7 @@ export const generateServiceOrderPDFProfessional = async (
         margin: { left: 25 },
       })
 
-      yPosition = (doc as any).lastAutoTable.finalY + 3
+      yPosition = (doc as any).autoTable.previous.finalY + 3
     }
 
     if (item.funcionarios && item.funcionarios.length > 0) {
@@ -437,7 +437,7 @@ export const generateServiceOrderPDFProfessional = async (
         margin: { left: 25 },
       })
 
-      yPosition = (doc as any).lastAutoTable.finalY + 5
+      yPosition = (doc as any).autoTable.previous.finalY + 5
     }
 
     yPosition += 2
@@ -531,7 +531,7 @@ export const generateServiceOrderPDFProfessional = async (
     margin: { left: 15, right: 15 },
   })
 
-  yPosition = (doc as any).lastAutoTable.finalY + 5
+  yPosition = (doc as any).autoTable.previous.finalY + 5
 
   if (orderData.payment_method || orderData.warranty_period) {
     if (yPosition > 240) {

@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 
 interface ProposalItem {
   description: string
@@ -329,7 +329,7 @@ export const generateProposalPDFV2 = (proposalData: ProposalData) => {
     ? ['Descrição', 'Un.', 'Qtd', 'Preço Unit.', 'Total']
     : ['Descrição', 'Un.', 'Qtd']
 
-  ;(doc as any).autoTable({
+  autoTable(doc, {
     startY: yPos,
     head: [columns],
     body: tableData,
@@ -359,7 +359,7 @@ export const generateProposalPDFV2 = (proposalData: ProposalData) => {
     margin: { left: margin, right: margin }
   })
 
-  yPos = (doc as any).lastAutoTable.finalY + 5
+  yPos = (doc as any).autoTable.previous.finalY + 5
 
   // Totais
   if (proposalData.show_value !== false) {

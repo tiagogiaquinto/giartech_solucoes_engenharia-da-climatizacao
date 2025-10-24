@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import { getCompanyInfo } from './companyData'
 
 interface ServiceOrderData {
@@ -377,7 +377,7 @@ export const generateServiceOrderPDF = async (
       `R$ ${((part.quantity || 1) * (part.unit_price || part.price || 0)).toFixed(2)}`
     ])
 
-    ;(doc as any).autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: [['Descrição', 'Qtd.', 'Preço Unit.', 'Total']],
       body: partsData,
@@ -402,7 +402,7 @@ export const generateServiceOrderPDF = async (
       margin: { left: margin, right: margin }
     })
 
-    yPos = (doc as any).lastAutoTable.finalY + 5
+    yPos = (doc as any).autoTable.previous.finalY + 5
   }
 
   // PRAZOS

@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import { getCompanyInfo } from './companyData'
 
 interface ServiceItem {
@@ -321,7 +321,7 @@ export const generateProposalPDFComplete = async (proposalData: ProposalData) =>
     ])
   }
 
-  ;(doc as any).autoTable({
+  autoTable(doc, {
     startY: yPos,
     head: [['Descrição', 'Un.', 'Qtd', 'Preço Unit.', 'Total']],
     body: tableData,
@@ -347,7 +347,7 @@ export const generateProposalPDFComplete = async (proposalData: ProposalData) =>
     margin: { left: margin, right: margin }
   })
 
-  yPos = (doc as any).lastAutoTable.finalY + 5
+  yPos = (doc as any).autoTable.previous.finalY + 5
 
   // Totais
   const totalsX = pageWidth - margin - 50

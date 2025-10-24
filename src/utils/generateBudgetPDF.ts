@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import { getCompanyInfo } from './companyData'
 
 interface BudgetItem {
@@ -413,7 +413,7 @@ export const generateBudgetPDF = async (budgetData: BudgetData): Promise<void> =
     2: { cellWidth: 20, halign: 'center' }
   }
 
-  ;(doc as any).autoTable({
+  autoTable(doc, {
     startY: yPos,
     head: tableHeaders,
     body: tableData,
@@ -433,7 +433,7 @@ export const generateBudgetPDF = async (budgetData: BudgetData): Promise<void> =
     margin: { left: margin, right: margin }
   })
 
-  yPos = (doc as any).lastAutoTable.finalY + 5
+  yPos = (doc as any).autoTable.previous.finalY + 5
 
   if (showValues) {
     const totalsX = pageWidth - margin - 50
