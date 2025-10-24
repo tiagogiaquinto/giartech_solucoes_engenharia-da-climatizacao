@@ -67,6 +67,7 @@ import EmailInbox from './pages/EmailInbox'
 import EmailCompose from './pages/EmailCompose'
 import { AIChatbot } from './components/AIChatbot'
 import ThomazSuperChat from './components/ThomazSuperChat'
+import { GiartechAssistant } from './components/GiartechAssistant'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -613,6 +614,9 @@ function App() {
 
       {/* Thomaz Super Chat - Assistente Inteligente */}
       <ThomazSuperChat />
+
+      {/* Assistente Giartech - Inteligência Corporativa */}
+      <GiartechAssistant />
     </UserProvider>
   )
 }
