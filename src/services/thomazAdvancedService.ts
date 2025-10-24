@@ -237,11 +237,36 @@ export class ThomazAdvancedService {
     }
 
     if (intent?.intent === 'about_self') {
-      return `Eu sou o Thomaz! 🤖✨\n\nSou seu assistente inteligente. Posso te ajudar com:\n\n📋 Ordens de Serviço\n📦 Estoque e Materiais\n📅 Agenda e Compromissos\n👥 Funcionários\n💰 Finanças\n📊 Estatísticas\n\nE muito mais! Posso conversar normalmente contigo, entender suas perguntas e aprender com cada interação. 😊\n\nO que você gostaria de saber?`
+      return `Eu sou o Thomaz! 🤖✨\n\nSou seu assistente inteligente. Posso te ajudar com:\n\n📋 Ordens de Serviço\n📦 Estoque e Materiais\n📅 Agenda e Compromissos\n👥 Funcionários\n💰 Finanças\n📊 Estatísticas\n🌐 Buscar na internet\n📚 Ler documentos\n\nE muito mais! Posso conversar normalmente contigo, entender suas perguntas, buscar informações na internet e aprender com cada interação. 😊\n\nO que você gostaria de saber?`
     }
 
     if (intent?.intent === 'help') {
-      return `Claro! Estou aqui para ajudar! 🆘\n\nPosso te auxiliar com:\n\n• 📋 Ver e gerenciar ordens de serviço\n• 📦 Consultar estoque e materiais\n• 📅 Checar sua agenda e compromissos\n• 👥 Informações sobre funcionários\n• 💰 Lançamentos financeiros\n• 📊 Estatísticas do sistema\n\nVocê pode me perguntar coisas como:\n- "Quais OSs estão abertas?"\n- "Tem algum item com estoque baixo?"\n- "Compromissos de hoje"\n- "Quanto faturamos este mês?"\n\nOu simplesmente conversar comigo normalmente! 😊\n\nO que você precisa?`
+      return `Claro! Estou aqui para ajudar! 🆘\n\nPosso te auxiliar com:\n\n• 📋 Ver e gerenciar ordens de serviço\n• 📦 Consultar estoque e materiais\n• 📅 Checar sua agenda e compromissos\n• 👥 Informações sobre funcionários\n• 💰 Lançamentos financeiros\n• 📊 Estatísticas do sistema\n• 🌐 Buscar informações na internet\n• 📚 Ler documentos da biblioteca\n\nVocê pode me perguntar coisas como:\n- "Quais OSs estão abertas?"\n- "Tem algum item com estoque baixo?"\n- "Compromissos de hoje"\n- "Quanto faturamos este mês?"\n- "Busca informações sobre gestão financeira"\n- "Quais documentos temos sobre segurança?"\n\nOu simplesmente conversar comigo normalmente! 😊\n\nO que você precisa?`
+    }
+
+    // Verificar se é uma pergunta que precisa de busca na internet
+    const needsWebSearch = /busca|pesquisa|procura|informações sobre|o que é|quem é|define/i.test(message)
+    const needsDocuments = /documento|manual|tutorial|guia|biblioteca|arquivo/i.test(message)
+
+    // Buscar na internet se necessário
+    if (needsWebSearch && !Object.keys(systemData).length) {
+      const savedKnowledge = await this.searchSavedKnowledge(message)
+      if (savedKnowledge) {
+        response = savedKnowledge
+      } else {
+        const webResult = await this.searchWeb(message)
+        if (webResult) {
+          response = webResult
+        }
+      }
+    }
+
+    // Buscar documentos se necessário
+    if (needsDocuments) {
+      const docsResult = await this.readLibraryDocuments(message)
+      if (docsResult) {
+        response += (response ? '\n\n' : '') + docsResult
+      }
     }
 
     if (Object.keys(systemData).length > 0) {
@@ -330,10 +355,16 @@ export class ThomazAdvancedService {
         timestamp: new Date()
       })
 
+      // Processar aprendizado em background
+      this.processLearningQueue().catch(err => console.error('Erro no aprendizado:', err))
+
       const intent = await this.detectIntent(userMessage)
       const memories = await this.recallMemories(userMessage)
       const systemData = await this.searchSystemData(userMessage)
-      const response = await this.generateResponse(userMessage, intent, systemData, memories)
+      let response = await this.generateResponse(userMessage, intent, systemData, memories)
+
+      // Melhorar resposta baseado em aprendizados anteriores
+      response = await this.improveResponse(userMessage, response)
 
       await this.saveLearn(userMessage, response, {
         intent: intent?.intent,
@@ -373,6 +404,97 @@ export class ThomazAdvancedService {
     }
   }
 
+  /**
+   * Buscar conhecimento na internet
+   */
+  private async searchWeb(query: string): Promise<string> {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const response = await fetch(`${supabaseUrl}/functions/v1/thomaz-web-search`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query, saveToKnowledge: true })
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro na busca web')
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.content) {
+        return `📚 **Encontrei informações na internet sobre "${query}":**\n\n${data.summary}\n\n_Fonte: ${data.source}_`
+      }
+
+      return 'Não encontrei informações específicas sobre isso na internet.'
+    } catch (error) {
+      console.error('Erro na busca web:', error)
+      return 'Tive dificuldade para buscar na internet agora. Vou usar meu conhecimento interno!'
+    }
+  }
+
+  /**
+   * Ler documentos da biblioteca digital
+   */
+  private async readLibraryDocuments(query: string): Promise<string> {
+    try {
+      const { data: documents } = await supabase
+        .from('library_items')
+        .select('*')
+        .or(`title.ilike.%${query}%,description.ilike.%${query}%,tags.cs.{${query}}`)
+        .limit(3)
+
+      if (!documents || documents.length === 0) {
+        return null
+      }
+
+      let response = `📚 **Encontrei ${documents.length} documento(s) na biblioteca:**\n\n`
+
+      documents.forEach((doc, index) => {
+        response += `${index + 1}. **${doc.title}**\n`
+        if (doc.description) {
+          response += `   _${doc.description.substring(0, 100)}${doc.description.length > 100 ? '...' : ''}_\n`
+        }
+        response += `   📁 Tipo: ${doc.type || 'Documento'}\n`
+        if (doc.tags && doc.tags.length > 0) {
+          response += `   🏷️ Tags: ${doc.tags.join(', ')}\n`
+        }
+        response += '\n'
+      })
+
+      return response
+    } catch (error) {
+      console.error('Erro ao buscar documentos:', error)
+      return null
+    }
+  }
+
+  /**
+   * Buscar no conhecimento web salvo
+   */
+  private async searchSavedKnowledge(query: string): Promise<string> {
+    try {
+      const { data: knowledge } = await supabase
+        .from('thomaz_web_knowledge')
+        .select('*')
+        .ilike('query', `%${query}%`)
+        .order('relevance_score', { ascending: false })
+        .limit(1)
+
+      if (knowledge && knowledge.length > 0) {
+        const item = knowledge[0]
+        return `💡 **Já busquei isso antes! Aqui está:**\n\n${item.content.substring(0, 600)}...\n\n_Última atualização: ${new Date(item.accessed_at).toLocaleDateString()}_`
+      }
+
+      return null
+    } catch (error) {
+      console.error('Erro ao buscar conhecimento salvo:', error)
+      return null
+    }
+  }
+
   async getInitialGreeting(): Promise<string> {
     await this.loadPersonality()
 
@@ -392,10 +514,155 @@ export class ThomazAdvancedService {
     greeting += '• 📦 Estoque e Materiais\n'
     greeting += '• 📅 Agenda\n'
     greeting += '• 💰 Finanças\n'
+    greeting += '• 🌐 Buscar informações na internet\n'
+    greeting += '• 📚 Ler documentos da biblioteca\n'
     greeting += '• E muito mais!\n\n'
     greeting += 'Como posso te ajudar hoje? 😊'
 
     return greeting
+  }
+
+  /**
+   * Aprender com feedback do usuário
+   */
+  async learnFromFeedback(userMessage: string, aiResponse: string, wasHelpful: boolean) {
+    try {
+      // Salvar feedback
+      await supabase.from('thomaz_feedback_analysis').insert({
+        user_query: userMessage,
+        response_given: aiResponse,
+        feedback_type: wasHelpful ? 'positive' : 'negative',
+        score: wasHelpful ? 1.0 : 0.0,
+        user_id: this.userId,
+        session_id: this.sessionId
+      })
+
+      // Se feedback foi positivo, fortalecer padrões
+      if (wasHelpful) {
+        // Identificar intent da mensagem
+        const { data: intents } = await supabase
+          .from('thomaz_nlp_patterns')
+          .select('*')
+          .ilike('pattern', `%${userMessage.toLowerCase().split(' ').slice(0, 3).join('%')}%`)
+          .limit(1)
+
+        if (intents && intents.length > 0) {
+          const pattern = intents[0]
+          await supabase
+            .from('thomaz_nlp_patterns')
+            .update({
+              usage_count: (pattern.usage_count || 0) + 1,
+              success_rate: Math.min(0.99, (pattern.success_rate || 0.5) + 0.05)
+            })
+            .eq('id', pattern.id)
+        }
+
+        // Salvar na memória de longo prazo
+        await supabase.from('thomaz_long_term_memory').insert({
+          fact: `Usuário perguntou: "${userMessage}" e a resposta foi útil`,
+          source: 'user_feedback',
+          confidence: 0.9,
+          category: 'interaction',
+          tags: userMessage.toLowerCase().split(' ').filter(w => w.length > 3).slice(0, 5)
+        })
+      } else {
+        // Se negativo, adicionar à fila de aprendizado
+        await supabase.from('thomaz_learning_queue').insert({
+          user_query: userMessage,
+          response_given: aiResponse,
+          feedback_type: 'improvement_needed',
+          priority: 8,
+          status: 'pending'
+        })
+      }
+
+      // Processar aprendizado automático
+      await this.processLearningQueue()
+    } catch (error) {
+      console.error('Erro ao aprender com feedback:', error)
+    }
+  }
+
+  /**
+   * Processar fila de aprendizado
+   */
+  private async processLearningQueue() {
+    try {
+      const { data: queue } = await supabase
+        .from('thomaz_learning_queue')
+        .select('*')
+        .eq('status', 'pending')
+        .order('priority', { ascending: false })
+        .limit(5)
+
+      if (!queue || queue.length === 0) return
+
+      for (const item of queue) {
+        // Analisar padrão da query
+        const words = item.user_query.toLowerCase().split(' ')
+        const keywords = words.filter((w: string) => w.length > 3)
+
+        // Verificar se já existe padrão similar
+        const { data: existing } = await supabase
+          .from('thomaz_nlp_patterns')
+          .select('*')
+          .containedBy('keywords', keywords)
+          .limit(1)
+
+        if (!existing || existing.length === 0) {
+          // Criar novo padrão
+          await supabase.from('thomaz_nlp_patterns').insert({
+            pattern: keywords.join('|'),
+            intent: 'general_query',
+            confidence: 0.6,
+            keywords: keywords,
+            examples: [item.user_query],
+            usage_count: 1,
+            success_rate: 0.5
+          })
+        }
+
+        // Marcar como processado
+        await supabase
+          .from('thomaz_learning_queue')
+          .update({ status: 'processed', processed_at: new Date().toISOString() })
+          .eq('id', item.id)
+      }
+    } catch (error) {
+      console.error('Erro ao processar fila de aprendizado:', error)
+    }
+  }
+
+  /**
+   * Melhorar resposta baseado em histórico
+   */
+  async improveResponse(message: string, baseResponse: string): Promise<string> {
+    try {
+      // Buscar feedbacks similares
+      const { data: feedbacks } = await supabase
+        .from('thomaz_feedback_analysis')
+        .select('*')
+        .ilike('user_query', `%${message.split(' ').slice(0, 2).join('%')}%`)
+        .eq('feedback_type', 'positive')
+        .order('score', { ascending: false })
+        .limit(3)
+
+      if (feedbacks && feedbacks.length > 0) {
+        // Analisar padrões de respostas bem-sucedidas
+        const successfulPatterns = feedbacks.map((f: any) => f.response_given)
+
+        // Se a resposta base é muito curta e há exemplos melhores
+        if (baseResponse.length < 100 && successfulPatterns.some((p: string) => p.length > 200)) {
+          // Adicionar mais contexto
+          return baseResponse + '\n\n💡 **Informação adicional:**\nPosso detalhar mais algum ponto específico se precisar!'
+        }
+      }
+
+      return baseResponse
+    } catch (error) {
+      console.error('Erro ao melhorar resposta:', error)
+      return baseResponse
+    }
   }
 
   async registerFeedback(messageId: string, userQuery: string, response: string, feedbackType: 'positive' | 'negative', score: number) {
