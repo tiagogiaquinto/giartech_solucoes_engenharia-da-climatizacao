@@ -129,12 +129,17 @@ const FinancialIntegration = () => {
       if (categoriesResult.error) throw categoriesResult.error
       if (staffResult.error) throw staffResult.error
       if (materialsResult.error) throw materialsResult.error
+      if (bankAccountsResult.error) {
+        console.error('Erro ao carregar contas bancárias:', bankAccountsResult.error)
+      }
 
       const entriesData = entriesResult.data || []
       const categoriesData = categoriesResult.data || []
       const staffData = staffResult.data || []
       const materialsData = materialsResult.data || []
       const bankAccountsData = bankAccountsResult.data || []
+
+      console.log('📊 Contas bancárias carregadas:', bankAccountsData)
 
       setEntries(entriesData)
       setCategories(categoriesData)
