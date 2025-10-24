@@ -47,12 +47,25 @@ interface DREData {
   margemOperacional: number
 }
 
+interface BankAccount {
+  id: string
+  account_name: string
+  bank_name: string
+  balance: number
+  is_default: boolean
+  total_transactions: number
+  total_receitas: number
+  total_despesas: number
+  saldo_calculado: number
+}
+
 const FinancialIntegration = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'dre' | 'cashflow' | 'reports' | 'kpis'>('overview')
   const [entries, setEntries] = useState<FinanceEntry[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [staff, setStaff] = useState<any[]>([])
   const [materials, setMaterials] = useState<any[]>([])
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [periodFilter, setPeriodFilter] = useState<'month' | 'quarter' | 'year' | 'all'>('month')
   const [startDate, setStartDate] = useState('')
@@ -104,11 +117,12 @@ const FinancialIntegration = () => {
     try {
       setLoading(true)
 
-      const [entriesResult, categoriesResult, staffResult, materialsResult] = await Promise.all([
+      const [entriesResult, categoriesResult, staffResult, materialsResult, bankAccountsResult] = await Promise.all([
         supabase.from('finance_entries').select('*').order('data', { ascending: false }),
         supabase.from('financial_categories').select('*'),
         supabase.from('employees').select('id, name, salary'),
-        supabase.from('inventory_items').select('unit_cost, unit_price, quantity').eq('active', true)
+        supabase.from('inventory_items').select('unit_cost, unit_price, quantity').eq('active', true),
+        supabase.rpc('get_bank_accounts_with_transactions')
       ])
 
       if (entriesResult.error) throw entriesResult.error
@@ -120,11 +134,13 @@ const FinancialIntegration = () => {
       const categoriesData = categoriesResult.data || []
       const staffData = staffResult.data || []
       const materialsData = materialsResult.data || []
+      const bankAccountsData = bankAccountsResult.data || []
 
       setEntries(entriesData)
       setCategories(categoriesData)
       setStaff(staffData)
       setMaterials(materialsData)
+      setBankAccounts(bankAccountsData)
 
       calculateMetrics(entriesData, staffData, materialsData)
       calculateDRE(entriesData, categoriesData, staffData)
@@ -398,93 +414,159 @@ const FinancialIntegration = () => {
 
       {activeTab === 'overview' && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-3 bg-white/20 rounded-lg"><ArrowUpRight className="h-6 w-6" /></div>
-                <TrendingUp className="h-5 w-5 opacity-80" />
+              className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-4 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-1">
+                <div className="p-2 bg-white/20 rounded-lg"><ArrowUpRight className="h-5 w-5" /></div>
+                <TrendingUp className="h-4 w-4 opacity-80" />
               </div>
-              <p className="text-green-100 text-sm font-medium mb-1">Total Receitas</p>
-              <h2 className="text-3xl font-bold">{formatCurrency(metrics.totalReceitas)}</h2>
-              <div className="mt-3 pt-3 border-t border-white/20">
-                <p className="text-sm text-green-100">Este mês: {formatCurrency(metrics.receitasMes)}</p>
+              <p className="text-green-100 text-xs font-medium mb-1">Total Receitas</p>
+              <h2 className="text-2xl font-bold">{formatCurrency(metrics.totalReceitas)}</h2>
+              <div className="mt-2 pt-2 border-t border-white/20">
+                <p className="text-xs text-green-100">Mês: {formatCurrency(metrics.receitasMes)}</p>
               </div>
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-3 bg-white/20 rounded-lg"><ArrowDownRight className="h-6 w-6" /></div>
-                <TrendingDown className="h-5 w-5 opacity-80" />
+              className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg p-4 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-1">
+                <div className="p-2 bg-white/20 rounded-lg"><ArrowDownRight className="h-5 w-5" /></div>
+                <TrendingDown className="h-4 w-4 opacity-80" />
               </div>
-              <p className="text-red-100 text-sm font-medium mb-1">Total Despesas</p>
-              <h2 className="text-3xl font-bold">{formatCurrency(metrics.totalDespesas)}</h2>
-              <div className="mt-3 pt-3 border-t border-white/20">
-                <p className="text-sm text-red-100">Este mês: {formatCurrency(metrics.despesasMes)}</p>
+              <p className="text-red-100 text-xs font-medium mb-1">Total Despesas</p>
+              <h2 className="text-2xl font-bold">{formatCurrency(metrics.totalDespesas)}</h2>
+              <div className="mt-2 pt-2 border-t border-white/20">
+                <p className="text-xs text-red-100">Mês: {formatCurrency(metrics.despesasMes)}</p>
               </div>
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-              className={`bg-gradient-to-br ${metrics.lucro >= 0 ? 'from-blue-500 to-blue-600' : 'from-orange-500 to-orange-600'} rounded-xl p-6 text-white shadow-lg`}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-3 bg-white/20 rounded-lg"><Wallet className="h-6 w-6" /></div>
-                <DollarSign className="h-5 w-5 opacity-80" />
+              className={`bg-gradient-to-br ${metrics.lucro >= 0 ? 'from-blue-500 to-blue-600' : 'from-orange-500 to-orange-600'} rounded-lg p-4 text-white shadow-lg`}>
+              <div className="flex items-center justify-between mb-1">
+                <div className="p-2 bg-white/20 rounded-lg"><Wallet className="h-5 w-5" /></div>
+                <DollarSign className="h-4 w-4 opacity-80" />
               </div>
-              <p className="text-blue-100 text-sm font-medium mb-1">Lucro Líquido</p>
-              <h2 className="text-3xl font-bold">{formatCurrency(metrics.lucro)}</h2>
-              <div className="mt-3 pt-3 border-t border-white/20">
-                <p className="text-sm text-blue-100">Margem: {formatPercent(metrics.margemLucro)}</p>
+              <p className="text-blue-100 text-xs font-medium mb-1">Lucro Líquido</p>
+              <h2 className="text-2xl font-bold">{formatCurrency(metrics.lucro)}</h2>
+              <div className="mt-2 pt-2 border-t border-white/20">
+                <p className="text-xs text-blue-100">Margem: {formatPercent(metrics.margemLucro)}</p>
               </div>
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-              className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-3 bg-white/20 rounded-lg"><Users className="h-6 w-6" /></div>
+              className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-4 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-1">
+                <div className="p-2 bg-white/20 rounded-lg"><Users className="h-5 w-5" /></div>
               </div>
-              <p className="text-purple-100 text-sm font-medium mb-1">Custo Folha</p>
-              <h2 className="text-3xl font-bold">{formatCurrency(metrics.custoFolha)}</h2>
-              <div className="mt-3 pt-3 border-t border-white/20">
-                <p className="text-sm text-purple-100">{staff.length} funcionários</p>
+              <p className="text-purple-100 text-xs font-medium mb-1">Custo Folha</p>
+              <h2 className="text-2xl font-bold">{formatCurrency(metrics.custoFolha)}</h2>
+              <div className="mt-2 pt-2 border-t border-white/20">
+                <p className="text-xs text-purple-100">{staff.length} funcionários</p>
               </div>
             </motion.div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl p-4 shadow-sm border">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-blue-600" />
+                Contas Bancárias
+              </h3>
+              <span className="text-sm text-gray-500">{bankAccounts.length} conta(s)</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {bankAccounts.map((account, index) => (
+                <motion.div
+                  key={account.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.05 }}
+                  className={`relative rounded-lg p-3 border-2 transition-all hover:shadow-md ${
+                    account.saldo_calculado >= 0
+                      ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'
+                      : 'bg-gradient-to-br from-red-50 to-orange-50 border-red-200'
+                  }`}
+                >
+                  {account.is_default && (
+                    <div className="absolute top-2 right-2">
+                      <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-medium">Principal</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wallet className={`h-4 w-4 ${account.saldo_calculado >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                    <h4 className="font-semibold text-sm text-gray-900 truncate">{account.bank_name}</h4>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-2 truncate">{account.account_name}</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">Saldo:</span>
+                      <span className={`text-sm font-bold ${
+                        account.saldo_calculado >= 0 ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                        {formatCurrency(Number(account.saldo_calculado))}
+                      </span>
+                    </div>
+                    <div className="pt-1.5 border-t border-gray-200">
+                      <div className="flex justify-between text-xs mb-0.5">
+                        <span className="text-green-600">Receitas:</span>
+                        <span className="font-medium text-green-700">{formatCurrency(Number(account.total_receitas))}</span>
+                      </div>
+                      <div className="flex justify-between text-xs mb-0.5">
+                        <span className="text-red-600">Despesas:</span>
+                        <span className="font-medium text-red-700">{formatCurrency(Number(account.total_despesas))}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Transações:</span>
+                        <span className="font-medium text-gray-700">{account.total_transactions}</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+              {bankAccounts.length === 0 && (
+                <div className="col-span-full text-center py-8 text-gray-400">
+                  <Wallet className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Nenhuma conta bancária cadastrada</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-              className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-6 text-white shadow-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-3 bg-white/20 rounded-lg"><Package className="h-6 w-6" /></div>
+              className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg p-4 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-1">
+                <div className="p-2 bg-white/20 rounded-lg"><Package className="h-5 w-5" /></div>
               </div>
-              <p className="text-amber-100 text-sm font-medium mb-1">Investido em Estoque</p>
-              <h2 className="text-3xl font-bold">{formatCurrency(metrics.valorEstoque)}</h2>
-              <div className="mt-3 pt-3 border-t border-white/20">
-                <p className="text-sm text-amber-100">Valor de Venda: {formatCurrency(metrics.valorVendaEstoque)}</p>
+              <p className="text-amber-100 text-xs font-medium mb-1">Investido em Estoque</p>
+              <h2 className="text-2xl font-bold">{formatCurrency(metrics.valorEstoque)}</h2>
+              <div className="mt-2 pt-2 border-t border-white/20">
+                <p className="text-xs text-amber-100">Venda: {formatCurrency(metrics.valorVendaEstoque)}</p>
               </div>
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-              className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-3 bg-white/20 rounded-lg"><TrendingUp className="h-6 w-6" /></div>
+              className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg p-4 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-1">
+                <div className="p-2 bg-white/20 rounded-lg"><TrendingUp className="h-5 w-5" /></div>
               </div>
-              <p className="text-emerald-100 text-sm font-medium mb-1">Lucro Potencial Estoque</p>
-              <h2 className="text-3xl font-bold">{formatCurrency(metrics.lucroEstoque)}</h2>
-              <div className="mt-3 pt-3 border-t border-white/20">
-                <p className="text-sm text-emerald-100">Margem: {formatPercent(metrics.valorEstoque > 0 ? (metrics.lucroEstoque / metrics.valorEstoque) * 100 : 0)}</p>
+              <p className="text-emerald-100 text-xs font-medium mb-1">Lucro Potencial Estoque</p>
+              <h2 className="text-2xl font-bold">{formatCurrency(metrics.lucroEstoque)}</h2>
+              <div className="mt-2 pt-2 border-t border-white/20">
+                <p className="text-xs text-emerald-100">Margem: {formatPercent(metrics.valorEstoque > 0 ? (metrics.lucroEstoque / metrics.valorEstoque) * 100 : 0)}</p>
               </div>
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
-              className="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl p-6 text-white shadow-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-3 bg-white/20 rounded-lg"><Package className="h-6 w-6" /></div>
+              className="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg p-4 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-1">
+                <div className="p-2 bg-white/20 rounded-lg"><Package className="h-5 w-5" /></div>
               </div>
-              <p className="text-cyan-100 text-sm font-medium mb-1">Itens em Estoque</p>
-              <h2 className="text-3xl font-bold">{materials.length}</h2>
-              <div className="mt-3 pt-3 border-t border-white/20">
-                <p className="text-sm text-cyan-100">Produtos disponíveis</p>
+              <p className="text-cyan-100 text-xs font-medium mb-1">Itens em Estoque</p>
+              <h2 className="text-2xl font-bold">{materials.length}</h2>
+              <div className="mt-2 pt-2 border-t border-white/20">
+                <p className="text-xs text-cyan-100">Produtos disponíveis</p>
               </div>
             </motion.div>
           </div>
