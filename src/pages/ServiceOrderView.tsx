@@ -67,10 +67,28 @@ const ServiceOrderView = () => {
 
         setCustomer(customerData)
 
-        // Buscar itens da ordem de serviço
+        // Buscar itens da ordem de serviço COM TODOS OS CAMPOS
         const { data: itemsData } = await supabase
           .from('service_order_items')
-          .select('*, service_catalog:service_catalog_id(id, name, description, base_price, category)')
+          .select(`
+            *,
+            service_catalog:service_catalog_id(
+              id,
+              name,
+              description,
+              base_price,
+              category,
+              escopo_servico,
+              requisitos_tecnicos,
+              avisos_seguranca,
+              passos_execucao,
+              resultados_esperados,
+              padroes_qualidade,
+              informacoes_garantia,
+              observacoes_tecnicas,
+              tempo_estimado_minutos
+            )
+          `)
           .eq('service_order_id', id!)
 
         // Buscar materiais de cada item
@@ -296,14 +314,28 @@ const ServiceOrderView = () => {
         model: order.model || '',
         equipment: order.equipment || ''
       },
-      items: (order.items || []).map((item: any) => ({
-        description: item.descricao || item.service_name || item.description || item.name || 'Serviço',
-        scope: item.escopo_detalhado || item.escopo || item.scope || '',
-        unit: item.unit || item.unidade || 'un.',
-        unit_price: item.unit_price || item.preco_unitario || 0,
-        quantity: item.quantity || item.quantidade || 1,
-        total_price: item.total_price || item.preco_total || 0
-      })),
+      items: (order.items || []).map((item: any) => {
+        const catalogData = item.service_catalog || {}
+        return {
+          service_name: item.service_name || catalogData.name || item.descricao || 'Serviço',
+          description: item.descricao || item.description || catalogData.description || '',
+          scope: item.escopo_detalhado || item.escopo || item.scope || catalogData.escopo_servico || '',
+          service_scope: item.escopo_detalhado || catalogData.escopo_servico || '',
+          technical_requirements: item.requisitos_tecnicos || catalogData.requisitos_tecnicos || '',
+          safety_warnings: item.avisos_seguranca || catalogData.avisos_seguranca || '',
+          execution_steps: item.passos_execucao || catalogData.passos_execucao || '',
+          expected_results: item.resultados_esperados || catalogData.resultados_esperados || '',
+          quality_standards: item.padroes_qualidade || catalogData.padroes_qualidade || '',
+          warranty_info: item.informacoes_garantia || catalogData.informacoes_garantia || '',
+          observations: item.observacoes_tecnicas || catalogData.observacoes_tecnicas || '',
+          unit: item.unit || item.unidade || 'un.',
+          unit_price: item.unit_price || item.preco_unitario || catalogData.base_price || 0,
+          quantity: item.quantity || item.quantidade || 1,
+          total_price: item.total_price || item.preco_total || (item.quantity * item.unit_price) || 0,
+          estimated_duration: item.tempo_estimado_minutos || catalogData.tempo_estimado_minutos || 0,
+          tempo_estimado_minutos: item.tempo_estimado_minutos || catalogData.tempo_estimado_minutos || 0
+        }
+      }),
       subtotal: order.subtotal || order.total_value || 0,
       discount: order.discount_amount || order.desconto_valor || 0,
       total: order.final_total || order.total_value || 0,
