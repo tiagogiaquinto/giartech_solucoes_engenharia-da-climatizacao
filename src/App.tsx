@@ -66,6 +66,7 @@ import EmailSettings from './pages/EmailSettings'
 import EmailInbox from './pages/EmailInbox'
 import EmailCompose from './pages/EmailCompose'
 import { AIChatbot } from './components/AIChatbot'
+import ThomazSuperChat from './components/ThomazSuperChat'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -610,8 +611,8 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* Chatbot IA */}
-      <AIChatbot />
+      {/* Thomaz Super Chat - Assistente Inteligente */}
+      <ThomazSuperChat />
     </UserProvider>
   )
 }
