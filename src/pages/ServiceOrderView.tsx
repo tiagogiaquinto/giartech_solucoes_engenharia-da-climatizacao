@@ -79,15 +79,7 @@ const ServiceOrderView = () => {
               description,
               base_price,
               category,
-              escopo_servico,
-              requisitos_tecnicos,
-              avisos_seguranca,
-              passos_execucao,
-              resultados_esperados,
-              padroes_qualidade,
-              informacoes_garantia,
-              observacoes_tecnicas,
-              tempo_estimado_minutos
+              estimated_duration
             )
           `)
           .eq('service_order_id', id!)
