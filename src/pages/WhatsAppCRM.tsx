@@ -42,13 +42,20 @@ const WhatsAppCRM = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditAccountModal, setShowEditAccountModal] = useState(false)
   const [selectedContact, setSelectedContact] = useState<WhatsAppContact | null>(null)
+  const [editingAccount, setEditingAccount] = useState<WhatsAppAccount | null>(null)
 
   const [newContact, setNewContact] = useState({
     name: '',
     phone: '',
     email: '',
     notes: ''
+  })
+
+  const [accountForm, setAccountForm] = useState({
+    name: '',
+    phone: ''
   })
 
   useEffect(() => {
@@ -113,6 +120,45 @@ const WhatsAppCRM = () => {
     } catch (error) {
       console.error('Error creating contact:', error)
       alert('Erro ao criar contato')
+    }
+  }
+
+  const handleEditAccount = (account: WhatsAppAccount) => {
+    setEditingAccount(account)
+    setAccountForm({
+      name: account.name,
+      phone: account.phone
+    })
+    setShowEditAccountModal(true)
+  }
+
+  const handleUpdateAccount = async () => {
+    if (!accountForm.name || !accountForm.phone) {
+      alert('Nome e telefone são obrigatórios')
+      return
+    }
+
+    if (!editingAccount) return
+
+    try {
+      const { error } = await supabase
+        .from('whatsapp_accounts')
+        .update({
+          name: accountForm.name,
+          phone: accountForm.phone,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingAccount.id)
+
+      if (error) throw error
+
+      await loadData()
+      setShowEditAccountModal(false)
+      setEditingAccount(null)
+      alert('Conta atualizada com sucesso!')
+    } catch (error) {
+      console.error('Error updating account:', error)
+      alert('Erro ao atualizar conta')
     }
   }
 
@@ -320,11 +366,11 @@ const WhatsAppCRM = () => {
                     className="bg-gray-50 rounded-lg p-4 border border-gray-200"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-3 flex-1">
                         <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                           <Phone className="h-6 w-6 text-green-600" />
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <h3 className="font-medium text-gray-900">{account.name}</h3>
                           <div className="flex items-center space-x-3 mt-1">
                             <p className="text-sm text-gray-600">{account.phone}</p>
@@ -339,11 +385,20 @@ const WhatsAppCRM = () => {
                           )}
                         </div>
                       </div>
-                      {account.is_active && (
-                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                          Ativo
-                        </span>
-                      )}
+                      <div className="flex items-center space-x-2">
+                        {account.is_active && (
+                          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                            Ativo
+                          </span>
+                        )}
+                        <button
+                          onClick={() => handleEditAccount(account)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Editar Conta"
+                        >
+                          <Edit className="h-5 w-5" />
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 ))
@@ -447,6 +502,84 @@ const WhatsAppCRM = () => {
               >
                 <Save className="h-4 w-4 mr-2" />
                 Salvar
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Edit Account Modal */}
+      {showEditAccountModal && editingAccount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowEditAccountModal(false)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white rounded-xl p-6 w-full max-w-md shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Editar Conta WhatsApp</h2>
+              <button
+                onClick={() => setShowEditAccountModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome da Conta *
+                </label>
+                <input
+                  type="text"
+                  value={accountForm.name}
+                  onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
+                  placeholder="Ex: Atendimento Principal"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Número WhatsApp *
+                </label>
+                <input
+                  type="tel"
+                  value={accountForm.phone}
+                  onChange={(e) => setAccountForm({ ...accountForm, phone: e.target.value })}
+                  placeholder="5535999999999"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Formato: Código do país + DDD + número (sem espaços ou caracteres especiais)
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-800">
+                  <strong>Importante:</strong> Após alterar o número, você precisará reconectar o WhatsApp escaneando o QR Code novamente.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={() => setShowEditAccountModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleUpdateAccount}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Alterações
               </button>
             </div>
           </motion.div>
