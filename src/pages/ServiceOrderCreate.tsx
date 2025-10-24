@@ -5,6 +5,7 @@ import { Plus, Trash2, Save, X, User, Calendar, FileText, Package, Users, Clock,
 import { supabase, getServiceOrderById } from '../lib/supabase'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { getCompanyInfo } from '../utils/companyData'
+import { mapServiceItems } from '../utils/serviceOrderDataMapper'
 import { useAutoSave } from '../hooks/useAutoSave'
 import { SmartServiceSearch } from '../components/SmartServiceSearch'
 import { TemplateSelector } from '../components/TemplateSelector'
@@ -794,6 +795,7 @@ const ServiceOrderCreate = () => {
           equipment: ''
         },
         items: serviceItems.map(item => ({
+          service_name: item.descricao || 'Serviço',
           description: item.descricao,
           scope: '',
           unit: 'un.',
@@ -872,14 +874,7 @@ const ServiceOrderCreate = () => {
           model: '',
           equipment: ''
         },
-        items: ((orderData as any).items || []).map((item: any) => ({
-          description: item.descricao || item.description || 'Serviço',
-          scope: '',
-          unit: 'un.',
-          unit_price: item.preco_unitario || item.unit_price || 0,
-          quantity: item.quantidade || item.quantity || 1,
-          total_price: item.preco_total || item.total_price || 0
-        })),
+        items: mapServiceItems((orderData as any).items || []),
         subtotal: (orderData as any).subtotal || (orderData as any).total_value || 0,
         discount: (orderData as any).discount_amount || 0,
         total: (orderData as any).total_value || 0,
@@ -948,14 +943,7 @@ const ServiceOrderCreate = () => {
           model: '',
           equipment: ''
         },
-        items: ((orderData as any).items || []).map((item: any) => ({
-          description: item.descricao || item.description || 'Serviço',
-          scope: '',
-          unit: 'un.',
-          unit_price: item.preco_unitario || item.unit_price || 0,
-          quantity: item.quantidade || item.quantity || 1,
-          total_price: item.preco_total || item.total_price || 0
-        })),
+        items: mapServiceItems((orderData as any).items || []),
         subtotal: (orderData as any).subtotal || (orderData as any).total_value || 0,
         discount: (orderData as any).discount_amount || 0,
         total: (orderData as any).total_value || 0,
