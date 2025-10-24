@@ -1,27 +1,9 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { getCompanyInfo } from './companyData'
+import { ServiceItemComplete, generateServiceDescription } from './serviceOrderDataMapper'
 
-interface ServiceItem {
-  description: string
-  scope?: string
-  service_name?: string
-  service_description?: string
-  service_scope?: string
-  technical_requirements?: string
-  safety_warnings?: string
-  execution_steps?: string
-  expected_results?: string
-  quality_standards?: string
-  warranty_info?: string
-  observations?: string
-  unit: string
-  unit_price: number
-  quantity: number
-  total_price: number
-  estimated_duration?: number
-  tempo_estimado_minutos?: number
-}
+type ServiceItem = ServiceItemComplete
 
 interface ServiceOrderData {
   order_number: string
@@ -355,51 +337,8 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
   const tableBody: any[] = []
   data.items.forEach(item => {
-    // Montar descrição completa com todos os detalhes
-    let descText = item.service_name || item.description || 'Serviço'
-
-    const fullDescription = item.service_description || item.description
-    if (fullDescription && fullDescription !== descText) {
-      descText += `\n${fullDescription}`
-    }
-
-    const serviceScope = item.service_scope || item.scope
-    if (serviceScope) {
-      descText += `\n\nESCOPO DO SERVIÇO:\n${serviceScope}`
-    }
-
-    if (item.technical_requirements) {
-      descText += `\n\nREQUISITOS TÉCNICOS:\n${item.technical_requirements}`
-    }
-
-    if (item.safety_warnings) {
-      descText += `\n\n⚠ AVISOS DE SEGURANÇA:\n${item.safety_warnings}`
-    }
-
-    if (item.execution_steps) {
-      descText += `\n\nPASSOS DE EXECUÇÃO:\n${item.execution_steps}`
-    }
-
-    if (item.expected_results) {
-      descText += `\n\nRESULTADOS ESPERADOS:\n${item.expected_results}`
-    }
-
-    if (item.quality_standards) {
-      descText += `\n\nPADRÕES DE QUALIDADE:\n${item.quality_standards}`
-    }
-
-    if (item.warranty_info) {
-      descText += `\n\n🛡 GARANTIA:\n${item.warranty_info}`
-    }
-
-    if (item.observations) {
-      descText += `\n\nOBSERVAÇÕES:\n${item.observations}`
-    }
-
-    const duration = item.estimated_duration || item.tempo_estimado_minutos
-    if (duration) {
-      descText += `\n\n⏱ Tempo estimado: ${duration} minutos`
-    }
+    // Usar função centralizada para gerar descrição completa
+    const descText = generateServiceDescription(item)
 
     tableBody.push([
       descText,
