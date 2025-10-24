@@ -419,7 +419,25 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder | nu
       supabase.from('service_orders').select('*').eq('id', id).maybeSingle(),
       supabase.from('customers').select('*'),
       supabase.from('customer_addresses').select('*'),
-      supabase.from('service_order_items').select('*, service_catalog:service_catalog_id(id, name, description, base_price)').eq('service_order_id', id),
+      supabase.from('service_order_items').select(`
+        *,
+        service_catalog:service_catalog_id(
+          id,
+          name,
+          description,
+          base_price,
+          category,
+          escopo_servico,
+          requisitos_tecnicos,
+          avisos_seguranca,
+          passos_execucao,
+          resultados_esperados,
+          padroes_qualidade,
+          informacoes_garantia,
+          observacoes_tecnicas,
+          tempo_estimado_minutos
+        )
+      `).eq('service_order_id', id),
       supabase.from('service_order_materials').select('*, material:material_id(name, unit)').eq('service_order_id', id),
       supabase.from('service_order_labor').select('*, employee:staff_id(id, name)').eq('service_order_id', id),
       supabase.from('service_order_team').select('*, employee:employee_id(id, name)').eq('service_order_id', id)

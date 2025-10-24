@@ -292,6 +292,16 @@ const ServiceOrderView = () => {
 
     const customerAddr = customer.customer_addresses?.[0]
 
+    // Debug: ver dados dos itens
+    console.log('📦 PREPARANDO DADOS GIARTECH')
+    console.log('📦 Total de itens:', order.items?.length)
+    if (order.items && order.items.length > 0) {
+      console.log('📝 Primeiro item completo:', JSON.stringify(order.items[0], null, 2))
+      if (order.items[0]?.service_catalog) {
+        console.log('📚 Catálogo do primeiro item:', JSON.stringify(order.items[0].service_catalog, null, 2))
+      }
+    }
+
     return {
       order_number: order.order_number || 'N/A',
       date: order.created_at || new Date().toISOString(),
@@ -314,8 +324,17 @@ const ServiceOrderView = () => {
         model: order.model || '',
         equipment: order.equipment || ''
       },
-      items: (order.items || []).map((item: any) => {
+      items: (order.items || []).map((item: any, index: number) => {
         const catalogData = item.service_catalog || {}
+
+        console.log(`🔧 Mapeando item ${index + 1}:`, {
+          service_name: item.service_name || catalogData.name,
+          has_catalog: !!item.service_catalog,
+          catalog_fields: Object.keys(catalogData),
+          escopo_item: item.escopo_detalhado,
+          escopo_catalog: catalogData.escopo_servico
+        })
+
         return {
           service_name: item.service_name || catalogData.name || item.descricao || 'Serviço',
           description: item.descricao || item.description || catalogData.description || '',
