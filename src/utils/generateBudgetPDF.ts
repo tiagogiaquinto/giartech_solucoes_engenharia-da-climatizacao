@@ -5,10 +5,22 @@ import { getCompanyInfo } from './companyData'
 interface BudgetItem {
   description: string
   scope?: string
+  service_name?: string
+  service_description?: string
+  service_scope?: string
+  technical_requirements?: string
+  safety_warnings?: string
+  execution_steps?: string
+  expected_results?: string
+  quality_standards?: string
+  warranty_info?: string
+  observations?: string
   unit: string
   unit_price: number
   quantity: number
   total_price: number
+  estimated_duration?: number
+  tempo_estimado_minutos?: number
 }
 
 interface BudgetData {
@@ -322,7 +334,51 @@ export const generateBudgetPDF = async (budgetData: BudgetData): Promise<void> =
   const showValues = budgetData.show_value !== false
 
   const tableData = budgetData.items.map(item => {
-    const description = item.description + (item.scope ? '\n\n' + item.scope : '')
+    // Montar descrição completa com todos os detalhes
+    let description = item.service_name || item.description || 'Serviço'
+
+    const fullDescription = item.service_description || item.description
+    if (fullDescription && fullDescription !== description) {
+      description += `\n${fullDescription}`
+    }
+
+    const serviceScope = item.service_scope || item.scope
+    if (serviceScope) {
+      description += `\n\nESCOPO:\n${serviceScope}`
+    }
+
+    if (item.technical_requirements) {
+      description += `\n\nREQUISITOS TÉCNICOS:\n${item.technical_requirements}`
+    }
+
+    if (item.safety_warnings) {
+      description += `\n\n⚠ AVISOS DE SEGURANÇA:\n${item.safety_warnings}`
+    }
+
+    if (item.execution_steps) {
+      description += `\n\nPASSOS:\n${item.execution_steps}`
+    }
+
+    if (item.expected_results) {
+      description += `\n\nRESULTADOS:\n${item.expected_results}`
+    }
+
+    if (item.quality_standards) {
+      description += `\n\nQUALIDADE:\n${item.quality_standards}`
+    }
+
+    if (item.warranty_info) {
+      description += `\n\n🛡 GARANTIA:\n${item.warranty_info}`
+    }
+
+    if (item.observations) {
+      description += `\n\nOBS:\n${item.observations}`
+    }
+
+    const duration = item.estimated_duration || item.tempo_estimado_minutos
+    if (duration) {
+      description += `\n\n⏱ Tempo: ${duration}min`
+    }
 
     if (showValues) {
       return [

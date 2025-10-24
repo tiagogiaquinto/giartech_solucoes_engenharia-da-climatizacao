@@ -5,10 +5,21 @@ import { getCompanyInfo } from './companyData'
 interface ServiceItem {
   service_name: string
   description?: string
+  service_description?: string
+  service_scope?: string
+  technical_requirements?: string
+  safety_warnings?: string
+  execution_steps?: string
+  expected_results?: string
+  quality_standards?: string
+  warranty_info?: string
+  observations?: string
   unit: string
   unit_price: number
   quantity: number
   total_price: number
+  estimated_duration?: number
+  tempo_estimado_minutos?: number
 }
 
 interface Material {
@@ -232,8 +243,53 @@ export const generateProposalPDFComplete = async (proposalData: ProposalData) =>
   const tableData: any[] = []
 
   proposalData.services.forEach(service => {
+    // Montar descrição completa
+    let fullDesc = service.service_name
+
+    const desc = service.service_description || service.description
+    if (desc && desc !== fullDesc) {
+      fullDesc += `\n${desc}`
+    }
+
+    if (service.service_scope) {
+      fullDesc += `\n\nESCOPO:\n${service.service_scope}`
+    }
+
+    if (service.technical_requirements) {
+      fullDesc += `\n\nREQUISITOS:\n${service.technical_requirements}`
+    }
+
+    if (service.safety_warnings) {
+      fullDesc += `\n\n⚠ SEGURANÇA:\n${service.safety_warnings}`
+    }
+
+    if (service.execution_steps) {
+      fullDesc += `\n\nPASSOS:\n${service.execution_steps}`
+    }
+
+    if (service.expected_results) {
+      fullDesc += `\n\nRESULTADOS:\n${service.expected_results}`
+    }
+
+    if (service.quality_standards) {
+      fullDesc += `\n\nQUALIDADE:\n${service.quality_standards}`
+    }
+
+    if (service.warranty_info) {
+      fullDesc += `\n\n🛡 GARANTIA:\n${service.warranty_info}`
+    }
+
+    if (service.observations) {
+      fullDesc += `\n\nOBS:\n${service.observations}`
+    }
+
+    const duration = service.estimated_duration || service.tempo_estimado_minutos
+    if (duration) {
+      fullDesc += `\n\n⏱ ${duration}min`
+    }
+
     tableData.push([
-      service.service_name,
+      fullDesc,
       service.unit,
       service.quantity,
       `R$ ${service.unit_price.toFixed(2)}`,
