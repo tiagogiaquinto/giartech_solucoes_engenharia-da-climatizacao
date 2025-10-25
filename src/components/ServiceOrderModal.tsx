@@ -152,80 +152,74 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
     try {
       setLoading(true)
 
-      // Buscar ordem de serviço com todos os dados relacionados
+      // Buscar ordem de serviço com TODOS os dados relacionados
       const [orderRes, itemsRes, materialsRes, teamRes] = await Promise.all([
         supabase.from('service_orders').select('*').eq('id', id).single(),
-        supabase.from('service_order_items').select('*, service_catalog:service_catalog_id(*)').eq('service_order_id', id),
+        supabase.from('service_order_items').select('*').eq('service_order_id', id),
         supabase.from('service_order_materials').select('*').eq('service_order_id', id),
-        supabase.from('service_order_team').select('*, employee:employee_id(*)').eq('service_order_id', id)
+        supabase.from('service_order_team').select('*').eq('service_order_id', id)
       ])
 
       const order = orderRes.data
-      if (order) {
-        // Carregar dados básicos
-        setFormData({
-          customer_id: order.customer_id || '',
-          description: order.description || '',
-          scheduled_at: order.scheduled_at || '',
-          desconto_percentual: order.desconto_percentual || 0,
-          desconto_valor: order.desconto_valor || 0,
-          show_material_costs: order.show_material_costs || false,
-          payment_method: order.payment_method || 'dinheiro',
-          payment_installments: order.payment_installments || 1,
-          warranty_period: order.warranty_period || 90,
-          warranty_type: order.warranty_type || 'days',
-          warranty_terms: order.warranty_terms || '',
-          bank_account_id: order.bank_account_id || '',
-          contract_template_id: order.contract_template_id || '',
-          contract_notes: order.contract_notes || '',
-          notes: order.notes || '',
-          estimated_hours: order.estimated_hours || 0,
-          actual_hours: order.actual_hours || 0,
-          title: order.title || '',
-          brand: order.brand || '',
-          model: order.model || '',
-          equipment: order.equipment || '',
-          prazo_execucao_dias: order.prazo_execucao_dias || 15,
-          relatorio_tecnico: order.relatorio_tecnico || '',
-          orientacoes_servico: order.orientacoes_servico || '',
-          escopo_detalhado: order.escopo_detalhado || '',
-          additional_info: order.additional_info || ''
-        })
+      if (!order) {
+        throw new Error('Ordem não encontrada')
+      }
 
-        // Carregar itens de serviço
-        if (itemsRes.data && itemsRes.data.length > 0) {
-          const loadedServiceItems = itemsRes.data.map((item: any) => {
-            const catalogName = item.service_catalog?.name || ''
-            const catalogDesc = item.service_catalog?.description || ''
-            const itemNotes = item.notes || ''
+      console.log('📦 Carregando OS:', id)
+      console.log('✅ Ordem:', order)
+      console.log('✅ Itens:', itemsRes.data)
+      console.log('✅ Materiais:', materialsRes.data)
+      console.log('✅ Equipe:', teamRes.data)
 
-            const descricao = catalogName || catalogDesc || itemNotes || 'Serviço'
+      // Carregar dados básicos da OS
+      setFormData({
+        customer_id: order.customer_id || '',
+        description: order.description || '',
+        scheduled_at: order.scheduled_at || '',
+        desconto_percentual: order.discount_percentage || 0,
+        desconto_valor: order.discount_amount || 0,
+        show_material_costs: order.show_material_costs || false,
+        payment_method: order.payment_method || 'dinheiro',
+        payment_installments: order.payment_installments || 1,
+        warranty_period: order.warranty_period || 90,
+        warranty_type: order.warranty_type || 'days',
+        warranty_terms: order.warranty_terms || '',
+        bank_account_id: order.bank_account_id || '',
+        contract_template_id: order.contract_template_id || '',
+        contract_notes: order.contract_notes || '',
+        notes: order.notes || '',
+        estimated_hours: order.estimated_hours || 0,
+        actual_hours: order.actual_hours || 0,
+        title: order.title || '',
+        brand: order.brand || '',
+        model: order.model || '',
+        equipment: order.equipment || '',
+        prazo_execucao_dias: order.prazo_execucao_dias || 15,
+        relatorio_tecnico: order.relatorio_tecnico || '',
+        orientacoes_servico: order.orientacoes_servico || '',
+        escopo_detalhado: order.escopo_detalhado || '',
+        additional_info: order.additional_info || ''
+      })
 
-            return {
-              id: item.id,
-              catalog_service_id: item.service_catalog_id || '',
-              descricao: descricao,
-              quantidade: item.quantity || 1,
-              preco_unitario: item.unit_price || 0,
-              preco_total: item.total_price || 0,
-              tempo_estimado_minutos: item.estimated_duration || 0,
-              materiais: [],
-              funcionarios: [],
-              custo_materiais: item.material_cost || 0,
-              custo_mao_obra: item.labor_cost || 0,
-              custo_total: (item.material_cost || 0) + (item.labor_cost || 0),
-              lucro: (item.total_price || 0) - ((item.material_cost || 0) + (item.labor_cost || 0)),
-              margem_lucro: item.total_price ? ((item.total_price - (item.material_cost || 0) - (item.labor_cost || 0)) / item.total_price * 100) : 0
-            }
-          })
-          setServiceItems(loadedServiceItems)
-        }
+      // Carregar itens de serviço
+      if (itemsRes.data && itemsRes.data.length > 0) {
+        const loadedServiceItems = await Promise.all(itemsRes.data.map(async (item: any) => {
+          // Buscar materiais e mão de obra deste serviço específico
+          const itemMaterialsRes = await supabase
+            .from('service_order_materials')
+            .select('*')
+            .eq('service_order_id', id)
+            .eq('service_order_item_id', item.id)
 
-        // Carregar materiais globais
-        if (materialsRes.data && materialsRes.data.length > 0) {
-          const loadedMaterials = materialsRes.data.map((mat: any) => ({
+          const itemLaborRes = await supabase
+            .from('service_order_team')
+            .select('*')
+            .eq('service_order_id', id)
+            .eq('service_order_item_id', item.id)
+
+          const itemMateriais = (itemMaterialsRes.data || []).map((mat: any) => ({
             id: mat.id,
-            material_id: mat.material_id,
+            material_id: mat.material_id || '',
             nome: mat.material_name || '',
             quantidade: mat.quantity || 0,
             unidade_medida: mat.unit || 'un',
@@ -235,25 +229,76 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
             valor_total: (mat.unit_price || 0) * (mat.quantity || 0),
             lucro: ((mat.unit_price || 0) - (mat.unit_cost || 0)) * (mat.quantity || 0)
           }))
-          setGlobalMaterials(loadedMaterials)
-        }
 
-        // Carregar equipe/mão de obra
-        if (teamRes.data && teamRes.data.length > 0) {
-          const loadedLabor = teamRes.data.map((member: any) => ({
+          const itemFuncionarios = (itemLaborRes.data || []).map((member: any) => ({
             id: member.id,
-            staff_id: member.employee_id,
-            nome: member.employee?.name || '',
+            staff_id: member.employee_id || '',
+            nome: member.employee_name || '',
             tempo_minutos: member.hours_worked ? member.hours_worked * 60 : 0,
             custo_hora: member.hourly_rate || 0,
             custo_total: (member.hourly_rate || 0) * (member.hours_worked || 0)
           }))
-          setGlobalLabor(loadedLabor)
-        }
+
+          return {
+            id: item.id,
+            catalog_service_id: item.service_catalog_id || '',
+            descricao: item.service_name || item.description || 'Serviço',
+            quantidade: item.quantity || 1,
+            preco_unitario: item.unit_price || 0,
+            preco_total: item.total_price || 0,
+            tempo_estimado_minutos: item.estimated_duration || 0,
+            materiais: itemMateriais,
+            funcionarios: itemFuncionarios,
+            custo_materiais: itemMateriais.reduce((sum, m) => sum + m.custo_total, 0),
+            custo_mao_obra: itemFuncionarios.reduce((sum, f) => sum + f.custo_total, 0),
+            custo_total: item.total_cost || 0,
+            lucro: (item.total_price || 0) - (item.total_cost || 0),
+            margem_lucro: item.total_price ? ((item.total_price - (item.total_cost || 0)) / item.total_price * 100) : 0
+          }
+        }))
+
+        console.log('🔧 Serviços carregados com materiais e mão de obra:', loadedServiceItems)
+        setServiceItems(loadedServiceItems)
       }
+
+      // Carregar materiais GLOBAIS (não vinculados a serviços específicos)
+      if (materialsRes.data && materialsRes.data.length > 0) {
+        const globalMats = materialsRes.data.filter((mat: any) => !mat.service_order_item_id)
+        const loadedMaterials = globalMats.map((mat: any) => ({
+          id: mat.id,
+          material_id: mat.material_id || '',
+          nome: mat.material_name || '',
+          quantidade: mat.quantity || 0,
+          unidade_medida: mat.unit || 'un',
+          preco_compra_unitario: mat.unit_cost || 0,
+          preco_venda_unitario: mat.unit_price || 0,
+          custo_total: (mat.unit_cost || 0) * (mat.quantity || 0),
+          valor_total: (mat.unit_price || 0) * (mat.quantity || 0),
+          lucro: ((mat.unit_price || 0) - (mat.unit_cost || 0)) * (mat.quantity || 0)
+        }))
+        console.log('📦 Materiais globais:', loadedMaterials)
+        setGlobalMaterials(loadedMaterials)
+      }
+
+      // Carregar mão de obra GLOBAL (não vinculada a serviços específicos)
+      if (teamRes.data && teamRes.data.length > 0) {
+        const globalLabor = teamRes.data.filter((member: any) => !member.service_order_item_id)
+        const loadedLabor = globalLabor.map((member: any) => ({
+          id: member.id,
+          staff_id: member.employee_id || '',
+          nome: member.employee_name || '',
+          tempo_minutos: member.hours_worked ? member.hours_worked * 60 : 0,
+          custo_hora: member.hourly_rate || 0,
+          custo_total: (member.hourly_rate || 0) * (member.hours_worked || 0)
+        }))
+        console.log('👷 Mão de obra global:', loadedLabor)
+        setGlobalLabor(loadedLabor)
+      }
+
+      console.log('✅ Carregamento completo!')
     } catch (error) {
-      console.error('Error loading order:', error)
-      alert('Erro ao carregar dados da ordem de serviço')
+      console.error('❌ Erro ao carregar OS:', error)
+      alert('Erro ao carregar dados da ordem de serviço: ' + (error as Error).message)
     } finally {
       setLoading(false)
     }

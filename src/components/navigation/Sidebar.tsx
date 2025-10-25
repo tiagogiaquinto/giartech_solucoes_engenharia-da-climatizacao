@@ -48,31 +48,7 @@ interface MenuItem {
 }
 
 const DEFAULT_MENU_ITEMS: MenuItem[] = [
-  { id: 'inicio', path: '/', icon: BarChart3, label: 'Início', description: 'Página inicial do sistema' },
-  { id: 'agenda', path: '/calendar', icon: Calendar, label: 'Agenda', description: 'Compromissos e eventos' },
-  { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes', description: 'Gestão de clientes PF/PJ' },
-  { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores' },
-  { id: 'compras', path: '/purchasing', icon: ShoppingCart, label: 'Compras', description: 'Pedidos e alertas de estoque' },
-  { id: 'service-orders', path: '/service-orders', icon: ClipboardList, label: 'Ordens de Serviço', description: 'Gestão de OS' },
-  { id: 'rotas', path: '/rotas', icon: Navigation, label: 'Rotas', description: 'Rastreamento e gestão de rotas' },
-  { id: 'financial', path: '/financial', icon: DollarSign, label: 'Integração Financeira', description: 'Dashboard financeiro integrado' },
-  { id: 'gestao-financeira', path: '/financial-management', icon: TrendingUp, label: 'Gestão Financeira', description: 'Receitas, despesas e DRE' },
-  { id: 'analise-financeira', path: '/financial-analysis', icon: Activity, label: 'Análise Financeira', description: 'EBITDA, ROI, Margens e Gráficos' },
-  { id: 'categorias-financeiras', path: '/financial-categories', icon: FolderKanban, label: 'Categorias Financeiras', description: 'Categorias e subcategorias' },
-  { id: 'contas-bancarias', path: '/bank-accounts', icon: CreditCard, label: 'Contas Bancárias', description: 'Gerenciar contas e saldos' },
-  { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis' },
-  { id: 'inventory', path: '/inventory', icon: Package, label: 'Estoque', description: 'Controle de materiais' },
-  { id: 'reports', path: '/reports', icon: PieChart, label: 'Relatórios', description: 'Análises e dashboards' },
-  { id: 'whatsapp-crm', path: '/whatsapp-crm', icon: MessageCircle, label: 'WhatsApp CRM', description: 'Gestão de conversas' },
-  { id: 'email', path: '/email/inbox', icon: Mail, label: 'Email Corporativo', description: 'Enviar e receber emails' },
-  { id: 'library', path: '/digital-library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos' },
-  { id: 'funcionarios', path: '/funcionarios', icon: UserCog, label: 'Funcionários', description: 'Gestão de funcionários' },
-  { id: 'users', path: '/users', icon: Users, label: 'Usuários', description: 'Gerenciar usuários' },
-  { id: 'access', path: '/access-management', icon: Key, label: 'Gestão de Acessos', description: 'Controle de permissões' },
-  { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações' },
-  { id: 'document-templates', path: '/document-templates', icon: FileText, label: 'Templates de Documentos', description: 'Gerenciar templates de OS, contratos e propostas' },
-  { id: 'customization', path: '/visual-customization', icon: Palette, label: 'Personalização', description: 'Customizar interface' },
-  { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais' }
+  { id: 'service-orders', path: '/service-orders', icon: ClipboardList, label: 'Ordens de Serviço', description: 'Gestão de OS' }
 ]
 
 const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
