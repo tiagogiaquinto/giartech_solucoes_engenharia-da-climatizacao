@@ -41,13 +41,13 @@ export const fillContractTemplate = async (
           email,
           phone,
           customer_addresses (
-            street,
-            number,
-            complement,
-            neighborhood,
-            city,
-            state,
-            zip_code
+            logradouro,
+            numero,
+            complemento,
+            bairro,
+            cidade,
+            estado,
+            cep
           )
         )
       `)
@@ -81,7 +81,7 @@ export const fillContractTemplate = async (
     const address = customer?.customer_addresses?.[0]
 
     const fullAddress = address
-      ? `${address.street}, ${address.number}${address.complement ? ' - ' + address.complement : ''}, ${address.neighborhood}, ${address.city}/${address.state}, CEP: ${address.zip_code}`
+      ? `${address.logradouro}, ${address.numero}${address.complemento ? ' - ' + address.complemento : ''}, ${address.bairro}, ${address.cidade}/${address.estado}, CEP: ${address.cep}`
       : 'Endereço não cadastrado'
 
     const servicesDescription = serviceItems
@@ -145,8 +145,8 @@ export const fillContractTemplate = async (
       '[ENDERECO_EMPRESA]': companyData?.address || 'Endereço não informado',
       '[TELEFONE_EMPRESA]': companyData?.phone || 'Telefone não informado',
       '[EMAIL_EMPRESA]': companyData?.email || 'E-mail não informado',
-      '[CIDADE]': companyData?.city || address?.city || 'Cidade não informada',
-      '[ESTADO]': companyData?.state || address?.state || 'Estado não informado',
+      '[CIDADE]': companyData?.city || address?.cidade || 'Cidade não informada',
+      '[ESTADO]': companyData?.state || address?.estado || 'Estado não informado',
       '[BANCO]': bankAccount?.bank_name || 'Banco não informado',
       '[AGENCIA]': bankAccount?.agency || '0000',
       '[CONTA]': bankAccount?.account_number || '00000-0',
