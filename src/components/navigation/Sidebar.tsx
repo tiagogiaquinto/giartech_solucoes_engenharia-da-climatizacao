@@ -83,14 +83,19 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
   const [isEditMode, setIsEditMode] = useState(false)
   const [stockAlerts, setStockAlerts] = useState(0)
+  const [agendaAlerts, setAgendaAlerts] = useState(0)
 
   useEffect(() => {
     loadMenuOrder().catch(err => {
       console.error('Failed to load menu order:', err)
     })
     loadStockAlerts()
+    loadAgendaAlerts()
 
-    const interval = setInterval(loadStockAlerts, 60000)
+    const interval = setInterval(() => {
+      loadStockAlerts()
+      loadAgendaAlerts()
+    }, 60000)
     return () => clearInterval(interval)
   }, [])
 
@@ -106,6 +111,17 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
       }
     } catch (error) {
       console.error('Error loading stock alerts:', error)
+    }
+  }
+
+  const loadAgendaAlerts = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_urgent_events_count')
+      if (!error && data !== null) {
+        setAgendaAlerts(data)
+      }
+    } catch (error) {
+      console.error('Error loading agenda alerts:', error)
     }
   }
 
@@ -301,6 +317,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                         {stockAlerts}
                       </span>
                     )}
+                    {item.id === 'agenda' && agendaAlerts > 0 && (
+                      <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                        {agendaAlerts}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs opacity-75 truncate">{item.description}</p>
                 </div>
@@ -308,6 +329,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
               {item.id === 'compras' && stockAlerts > 0 && isCollapsed && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse min-w-[20px] text-center">
                   {stockAlerts}
+                </span>
+              )}
+              {item.id === 'agenda' && agendaAlerts > 0 && isCollapsed && (
+                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse min-w-[20px] text-center">
+                  {agendaAlerts}
                 </span>
               )}
               {active && !isCollapsed && (
