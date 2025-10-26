@@ -5,6 +5,8 @@ import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDo
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { mapServiceItems } from '../utils/serviceOrderDataMapper'
+import { usePrintDocument } from '../hooks/usePrintDocument'
+import PrintDocumentButton from '../components/PrintDocumentButton'
 import ContractViewModal from '../components/ContractViewModal'
 import ProposalViewModal from '../components/ProposalViewModal'
 import ServiceOrderViewGiartech from '../components/ServiceOrderViewGiartech'
@@ -193,6 +195,21 @@ const ServiceOrderView = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleGeneratePDFNew = async (): Promise<Blob> => {
+    if (!order || !customer) {
+      throw new Error('Dados incompletos para gerar PDF')
+    }
+
+    const giartechData = prepareGiartechData()
+    if (!giartechData) {
+      throw new Error('Erro ao preparar dados do documento')
+    }
+
+    await generateServiceOrderPDFGiartech(giartechData)
+
+    return new Blob([], { type: 'application/pdf' })
   }
 
   const handleGeneratePDF = async () => {
@@ -425,13 +442,17 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
             <Eye className="h-4 w-4" />
             Ver Orçamento
           </button>
-          <button
-            onClick={handleGeneratePDF}
-            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 flex items-center gap-2 shadow-lg"
-          >
-            <FileDown className="h-4 w-4" />
-            Gerar PDF OS
-          </button>
+          <PrintDocumentButton
+            documentType="ordem_servico"
+            generatePDF={handleGeneratePDFNew}
+            printOptions={{
+              documentNumber: order?.order_number,
+              clientName: customer?.nome_razao || customer?.name
+            }}
+            label="Imprimir OS Completa"
+            variant="primary"
+            size="md"
+          />
           <button
             onClick={() => setShowProposalModal(true)}
             className="px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg hover:from-teal-700 hover:to-teal-800 flex items-center gap-2 shadow-lg"
