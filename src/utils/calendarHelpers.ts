@@ -173,3 +173,53 @@ export const mapCalendarEventToAgendaEvent = (calendarEvent: Partial<CalendarEve
     notes: calendarEvent.description
   }
 }
+
+// Função para verificar se um evento ocorre em uma data específica
+export const eventOccursOnDate = (event: CalendarEvent, targetDate: string): boolean => {
+  const target = new Date(targetDate + 'T00:00:00')
+  const eventStart = new Date(event.date + 'T00:00:00')
+
+  if (!event.endDate) {
+    // Evento de um único dia
+    return event.date === targetDate
+  }
+
+  const eventEnd = new Date(event.endDate + 'T00:00:00')
+
+  // Verifica se a data alvo está entre início e fim (inclusive)
+  return target >= eventStart && target <= eventEnd
+}
+
+// Função para expandir eventos multi-dia em eventos individuais por dia
+export const expandMultiDayEvents = (events: CalendarEvent[]): CalendarEvent[] => {
+  const expandedEvents: CalendarEvent[] = []
+
+  events.forEach(event => {
+    if (!event.endDate || event.date === event.endDate) {
+      // Evento de um único dia
+      expandedEvents.push(event)
+    } else {
+      // Evento multi-dia - criar uma entrada para cada dia
+      const startDate = new Date(event.date + 'T00:00:00')
+      const endDate = new Date(event.endDate + 'T00:00:00')
+
+      let currentDate = new Date(startDate)
+
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toISOString().split('T')[0]
+
+        expandedEvents.push({
+          ...event,
+          date: dateStr,
+          // Marcar visualmente que é multi-dia
+          title: event.title + (currentDate.getTime() === startDate.getTime() ? ' 🏁' :
+                 currentDate.getTime() === endDate.getTime() ? ' 🏁' : ' ⏳')
+        })
+
+        currentDate.setDate(currentDate.getDate() + 1)
+      }
+    }
+  })
+
+  return expandedEvents
+}

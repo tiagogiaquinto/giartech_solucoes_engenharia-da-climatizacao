@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, Users, MapPin, X, Save, CircleCheck as CheckCircle, CircleAlert as AlertCircle, CreditCard as Edit, Trash2, ArrowRight, Flag, List, LayoutGrid, ChartGantt as GanttChart, GitBranch } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { getAgendaEvents, createAgendaEvent, updateAgendaEvent, deleteAgendaEvent, type AgendaEvent } from '../lib/supabase'
-import { mapAgendaEventToCalendarEvent, mapCalendarEventToAgendaEvent, type CalendarEvent } from '../utils/calendarHelpers'
+import { mapAgendaEventToCalendarEvent, mapCalendarEventToAgendaEvent, expandMultiDayEvents, type CalendarEvent } from '../utils/calendarHelpers'
 
 interface CalendarProps {
   onPremiumFeature?: (feature: string) => void
@@ -32,7 +32,9 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
       setLoading(true)
       const agendaEvents = await getAgendaEvents()
       const calendarEvents = agendaEvents.map(mapAgendaEventToCalendarEvent)
-      setEvents(calendarEvents)
+      // Expandir eventos multi-dia para aparecerem em todos os dias
+      const expandedEvents = expandMultiDayEvents(calendarEvents)
+      setEvents(expandedEvents)
     } catch (error) {
       console.error('Error loading events:', error)
       setEvents([])
