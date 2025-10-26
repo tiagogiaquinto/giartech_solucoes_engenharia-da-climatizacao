@@ -583,14 +583,14 @@ export const updateServiceOrder = async (id: string, updates: Partial<ServiceOrd
 
 export const deleteServiceOrder = async (id: string) => {
   try {
-    const { error } = await supabase
-      .from('service_orders')
-      .delete()
-      .eq('id', id)
+    const { data, error } = await supabase
+      .rpc('delete_service_order_complete', { p_service_order_id: id })
 
     if (error) throw handleSupabaseError(error)
 
     cache.invalidatePattern('service_orders')
+
+    return data
   } catch (error) {
     throw handleSupabaseError(error as Error)
   }
