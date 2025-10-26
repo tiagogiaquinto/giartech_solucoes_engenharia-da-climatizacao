@@ -83,7 +83,14 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
   const [isEditMode, setIsEditMode] = useState(false)
   const [stockAlerts, setStockAlerts] = useState(0)
-  const [agendaAlerts, setAgendaAlerts] = useState(0)
+  const [agendaAlerts, setAgendaAlerts] = useState({
+    total: 0,
+    meeting: 0,
+    pagar: 0,
+    cobrar: 0,
+    operational: 0,
+    other: 0
+  })
 
   useEffect(() => {
     loadMenuOrder().catch(err => {
@@ -116,7 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
 
   const loadAgendaAlerts = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_urgent_events_count')
+      const { data, error } = await supabase.rpc('get_urgent_events_by_type')
       if (!error && data !== null) {
         setAgendaAlerts(data)
       }
@@ -310,17 +317,41 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
               <Icon className={`h-5 w-5 ${active ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
               {!isCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="font-medium truncate">{item.label}</p>
                     {item.id === 'compras' && stockAlerts > 0 && (
                       <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
                         {stockAlerts}
                       </span>
                     )}
-                    {item.id === 'agenda' && agendaAlerts > 0 && (
-                      <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
-                        {agendaAlerts}
-                      </span>
+                    {item.id === 'agenda' && agendaAlerts.total > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {agendaAlerts.meeting > 0 && (
+                          <span className="bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse" title="Reuniões/Pessoal">
+                            {agendaAlerts.meeting}
+                          </span>
+                        )}
+                        {agendaAlerts.pagar > 0 && (
+                          <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse" title="Pagamentos">
+                            {agendaAlerts.pagar}
+                          </span>
+                        )}
+                        {agendaAlerts.cobrar > 0 && (
+                          <span className="bg-green-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse" title="Cobranças">
+                            {agendaAlerts.cobrar}
+                          </span>
+                        )}
+                        {agendaAlerts.operational > 0 && (
+                          <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse" title="Operacional">
+                            {agendaAlerts.operational}
+                          </span>
+                        )}
+                        {agendaAlerts.other > 0 && (
+                          <span className="bg-purple-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse" title="Outros">
+                            {agendaAlerts.other}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                   <p className="text-xs opacity-75 truncate">{item.description}</p>
@@ -331,10 +362,34 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                   {stockAlerts}
                 </span>
               )}
-              {item.id === 'agenda' && agendaAlerts > 0 && isCollapsed && (
-                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse min-w-[20px] text-center">
-                  {agendaAlerts}
-                </span>
+              {item.id === 'agenda' && agendaAlerts.total > 0 && isCollapsed && (
+                <div className="absolute -top-1 -right-1 flex flex-col gap-0.5">
+                  {agendaAlerts.meeting > 0 && (
+                    <span className="bg-blue-500 text-white text-[10px] font-bold px-1 py-0.5 rounded-full animate-pulse min-w-[16px] text-center" title="Reuniões">
+                      {agendaAlerts.meeting}
+                    </span>
+                  )}
+                  {agendaAlerts.pagar > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-1 py-0.5 rounded-full animate-pulse min-w-[16px] text-center" title="Pagar">
+                      {agendaAlerts.pagar}
+                    </span>
+                  )}
+                  {agendaAlerts.cobrar > 0 && (
+                    <span className="bg-green-500 text-white text-[10px] font-bold px-1 py-0.5 rounded-full animate-pulse min-w-[16px] text-center" title="Cobrar">
+                      {agendaAlerts.cobrar}
+                    </span>
+                  )}
+                  {agendaAlerts.operational > 0 && (
+                    <span className="bg-orange-500 text-white text-[10px] font-bold px-1 py-0.5 rounded-full animate-pulse min-w-[16px] text-center" title="Operacional">
+                      {agendaAlerts.operational}
+                    </span>
+                  )}
+                  {agendaAlerts.other > 0 && (
+                    <span className="bg-purple-500 text-white text-[10px] font-bold px-1 py-0.5 rounded-full animate-pulse min-w-[16px] text-center" title="Outros">
+                      {agendaAlerts.other}
+                    </span>
+                  )}
+                </div>
               )}
               {active && !isCollapsed && (
                 <motion.div
