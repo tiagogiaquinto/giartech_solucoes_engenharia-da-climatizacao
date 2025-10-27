@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import AIProvidersService from './aiProvidersService'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -30,6 +31,7 @@ interface ThomazCapabilities {
   embeddingsSearch: (query: string, namespace: string, topK?: number) => Promise<any[]>
   generatePdf: (docType: string, id?: string, title?: string, html?: string, withAnnexes?: boolean) => Promise<string>
   notifyWhatsApp: (to: string, message: string, link?: string) => Promise<boolean>
+  aiProcess: (prompt: string, systemPrompt?: string, maxTokens?: number) => Promise<string>
 }
 
 export class ThomazAdvancedService {
@@ -40,10 +42,12 @@ export class ThomazAdvancedService {
   private personality: any = null
   private libraryKnowledge: any[] = []
   private capabilities: ThomazCapabilities
+  private aiProvider: AIProvidersService
 
   constructor(userId?: string) {
     this.userId = userId
     this.sessionId = `adv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    this.aiProvider = new AIProvidersService()
     this.loadPersonality()
     this.loadLibraryKnowledge()
     this.capabilities = this.initializeCapabilities()
@@ -151,6 +155,28 @@ export class ThomazAdvancedService {
         } catch (err) {
           console.error('Erro notifyWhatsApp:', err)
           return false
+        }
+      },
+
+      aiProcess: async (prompt: string, systemPrompt?: string, maxTokens?: number) => {
+        try {
+          const response = await this.aiProvider.processRequest({
+            prompt,
+            systemPrompt: systemPrompt || 'Você é Thomaz, assistente inteligente da Giartech.',
+            maxTokens: maxTokens || 2000,
+            temperature: 0.7
+          })
+
+          if (response.success) {
+            console.log(`✅ IA ${response.provider} processou com sucesso`)
+            return response.content
+          } else {
+            console.error(`❌ Erro na IA: ${response.error}`)
+            return 'Desculpe, não consegui processar sua solicitação com a IA no momento.'
+          }
+        } catch (err) {
+          console.error('Erro aiProcess:', err)
+          return 'Erro ao processar com IA externa.'
         }
       }
     }
@@ -585,7 +611,7 @@ export class ThomazAdvancedService {
     }
 
     if (!response) {
-      response = this.generateConversationalResponse(message)
+      response = await this.generateConversationalResponse(message)
     }
 
     return response
@@ -640,7 +666,30 @@ export class ThomazAdvancedService {
     return response
   }
 
-  private generateConversationalResponse(message: string): string {
+  private async generateConversationalResponse(message: string): Promise<string> {
+    // Tentar usar IA externa para responder
+    try {
+      const systemPrompt = `Você é Thomaz, assistente inteligente da Giartech Soluções em Climatização.
+
+Você tem acesso a:
+- Sistema de gestão de ordens de serviço
+- Controle de estoque e materiais
+- Agenda e compromissos
+- Gestão financeira
+- Biblioteca de documentos
+
+Responda de forma natural, profissional e prestativa. Se não souber algo, seja honesto e ofereça alternativas.`
+
+      const aiResponse = await this.capabilities.aiProcess(message, systemPrompt, 500)
+
+      if (aiResponse && !aiResponse.includes('Erro')) {
+        return aiResponse
+      }
+    } catch (err) {
+      console.error('Erro ao usar IA para resposta:', err)
+    }
+
+    // Fallback: respostas padrão
     const responses = [
       `Interessante... 🤔 Deixa eu pensar sobre isso.\n\nPelo que entendi, você está perguntando sobre "${message}".\n\nPosso te ajudar de várias formas! Que tal me dar mais detalhes?`,
       `Entendi! Sobre "${message}"...\n\nAinda estou aprendendo sobre este assunto. Pode me explicar melhor o que você precisa?`,
