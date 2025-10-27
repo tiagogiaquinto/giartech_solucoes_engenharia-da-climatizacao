@@ -7,37 +7,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 }
 
-const SYSTEM_IDENTITY = `
-# Assistente Giartech - Inteligência Corporativa
-
-Você é o **Assistente Giartech**, criado por Tiago Bruno Giaquinto para a Giartech Soluções em Climatização.
-Atua como consultor estratégico e operacional, transformando dados em decisões inteligentes.
-
-## Missão
-Apoiar nas áreas: Operacional (OS, técnicos, VRF), Financeira (DRE, fluxo de caixa), Comercial (CRM, contratos) e Estratégica (KPIs, metas).
-
-## Estilo
-Tom corporativo, empático e focado em ação. Sempre estruture:
-📊 RESUMO EXECUTIVO - pontos-chave
-📈 ANÁLISE - dados e tendências
-💡 RECOMENDAÇÕES - ações práticas
-⚠️ RISCOS - pontos de atenção
-🎯 PRÓXIMOS PASSOS - cronograma
-📚 FONTES - origem dos dados
-
-Você é o elo entre dados e decisão!
-`
-
-interface ChatMessage {
-  role: 'user' | 'assistant' | 'system'
-  content: string
-}
-
 interface AssistantRequest {
   message: string
   conversationId?: string
   userId?: string
-  context?: any
 }
 
 Deno.serve(async (req: Request) => {
@@ -50,7 +23,7 @@ Deno.serve(async (req: Request) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    const { message, conversationId, userId, context } = await req.json() as AssistantRequest
+    const { message, conversationId, userId } = await req.json() as AssistantRequest
 
     if (!message) {
       return new Response(
@@ -59,16 +32,10 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // 1. Analisar a intenção do usuário
     const intent = await analyzeIntent(message)
-
-    // 2. Buscar dados relevantes do sistema
     const systemData = await gatherSystemData(intent, supabase)
+    const response = await generateHumanResponse(message, systemData, intent)
 
-    // 3. Gerar resposta contextualizada
-    const response = await generateResponse(message, systemData, intent)
-
-    // 4. Salvar no histórico
     await saveConversation(conversationId || crypto.randomUUID(), userId, message, response, supabase)
 
     return new Response(
@@ -80,7 +47,6 @@ Deno.serve(async (req: Request) => {
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
-
   } catch (error) {
     console.error("Error:", error)
     return new Response(
@@ -90,22 +56,71 @@ Deno.serve(async (req: Request) => {
   }
 })
 
-// Analisa a intenção do usuário
+// Saudações humanizadas
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  const greetings = [
+    'Oi!', 'Olá!', 'E aí!', 'Tudo bem?', 'Beleza?'
+  ]
+  const random = greetings[Math.floor(Math.random() * greetings.length)]
+  
+  if (hour < 6) return `${random} Ainda acordado? 😅`
+  if (hour < 12) return `${random} Bom dia! ☀️`
+  if (hour < 18) return `${random} Boa tarde! 🌤️`
+  return `${random} Boa noite! 🌙`
+}
+
+// Frases de transição humanizadas
+function getTransition(): string {
+  const transitions = [
+    'Deixa eu ver aqui...',
+    'Vou dar uma olhada nos dados...',
+    'Já vou te mostrar!',
+    'Olha só o que encontrei:',
+    'Bom, analisando aqui...',
+    'Deixa eu checar pra você...',
+    'Já te passo as informações!'
+  ]
+  return transitions[Math.floor(Math.random() * transitions.length)]
+}
+
+// Comentários humanizados
+function getPositiveComment(): string {
+  const comments = [
+    'Isso tá show! 🎉',
+    'Olha que legal!',
+    'Bacana isso hein!',
+    'Tá indo bem!',
+    'Excelente!',
+    'Boa! 👏'
+  ]
+  return comments[Math.floor(Math.random() * comments.length)]
+}
+
+function getConcernComment(): string {
+  const comments = [
+    'Opa, preciso te alertar sobre isso...',
+    'Hmm, achei algo aqui que merece atenção...',
+    'Olha, tem uma coisa que você precisa ver...',
+    'Eita, encontrei um ponto de atenção...',
+    'Vou te mostrar algo importante...'
+  ]
+  return comments[Math.floor(Math.random() * comments.length)]
+}
+
 async function analyzeIntent(message: string): Promise<any> {
   const lowerMessage = message.toLowerCase()
-
   const intents = {
-    financial: ['financeiro', 'dre', 'receita', 'despesa', 'lucro', 'faturamento', 'custos', 'pagar', 'receber'],
-    serviceOrders: ['ordem', 'os', 'serviço', 'atendimento', 'técnico', 'manutenção'],
+    financial: ['financeiro', 'dre', 'receita', 'despesa', 'lucro', 'faturamento', 'dinheiro', 'grana', 'custos', 'pagar', 'receber'],
+    serviceOrders: ['ordem', 'os', 'serviço', 'atendimento', 'técnico', 'manutenção', 'chamado'],
     inventory: ['estoque', 'material', 'produto', 'inventário', 'peça'],
-    clients: ['cliente', 'contato', 'crm', 'lead', 'proposta'],
-    employees: ['funcionário', 'técnico', 'equipe', 'colaborador', 'rh'],
-    analytics: ['análise', 'relatório', 'indicador', 'kpi', 'dashboard', 'desempenho'],
-    calendar: ['agenda', 'evento', 'compromisso', 'agendamento', 'calendário', 'reunião', 'encontro', 'horário', 'hoje', 'amanhã', 'semana']
+    clients: ['cliente', 'contato', 'crm', 'lead'],
+    employees: ['funcionário', 'técnico', 'equipe', 'colaborador', 'pessoal'],
+    analytics: ['análise', 'relatório', 'indicador', 'dashboard', 'resumo', 'visão'],
+    calendar: ['agenda', 'evento', 'compromisso', 'reunião', 'hoje', 'amanhã', 'semana']
   }
 
   let detectedIntent = 'general'
-
   for (const [intentType, keywords] of Object.entries(intents)) {
     if (keywords.some(keyword => lowerMessage.includes(keyword))) {
       detectedIntent = intentType
@@ -113,32 +128,26 @@ async function analyzeIntent(message: string): Promise<any> {
     }
   }
 
-  return {
-    type: detectedIntent,
-    query: message
-  }
+  return { type: detectedIntent, query: message }
 }
 
-// Busca dados do sistema
 async function gatherSystemData(intent: any, supabase: any): Promise<any> {
   const data: any = {}
 
   try {
     switch (intent.type) {
       case 'financial':
-        // Buscar dados financeiros do mês atual
         const currentDate = new Date()
-        const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+        const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
         
         const { data: financeData } = await supabase
           .from('finance_entries')
           .select('*')
-          .gte('data', firstDayOfMonth.toISOString().split('T')[0])
+          .gte('data', firstDay.toISOString().split('T')[0])
           .order('data', { ascending: false })
 
         data.finance = financeData || []
-
-        // Calcular resumo
+        
         const receitas = financeData?.filter((f: any) => f.tipo === 'receita') || []
         const despesas = financeData?.filter((f: any) => f.tipo === 'despesa') || []
         
@@ -148,21 +157,16 @@ async function gatherSystemData(intent: any, supabase: any): Promise<any> {
         data.financialSummary = {
           total_revenue: totalReceitas,
           total_expenses: totalDespesas,
-          profit: totalReceitas - totalDespesas,
-          margin: totalReceitas > 0 ? ((totalReceitas - totalDespesas) / totalReceitas * 100) : 0
+          profit: totalReceitas - totalDespesas
         }
         break
 
       case 'serviceOrders':
         const { data: orders } = await supabase
           .from('service_orders')
-          .select(`
-            *,
-            customers (name, phone)
-          `)
+          .select('*, customers(name, phone)')
           .order('created_at', { ascending: false })
           .limit(50)
-
         data.serviceOrders = orders || []
         break
 
@@ -171,8 +175,6 @@ async function gatherSystemData(intent: any, supabase: any): Promise<any> {
           .from('inventory_items')
           .select('*')
           .order('quantity', { ascending: true })
-          .limit(100)
-
         data.inventory = inventory || []
         break
 
@@ -181,8 +183,6 @@ async function gatherSystemData(intent: any, supabase: any): Promise<any> {
           .from('customers')
           .select('*')
           .order('created_at', { ascending: false })
-          .limit(100)
-
         data.customers = customers || []
         break
 
@@ -191,7 +191,6 @@ async function gatherSystemData(intent: any, supabase: any): Promise<any> {
           .from('employees')
           .select('*')
           .eq('active', true)
-
         data.employees = employees || []
         break
 
@@ -203,255 +202,203 @@ async function gatherSystemData(intent: any, supabase: any): Promise<any> {
       case 'calendar':
         const today = new Date()
         today.setHours(0, 0, 0, 0)
-
         const nextWeek = new Date(today)
         nextWeek.setDate(nextWeek.getDate() + 7)
 
         const { data: agendaEvents } = await supabase
           .from('agenda_events')
-          .select(`
-            *,
-            customers (name, phone),
-            employees (name, position),
-            service_orders (order_number, status)
-          `)
+          .select('*, customers(name), employees(name), service_orders(order_number)')
           .gte('start_time', today.toISOString())
           .lte('start_time', nextWeek.toISOString())
           .order('start_time', { ascending: true })
-
         data.agendaEvents = agendaEvents || []
 
-        // Eventos de hoje
         const tomorrow = new Date(today)
         tomorrow.setDate(tomorrow.getDate() + 1)
-
         const { data: todayEvents } = await supabase
           .from('agenda_events')
-          .select(`
-            *,
-            customers (name, phone),
-            employees (name, position),
-            service_orders (order_number, status)
-          `)
+          .select('*, customers(name), employees(name), service_orders(order_number)')
           .gte('start_time', today.toISOString())
           .lt('start_time', tomorrow.toISOString())
           .order('start_time', { ascending: true })
-
         data.todayEvents = todayEvents || []
         break
     }
-
-    // Sempre buscar dados gerais
-    const { data: companySettings } = await supabase
-      .from('company_settings')
-      .select('*')
-      .single()
-
-    data.company = companySettings
-
   } catch (error) {
-    console.error('Error gathering system data:', error)
+    console.error('Error gathering data:', error)
   }
 
   return data
 }
 
-// Gera resposta contextualizada
-async function generateResponse(
-  message: string,
-  systemData: any,
-  intent: any
-): Promise<string> {
+async function generateHumanResponse(message: string, data: any, intent: any): Promise<string> {
   let response = ''
 
   switch (intent.type) {
     case 'financial':
-      response += await analyzeFinancialData(message, systemData)
+      response = analyzeFinancial(data)
       break
-
     case 'serviceOrders':
-      response += await analyzeServiceOrders(message, systemData)
+      response = analyzeServiceOrders(data)
       break
-
     case 'inventory':
-      response += await analyzeInventory(message, systemData)
+      response = analyzeInventory(data)
       break
-
     case 'clients':
-      response += await analyzeClients(message, systemData)
+      response = analyzeClients(data)
       break
-
     case 'employees':
-      response += await analyzeEmployees(message, systemData)
+      response = analyzeEmployees(data)
       break
-
     case 'analytics':
-      response += await analyzeAnalytics(message, systemData)
+      response = analyzeStats(data)
       break
-
     case 'calendar':
-      response += await analyzeCalendar(message, systemData)
+      response = analyzeCalendar(data)
       break
-
     default:
-      response += await generateGeneralResponse(message, systemData)
+      response = generateWelcome()
   }
 
   return response
 }
 
-// Análise financeira
-async function analyzeFinancialData(message: string, data: any): Promise<string> {
-  let response = '💰 **ANÁLISE FINANCEIRA**\n\n'
+function analyzeFinancial(data: any): string {
+  const greeting = getGreeting()
+  const transition = getTransition()
+  let msg = `${greeting}\n\n${transition}\n\n`
 
   if (data.financialSummary) {
-    const summary = data.financialSummary
-    const revenue = summary.total_revenue || 0
-    const expenses = summary.total_expenses || 0
-    const profit = summary.profit || 0
-    const margin = summary.margin || 0
+    const { total_revenue, total_expenses, profit } = data.financialSummary
+    const margin = total_revenue > 0 ? (profit / total_revenue * 100) : 0
 
-    response += '📊 **RESUMO EXECUTIVO**\n'
-    response += `• Receita Total: R$ ${revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
-    response += `• Despesas: R$ ${expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
-    response += `• Lucro Líquido: R$ ${profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
-    response += `• Margem: ${margin.toFixed(2)}%\n\n`
+    msg += `**Resumo do mês:**\n\n`
+    msg += `💰 Receitas: R$ ${total_revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    msg += `💸 Despesas: R$ ${total_expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    msg += `📊 Resultado: R$ ${profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    msg += `📈 Margem: ${margin.toFixed(1)}%\n\n`
+
+    if (profit > 0) {
+      msg += `${getPositiveComment()} O resultado tá positivo! Continuem assim! 🚀\n`
+    } else if (profit < 0) {
+      msg += `${getConcernComment()} O resultado tá negativo... Vamos dar uma olhada juntos no que pode melhorar, ok?\n`
+    }
   }
 
   if (data.finance && data.finance.length > 0) {
     const pendingPayments = data.finance.filter((f: any) => f.status === 'pendente' && f.tipo === 'despesa')
     const pendingReceivables = data.finance.filter((f: any) => f.status === 'pendente' && f.tipo === 'receita')
-    
-    const totalPayable = pendingPayments.reduce((sum: number, f: any) => sum + Number(f.valor || 0), 0)
-    const totalReceivable = pendingReceivables.reduce((sum: number, f: any) => sum + Number(f.valor || 0), 0)
 
-    response += '📈 **ANÁLISE**\n'
-    response += `• Contas a Pagar: ${pendingPayments.length} (R$ ${totalPayable.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})\n`
-    response += `• Contas a Receber: ${pendingReceivables.length} (R$ ${totalReceivable.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})\n`
-    response += `• Saldo Projetado: R$ ${(totalReceivable - totalPayable).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`
-
-    response += '💡 **RECOMENDAÇÕES**\n'
-    if (totalPayable > totalReceivable) {
-      response += `⚠️ Contas a pagar excedem recebíveis em R$ ${(totalPayable - totalReceivable).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
-      response += '• Intensificar cobranças\n'
-      response += '• Negociar prazos com fornecedores\n'
-    } else {
-      response += '✅ Fluxo de caixa positivo\n'
-      response += '• Manter controle de pagamentos\n'
+    if (pendingPayments.length > 0 || pendingReceivables.length > 0) {
+      msg += `\n**Olha só o que temos pendente:**\n\n`
+      if (pendingPayments.length > 0) {
+        msg += `🔴 ${pendingPayments.length} contas pra pagar\n`
+      }
+      if (pendingReceivables.length > 0) {
+        msg += `🟢 ${pendingReceivables.length} a receber\n`
+      }
     }
-  } else {
-    response += '⚠️ Nenhum lançamento financeiro encontrado no período.\n'
   }
 
-  return response
+  msg += `\nQualquer coisa é só chamar! 😊`
+  return msg
 }
 
-// Análise de ordens de serviço
-async function analyzeServiceOrders(message: string, data: any): Promise<string> {
-  let response = '🔧 **ORDENS DE SERVIÇO**\n\n'
+function analyzeServiceOrders(data: any): string {
+  const greeting = getGreeting()
+  let msg = `${greeting}\n\n`
 
   if (data.serviceOrders && data.serviceOrders.length > 0) {
     const orders = data.serviceOrders
+    const pending = orders.filter((o: any) => o.status === 'pending' || o.status === 'aberta').length
+    const inProgress = orders.filter((o: any) => o.status === 'in_progress' || o.status === 'em_andamento').length
+    const completed = orders.filter((o: any) => o.status === 'completed' || o.status === 'concluida').length
 
-    const byStatus = {
-      pending: orders.filter((o: any) => o.status === 'pending' || o.status === 'aberta').length,
-      in_progress: orders.filter((o: any) => o.status === 'in_progress' || o.status === 'em_andamento').length,
-      completed: orders.filter((o: any) => o.status === 'completed' || o.status === 'concluida').length
-    }
+    msg += `Bom, sobre as OSs...\n\n`
+    msg += `📋 **Total:** ${orders.length} ordens\n`
+    msg += `⏳ **Aguardando:** ${pending}\n`
+    msg += `⚙️ **Em andamento:** ${inProgress}\n`
+    msg += `✅ **Finalizadas:** ${completed}\n\n`
 
-    const totalValue = orders.reduce((sum: number, o: any) => sum + Number(o.total_amount || o.total_value || 0), 0)
-    const avgValue = orders.length > 0 ? totalValue / orders.length : 0
-
-    response += '📊 **RESUMO**\n'
-    response += `• Total de OSs: ${orders.length}\n`
-    response += `• Pendentes: ${byStatus.pending}\n`
-    response += `• Em Andamento: ${byStatus.in_progress}\n`
-    response += `• Concluídas: ${byStatus.completed}\n`
-    response += `• Valor Total: R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
-    response += `• Ticket Médio: R$ ${avgValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`
-
-    response += '💡 **RECOMENDAÇÕES**\n'
-    if (byStatus.pending > 10) {
-      response += `⚠️ ${byStatus.pending} OSs pendentes - alocar mais técnicos\n`
-    }
-    if (byStatus.completed > byStatus.pending + byStatus.in_progress) {
-      response += '✅ Boa performance de conclusão\n'
+    if (pending > 10) {
+      msg += `Opa! Tem bastante OS esperando... Que tal distribuir melhor pra galera da equipe? 👨‍🔧\n`
+    } else if (inProgress > pending) {
+      msg += `Legal! A equipe tá focada, mais em andamento que paradas. Bom sinal! 💪\n`
     }
   } else {
-    response += '⚠️ Nenhuma ordem de serviço encontrada.\n'
+    msg += `Hmm, não achei OSs recentes por aqui... Tudo tranquilo ou posso ajudar em outra coisa?`
   }
 
-  return response
+  return msg
 }
 
-// Análise de estoque
-async function analyzeInventory(message: string, data: any): Promise<string> {
-  let response = '📦 **ESTOQUE**\n\n'
+function analyzeInventory(data: any): string {
+  const greeting = getGreeting()
+  let msg = `${greeting}\n\n`
 
   if (data.inventory && data.inventory.length > 0) {
     const lowStock = data.inventory.filter((i: any) => Number(i.quantity) <= Number(i.min_quantity || 5))
     const outOfStock = data.inventory.filter((i: any) => Number(i.quantity) === 0)
 
-    response += `📊 **STATUS**\n`
-    response += `• Total de itens: ${data.inventory.length}\n`
-    response += `• Estoque baixo: ${lowStock.length}\n`
-    response += `• Sem estoque: ${outOfStock.length}\n\n`
+    msg += `Sobre o estoque...\n\n`
+    msg += `📦 **Total de itens:** ${data.inventory.length}\n\n`
 
-    if (lowStock.length > 0) {
-      response += `⚠️ **ITENS COM ESTOQUE BAIXO:**\n`
-      lowStock.slice(0, 5).forEach((item: any) => {
-        response += `• ${item.name} - Qtd: ${item.quantity} ${item.unit || ''}\n`
+    if (outOfStock.length > 0) {
+      msg += `🔴 **Eita!** ${outOfStock.length} itens zerados! Bora repor logo:\n`
+      outOfStock.slice(0, 3).forEach((item: any) => {
+        msg += `   • ${item.name}\n`
       })
-      response += '\n'
+      msg += `\n`
     }
 
-    response += `💡 **RECOMENDAÇÃO**\n`
     if (lowStock.length > 0) {
-      response += `Há ${lowStock.length} itens com estoque baixo. Programe reposição urgente.\n`
-    } else {
-      response += 'Estoque em níveis adequados.\n'
+      msg += `⚠️ **Atenção:** ${lowStock.length} itens tão acabando...\n`
+      lowStock.slice(0, 3).forEach((item: any) => {
+        msg += `   • ${item.name} - só ${item.quantity} restando\n`
+      })
+    } else if (outOfStock.length === 0) {
+      msg += `${getPositiveComment()} Estoque tá tranquilo! 👍`
     }
   }
 
-  return response
+  return msg
 }
 
-// Análise de clientes
-async function analyzeClients(message: string, data: any): Promise<string> {
-  let response = '👥 **CLIENTES**\n\n'
+function analyzeClients(data: any): string {
+  const greeting = getGreeting()
+  let msg = `${greeting}\n\n`
 
   if (data.customers && data.customers.length > 0) {
-    response += `📊 **BASE DE CLIENTES**\n`
-    response += `• Total: ${data.customers.length}\n\n`
-
-    const recentClients = data.customers.filter((c: any) => {
+    const recent = data.customers.filter((c: any) => {
       const created = new Date(c.created_at)
-      const thirtyDaysAgo = new Date()
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      return created > thirtyDaysAgo
+      const thirtyDays = new Date()
+      thirtyDays.setDate(thirtyDays.getDate() - 30)
+      return created > thirtyDays
     })
 
-    response += `📈 **ÚLTIMOS 30 DIAS**\n`
-    response += `• Novos clientes: ${recentClients.length}\n\n`
+    msg += `Sobre os clientes...\n\n`
+    msg += `👥 **Base total:** ${data.customers.length} clientes\n`
+    msg += `🆕 **Novos este mês:** ${recent.length}\n\n`
 
-    response += `💡 **INSIGHTS**\n`
-    if (recentClients.length > 10) {
-      response += `Excelente! ${recentClients.length} novos clientes no mês.\n`
-    } else if (recentClients.length < 5) {
-      response += `Apenas ${recentClients.length} novos clientes. Intensificar ações comerciais.\n`
+    if (recent.length > 15) {
+      msg += `${getPositiveComment()} Caramba! Tá chegando cliente novo demais! O marketing tá voando! 🚀\n`
+    } else if (recent.length < 5) {
+      msg += `Hmm, poucos clientes novos esse mês... Vamos pensar em algumas ações comerciais? 🤔`
+    } else {
+      msg += `Bom ritmo de clientes novos! Continuem assim! 💪`
     }
   }
 
-  return response
+  return msg
 }
 
-// Análise de funcionários
-async function analyzeEmployees(message: string, data: any): Promise<string> {
-  let response = '👨‍💼 **EQUIPE**\n\n'
+function analyzeEmployees(data: any): string {
+  const greeting = getGreeting()
+  let msg = `${greeting}\n\n`
 
   if (data.employees && data.employees.length > 0) {
-    response += `📊 **EQUIPE ATIVA**\n`
-    response += `• Total: ${data.employees.length} colaboradores\n\n`
+    msg += `Sobre a equipe...\n\n`
+    msg += `👨‍💼 **Time ativo:** ${data.employees.length} colaboradores\n\n`
 
     const byPosition = data.employees.reduce((acc: any, emp: any) => {
       const pos = emp.position || 'Não definido'
@@ -459,116 +406,89 @@ async function analyzeEmployees(message: string, data: any): Promise<string> {
       return acc
     }, {})
 
-    response += `📋 **POR CARGO**\n`
+    msg += `**Distribuição:**\n`
     Object.entries(byPosition).forEach(([position, count]) => {
-      response += `• ${position}: ${count}\n`
+      msg += `   • ${position}: ${count}\n`
     })
   }
 
-  return response
+  return msg
 }
 
-// Análise de analytics
-async function analyzeAnalytics(message: string, data: any): Promise<string> {
-  let response = '📊 **INDICADORES**\n\n'
+function analyzeStats(data: any): string {
+  const greeting = getGreeting()
+  let msg = `${greeting}\n\n${getTransition()}\n\n`
 
   if (data.stats) {
-    response += `🎯 **VISÃO GERAL**\n`
-    response += `• Ordens de Serviço: ${data.stats.total_oss || 0} (${data.stats.oss_abertas || 0} abertas)\n`
-    response += `• Clientes: ${data.stats.total_clientes || 0}\n`
-    response += `• Funcionários: ${data.stats.total_funcionarios || 0}\n`
-    response += `• Itens em Estoque: ${data.stats.itens_estoque || 0}\n`
-    
-    if (data.stats.estoque_baixo > 0) {
-      response += `• ⚠️ Estoque Baixo: ${data.stats.estoque_baixo} itens\n`
+    const s = data.stats
+    msg += `**Visão geral do sistema:**\n\n`
+    msg += `🔧 OSs: ${s.total_oss || 0} no total, ${s.oss_abertas || 0} abertas\n`
+    msg += `👥 Clientes: ${s.total_clientes || 0}\n`
+    msg += `👨‍💼 Equipe: ${s.total_funcionarios || 0} ativos\n`
+    msg += `📦 Estoque: ${s.itens_estoque || 0} itens\n\n`
+
+    if (s.estoque_baixo > 0) {
+      msg += `⚠️ Opa! ${s.estoque_baixo} itens com estoque baixo\n\n`
     }
-    
-    response += `\n📈 **FINANCEIRO DO MÊS**\n`
-    response += `• Receitas: R$ ${Number(data.stats.receitas_mes || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
-    response += `• Despesas: R$ ${Number(data.stats.despesas_mes || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
-    
-    const saldo = Number(data.stats.receitas_mes || 0) - Number(data.stats.despesas_mes || 0)
-    response += `• Saldo: R$ ${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${saldo >= 0 ? '✅' : '⚠️'}\n`
+
+    const receitas = Number(s.receitas_mes || 0)
+    const despesas = Number(s.despesas_mes || 0)
+    const saldo = receitas - despesas
+
+    msg += `**Financeiro do mês:**\n`
+    msg += `💰 Receitas: R$ ${receitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    msg += `💸 Despesas: R$ ${despesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    msg += `📊 Saldo: R$ ${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${saldo >= 0 ? '✅' : '⚠️'}\n\n`
+
+    if (saldo > 0) {
+      msg += `${getPositiveComment()} Mês positivo! Bora manter esse ritmo! 🎯`
+    }
   }
 
-  return response
+  return msg
 }
 
-// Análise de agenda
-async function analyzeCalendar(message: string, data: any): Promise<string> {
-  let response = '📅 **AGENDA**\n\n'
-
-  const lowerMessage = message.toLowerCase()
-  const isToday = lowerMessage.includes('hoje')
+function analyzeCalendar(data: any): string {
+  const greeting = getGreeting()
+  let msg = `${greeting}\n\n`
 
   if (data.todayEvents && data.todayEvents.length > 0) {
-    response += `📆 **HOJE (${new Date().toLocaleDateString('pt-BR')})**\n`
-    response += `• ${data.todayEvents.length} ${data.todayEvents.length === 1 ? 'evento' : 'eventos'}\n\n`
-
+    msg += `**Hoje você tem:**\n\n`
+    
     data.todayEvents.slice(0, 5).forEach((event: any) => {
-      const startTime = new Date(event.start_time)
-      const timeStr = startTime.toLocaleTimeString('pt-BR', {
+      const time = new Date(event.start_time).toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit'
       })
-
-      response += `⏰ **${timeStr}** - ${event.title}\n`
-
+      msg += `⏰ **${time}** - ${event.title}\n`
       if (event.customers?.name) {
-        response += `   👤 ${event.customers.name}\n`
+        msg += `   Com: ${event.customers.name}\n`
       }
-
-      if (event.employees?.name) {
-        response += `   👨‍🔧 ${event.employees.name}\n`
-      }
-
       if (event.location) {
-        response += `   📍 ${event.location}\n`
+        msg += `   Onde: ${event.location}\n`
       }
-
-      response += '\n'
+      msg += `\n`
     })
 
     if (data.todayEvents.length > 5) {
-      response += `... e mais ${data.todayEvents.length - 5} eventos.\n`
+      msg += `... e mais ${data.todayEvents.length - 5} eventos! Dia cheio hein! 📅\n`
     }
-  } else if (isToday) {
-    response += '✅ **HOJE**\n'
-    response += 'Nenhum compromisso agendado para hoje.\n'
-  }
-
-  if (data.agendaEvents && data.agendaEvents.length > 0 && !isToday) {
-    response += `\n📊 **PRÓXIMOS 7 DIAS**\n`
-    response += `• Total: ${data.agendaEvents.length} eventos\n`
-  }
-
-  return response
-}
-
-// Resposta geral
-async function generateGeneralResponse(message: string, data: any): Promise<string> {
-  let response = ''
-
-  if (data.company) {
-    response += `Olá! Sou o Assistente Giartech da **${data.company.company_name}**.\n\n`
   } else {
-    response += 'Olá! Sou o Assistente Giartech.\n\n'
+    msg += `Hoje tá tranquilo! Nenhum compromisso agendado. Bom momento pra organizar outras coisas! 😊`
   }
 
-  response += 'Como posso ajudá-lo? Posso fornecer informações sobre:\n\n'
-  response += '💰 Financeiro\n'
-  response += '🔧 Ordens de Serviço\n'
-  response += '📦 Estoque\n'
-  response += '👥 Clientes\n'
-  response += '👨‍💼 Equipe\n'
-  response += '📊 Indicadores\n'
-  response += '📅 Agenda\n\n'
-  response += 'Basta fazer sua pergunta!'
+  if (data.agendaEvents && data.agendaEvents.length > 0) {
+    msg += `\n\n**Próximos 7 dias:** ${data.agendaEvents.length} eventos agendados`
+  }
 
-  return response
+  return msg
 }
 
-// Salva conversa
+function generateWelcome(): string {
+  const greeting = getGreeting()
+  return `${greeting}\n\nSou o assistente da Giartech! Posso te ajudar com:\n\n💰 Financeiro e DRE\n🔧 Ordens de Serviço\n📦 Estoque\n👥 Clientes\n👨‍💼 Equipe\n📊 Indicadores\n📅 Agenda\n\nÉ só perguntar o que você precisa! 😊`
+}
+
 async function saveConversation(
   conversationId: string,
   userId: string | undefined,
@@ -585,6 +505,6 @@ async function saveConversation(
       created_at: new Date().toISOString()
     }])
   } catch (error) {
-    console.error('Error saving conversation:', error)
+    console.error('Error saving:', error)
   }
 }
