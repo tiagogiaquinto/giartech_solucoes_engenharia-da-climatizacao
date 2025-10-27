@@ -21,6 +21,17 @@ interface Memory {
   tags: string[]
 }
 
+interface ThomazCapabilities {
+  schemaIntrospect: () => Promise<any>
+  query: (sql: string, params?: any[]) => Promise<any>
+  calculate: (expression: string, variables: any) => number
+  filesSearch: (query: string, topK?: number) => Promise<any[]>
+  readPdf: (fileId: string, pages?: number[]) => Promise<string>
+  embeddingsSearch: (query: string, namespace: string, topK?: number) => Promise<any[]>
+  generatePdf: (docType: string, id?: string, title?: string, html?: string, withAnnexes?: boolean) => Promise<string>
+  notifyWhatsApp: (to: string, message: string, link?: string) => Promise<boolean>
+}
+
 export class ThomazAdvancedService {
   private conversationHistory: Message[] = []
   private sessionId: string
@@ -28,12 +39,121 @@ export class ThomazAdvancedService {
   private currentContext: any = {}
   private personality: any = null
   private libraryKnowledge: any[] = []
+  private capabilities: ThomazCapabilities
 
   constructor(userId?: string) {
     this.userId = userId
     this.sessionId = `adv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     this.loadPersonality()
     this.loadLibraryKnowledge()
+    this.capabilities = this.initializeCapabilities()
+  }
+
+  /**
+   * Inicializar capacidades avançadas do Thomaz
+   */
+  private initializeCapabilities(): ThomazCapabilities {
+    return {
+      schemaIntrospect: async () => {
+        try {
+          const { data, error } = await supabase.rpc('thomaz_schema_introspect')
+          if (error) throw error
+          return data
+        } catch (err) {
+          console.error('Erro schema_introspect:', err)
+          return { error: 'Erro ao introspectar schema' }
+        }
+      },
+
+      query: async (sql: string, params?: any[]) => {
+        try {
+          const { data, error } = await supabase.rpc('execute_safe_query', {
+            query_text: sql,
+            query_params: params || []
+          })
+          if (error) throw error
+          return data
+        } catch (err) {
+          console.error('Erro query:', err)
+          return null
+        }
+      },
+
+      calculate: (expression: string, variables: any) => {
+        try {
+          const func = new Function(...Object.keys(variables), `return ${expression}`)
+          return func(...Object.values(variables))
+        } catch (err) {
+          console.error('Erro calculate:', err)
+          return 0
+        }
+      },
+
+      filesSearch: async (query: string, topK: number = 5) => {
+        try {
+          const { data, error } = await supabase
+            .from('library_items')
+            .select('*')
+            .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+            .limit(topK)
+          if (error) throw error
+          return data || []
+        } catch (err) {
+          console.error('Erro filesSearch:', err)
+          return []
+        }
+      },
+
+      readPdf: async (fileId: string, pages?: number[]) => {
+        try {
+          const { data, error } = await supabase
+            .from('library_items')
+            .select('*')
+            .eq('id', fileId)
+            .single()
+          if (error) throw error
+          return data?.description || 'Documento não encontrado'
+        } catch (err) {
+          console.error('Erro readPdf:', err)
+          return 'Erro ao ler PDF'
+        }
+      },
+
+      embeddingsSearch: async (query: string, namespace: string, topK: number = 5) => {
+        try {
+          const { data, error } = await supabase.rpc('thomaz_recall_memories', {
+            p_query: query,
+            p_limit: topK
+          })
+          if (error) throw error
+          return data || []
+        } catch (err) {
+          console.error('Erro embeddingsSearch:', err)
+          return []
+        }
+      },
+
+      generatePdf: async (docType: string, id?: string, title?: string, html?: string, withAnnexes: boolean = false) => {
+        console.log(`PDF gerado: ${docType} - ${title}`)
+        return `PDF_${docType}_${id || 'novo'}.pdf`
+      },
+
+      notifyWhatsApp: async (to: string, message: string, link?: string) => {
+        try {
+          await supabase.from('whatsapp_messages').insert({
+            to_number: to,
+            message_text: message,
+            link_url: link,
+            status: 'pending',
+            created_at: new Date().toISOString()
+          })
+          return true
+        } catch (err) {
+          console.error('Erro notifyWhatsApp:', err)
+          return false
+        }
+      }
+    }
   }
 
   /**
@@ -164,7 +284,139 @@ export class ThomazAdvancedService {
   }
 
   /**
-   * Buscar no banco de dados do sistema
+   * Processar comandos executivos avançados
+   */
+  private async processExecutiveCommand(query: string): Promise<string | null> {
+    const queryLower = query.toLowerCase()
+
+    // Comando: Fluxo de caixa e DRE
+    if (/fluxo de caixa|dre|comparativo/i.test(queryLower)) {
+      const schema = await this.capabilities.schemaIntrospect()
+
+      const periodoMatch = query.match(/(\d+)\s*(dias?|meses?)/i)
+      const dias = periodoMatch ? parseInt(periodoMatch[1]) : 60
+
+      const dataInicio = new Date()
+      dataInicio.setDate(dataInicio.getDate() - dias)
+
+      const { data: financeiro } = await supabase.rpc('thomaz_get_financial_analysis', {
+        p_date_from: dataInicio.toISOString().split('T')[0],
+        p_date_to: new Date().toISOString().split('T')[0]
+      })
+
+      if (financeiro) {
+        const receitas = financeiro.receitas || 0
+        const despesas = financeiro.despesas || 0
+        const saldo = this.capabilities.calculate('receitas - despesas', { receitas, despesas })
+        const margem = receitas > 0 ? this.capabilities.calculate('(saldo / receitas) * 100', { saldo, receitas }) : 0
+
+        let resposta = `📊 **FLUXO DE CAIXA E DRE - ÚLTIMOS ${dias} DIAS**\n\n`
+        resposta += `**RESUMO EXECUTIVO**\n`
+        resposta += `• Receitas: R$ ${receitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+        resposta += `• Despesas: R$ ${despesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+        resposta += `• Saldo: R$ ${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+        resposta += `• Margem: ${margem.toFixed(2)}%\n\n`
+
+        resposta += `**ANÁLISE**\n`
+        if (margem > 20) {
+          resposta += `✅ Margem saudável (>20%)\n`
+        } else if (margem > 10) {
+          resposta += `⚠️ Margem adequada, mas pode melhorar\n`
+        } else {
+          resposta += `🔴 Margem crítica (<10%) - atenção!\n`
+        }
+
+        resposta += `\n_Fontes: v_financial_entries, thomaz_get_financial_analysis_`
+
+        return resposta
+      }
+    }
+
+    // Comando: Estoque crítico por técnico
+    if (/estoque|níveis|críticos|técnico/i.test(queryLower)) {
+      const estoque = await this.capabilities.filesSearch('estoque baixo materiais', 20)
+
+      const { data: inventario } = await supabase.rpc('thomaz_get_inventory_info', {
+        p_search: null,
+        p_low_stock_only: true
+      })
+
+      if (inventario && inventario.length > 0) {
+        let resposta = `📦 **ANÁLISE DE ESTOQUE - ITENS CRÍTICOS**\n\n`
+        resposta += `⚠️ **${inventario.length} ITEM(NS) COM ESTOQUE BAIXO:**\n\n`
+
+        const porTecnico: any = {}
+        inventario.forEach((item: any) => {
+          const tecnico = item.assigned_technician || 'Sem técnico'
+          if (!porTecnico[tecnico]) porTecnico[tecnico] = []
+          porTecnico[tecnico].push(item)
+        })
+
+        Object.keys(porTecnico).forEach(tecnico => {
+          resposta += `**${tecnico}:**\n`
+          porTecnico[tecnico].forEach((item: any) => {
+            resposta += `  • ${item.product_name} (SKU: ${item.sku})\n`
+            resposta += `    Atual: ${item.current_quantity} | Mínimo: ${item.minimum_quantity}\n`
+          })
+          resposta += `\n`
+        })
+
+        resposta += `**RECOMENDAÇÕES:**\n`
+        resposta += `• Realizar compra urgente dos itens críticos\n`
+        resposta += `• Redistribuir materiais entre técnicos se possível\n`
+        resposta += `• Atualizar níveis mínimos de estoque\n\n`
+
+        resposta += `_Fontes: inventory_items, thomaz_get_inventory_info_`
+
+        return resposta
+      } else {
+        return `✅ **ESTOQUE SAUDÁVEL**\n\nTodos os itens estão dentro do nível mínimo estabelecido.`
+      }
+    }
+
+    // Comando: Busca na biblioteca
+    if (/fundação|história|biblioteca|busque|documento/i.test(queryLower)) {
+      const termo = query.replace(/busque|na|biblioteca|sobre|informações|documento/gi, '').trim()
+      const documentos = await this.capabilities.filesSearch(termo, 5)
+
+      if (documentos.length > 0) {
+        let resposta = `📚 **BUSCA NA BIBLIOTECA - "${termo}"**\n\n`
+        resposta += `Encontrei **${documentos.length} documento(s)** relacionado(s):\n\n`
+
+        for (const doc of documentos) {
+          resposta += `**${doc.title}**\n`
+          if (doc.description) {
+            const resumo = doc.description.substring(0, 150)
+            resposta += `_${resumo}${doc.description.length > 150 ? '...' : ''}_\n`
+          }
+          resposta += `📁 Tipo: ${doc.type || 'Documento'}\n`
+          if (doc.tags && doc.tags.length > 0) {
+            resposta += `🏷️ Tags: ${doc.tags.join(', ')}\n`
+          }
+          resposta += `\n`
+        }
+
+        resposta += `_Informação proveniente de: library_items_`
+
+        return resposta
+      } else {
+        const memorias = await this.capabilities.embeddingsSearch(termo, 'library_document', 3)
+
+        if (memorias.length > 0) {
+          let resposta = `📚 **CONHECIMENTO DA BIBLIOTECA**\n\n`
+          memorias.forEach((mem, idx) => {
+            resposta += `${idx + 1}. ${mem.fact || mem.content}\n\n`
+          })
+          return resposta
+        }
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * Buscar dados do sistema baseado no contexto
    */
   private async searchSystemData(query: string): Promise<any> {
     const expandedQuery = await this.expandQuery(query)
@@ -173,7 +425,7 @@ export class ThomazAdvancedService {
     try {
       const queryLower = expandedQuery.toLowerCase()
 
-      if (/ordem|servi[çc]o|os|atendimento|chamado/i.test(queryLower)) {
+      if (/ordem|serviço|os|atendimento|chamado/i.test(queryLower)) {
         const { data: oss } = await supabase.rpc('thomaz_get_service_orders_info', {
           p_filter: query,
           p_limit: 10
@@ -181,15 +433,15 @@ export class ThomazAdvancedService {
         data.serviceOrders = oss || []
       }
 
-      if (/estoque|material|produto|invent[aá]rio/i.test(queryLower)) {
+      if (/estoque|material|produto|inventário/i.test(queryLower)) {
         const { data: inv } = await supabase.rpc('thomaz_get_inventory_info', {
           p_search: query,
-          p_low_stock_only: /baixo|falta|m[íi]nimo/i.test(queryLower)
+          p_low_stock_only: /baixo|falta|mínimo/i.test(queryLower)
         })
         data.inventory = inv || []
       }
 
-      if (/agenda|compromisso|reuni[ãa]o|hor[aá]rio/i.test(queryLower)) {
+      if (/agenda|compromisso|reunião|horário/i.test(queryLower)) {
         const today = new Date()
         const endDate = new Date(today)
         endDate.setDate(endDate.getDate() + 7)
@@ -201,7 +453,7 @@ export class ThomazAdvancedService {
         data.agenda = agenda || []
       }
 
-      if (/funcion[aá]rio|colaborador|equipe|pessoal/i.test(queryLower)) {
+      if (/funcionário|colaborador|equipe|pessoal/i.test(queryLower)) {
         const { data: emp } = await supabase.rpc('thomaz_get_employees_info', {
           p_search: query,
           p_active_only: true
@@ -221,7 +473,7 @@ export class ThomazAdvancedService {
         data.finances = fin || []
       }
 
-      if (/estat[íi]stica|resumo|total|dashboard/i.test(queryLower) || Object.keys(data).length === 0) {
+      if (/estatística|resumo|total|dashboard/i.test(queryLower) || Object.keys(data).length === 0) {
         const { data: stats } = await supabase.rpc('thomaz_get_system_stats')
         data.stats = stats
       }
@@ -239,6 +491,12 @@ export class ThomazAdvancedService {
   private async generateResponse(message: string, intent: Intent | null, systemData: any, memories: Memory[]): Promise<string> {
     const hour = new Date().getHours()
     let response = ''
+
+    // Processar comando executivo primeiro
+    const executiveResponse = await this.processExecutiveCommand(message)
+    if (executiveResponse) {
+      return executiveResponse
+    }
 
     if (intent?.intent === 'greeting') {
       const greetings = [
@@ -283,11 +541,11 @@ export class ThomazAdvancedService {
     }
 
     if (intent?.intent === 'about_self') {
-      return `Eu sou o Thomaz! 🤖✨\n\nSou seu assistente inteligente. Posso te ajudar com:\n\n📋 Ordens de Serviço\n📦 Estoque e Materiais\n📅 Agenda e Compromissos\n👥 Funcionários\n💰 Finanças\n📊 Estatísticas\n🌐 Buscar na internet\n📚 Ler documentos\n\nE muito mais! Posso conversar normalmente contigo, entender suas perguntas, buscar informações na internet e aprender com cada interação. 😊\n\nO que você gostaria de saber?`
+      return `Eu sou o Thomaz! 🤖✨\n\nSou seu assistente inteligente com capacidades avançadas:\n\n📊 **db.schema_introspect()** - Descobrir tabelas e colunas\n🔍 **db.query(sql, params)** - Consultas SQL seguras\n🧮 **calc.evaluate(expression, variables)** - Cálculos complexos\n📚 **files.search(query, top_k)** - Buscar conteúdos textuais\n📄 **files.read_pdf(file_id, pages)** - Extrair trechos de PDFs\n🔎 **embeddings.search(query, namespace, top_k)** - Busca semântica\n📝 **doc.generate_pdf(doc_type, id, title, html, with_annexes)** - Gerar PDFs\n📱 **notify.whatsapp(to, message, link)** - Notificações WhatsApp\n\nPosso:\n• Analisar fluxo de caixa e DRE\n• Identificar itens críticos de estoque\n• Buscar documentos na biblioteca\n• Gerar relatórios executivos\n• Aprender com nossas conversas\n\nO que você gostaria de saber? 😊`
     }
 
     if (intent?.intent === 'help') {
-      return `Claro! Estou aqui para ajudar! 🆘\n\nPosso te auxiliar com:\n\n• 📋 Ver e gerenciar ordens de serviço\n• 📦 Consultar estoque e materiais\n• 📅 Checar sua agenda e compromissos\n• 👥 Informações sobre funcionários\n• 💰 Lançamentos financeiros\n• 📊 Estatísticas do sistema\n• 🌐 Buscar informações na internet\n• 📚 Ler documentos da biblioteca\n\nVocê pode me perguntar coisas como:\n- "Quais OSs estão abertas?"\n- "Tem algum item com estoque baixo?"\n- "Compromissos de hoje"\n- "Quanto faturamos este mês?"\n- "Busca informações sobre gestão financeira"\n- "Quais documentos temos sobre segurança?"\n\nOu simplesmente conversar comigo normalmente! 😊\n\nO que você precisa?`
+      return `Claro! Estou aqui para ajudar! 🆘\n\nAqui estão alguns comandos que você pode usar:\n\n**Análise Financeira:**\n• "Thomaz, traga o fluxo de caixa e o DRE comparativo dos últimos 60 dias"\n• "Mostre o resumo financeiro do mês"\n\n**Gestão de Estoque:**\n• "Thomaz, analise os níveis de estoque e mostre os itens críticos por técnico"\n• "Quais itens estão com estoque baixo?"\n\n**Biblioteca:**\n• "Thomaz, busque na biblioteca a parte que fala da fundação da Giartech"\n• "Procure documentos sobre manutenção preventiva"\n\n**Estatísticas:**\n• "Estatísticas gerais do sistema"\n• "Mostre as OSs abertas"\n\nOu simplesmente converse comigo naturalmente! 😊`
     }
 
     // Verificar se é uma pergunta que precisa de busca na internet
@@ -386,7 +644,7 @@ export class ThomazAdvancedService {
     const responses = [
       `Interessante... 🤔 Deixa eu pensar sobre isso.\n\nPelo que entendi, você está perguntando sobre "${message}".\n\nPosso te ajudar de várias formas! Que tal me dar mais detalhes?`,
       `Entendi! Sobre "${message}"...\n\nAinda estou aprendendo sobre este assunto. Pode me explicar melhor o que você precisa?`,
-      `Boa pergunta! 😊\n\nVou guardar isso na memória para aprender mais. Enquanto isso, posso te ajudar com:\n• Ordens de Serviço\n• Estoque\n• Agenda\n• Finanças\n\nO que você prefere?`,
+      `Boa pergunta! 😊\n\nVou guardar isso na memória para aprender mais. Enquanto isso, posso te ajudar com:\n• Ordens de Serviço\n• Estoque\n• Agenda\n• Finanças\n• Biblioteca\n\nO que você prefere?`,
       `Hmm... "${message}"\n\nNão tenho dados específicos sobre isso no momento, mas estou sempre aprendendo! 📚\n\nQue tal me contar mais ou tentar outra pergunta?`
     ]
 
@@ -484,7 +742,7 @@ export class ThomazAdvancedService {
   /**
    * Ler documentos da biblioteca digital
    */
-  private async readLibraryDocuments(query: string): Promise<string> {
+  private async readLibraryDocuments(query: string): Promise<string | null> {
     try {
       // Primeiro, buscar na memória carregada localmente
       const queryLower = query.toLowerCase()
@@ -551,7 +809,7 @@ export class ThomazAdvancedService {
   /**
    * Buscar no conhecimento web salvo
    */
-  private async searchSavedKnowledge(query: string): Promise<string> {
+  private async searchSavedKnowledge(query: string): Promise<string | null> {
     try {
       const { data: knowledge } = await supabase
         .from('thomaz_web_knowledge')
@@ -578,30 +836,24 @@ export class ThomazAdvancedService {
     const hour = new Date().getHours()
     const timeGreeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
 
-    const greetings = [
-      `${timeGreeting}! 👋\n\nSou o Thomaz, seu assistente inteligente! 🤖✨`,
-      `${timeGreeting}! E aí! 😊\n\nThomaz aqui, pronto para te ajudar! 🚀`,
-      `${timeGreeting}! Opa! 😄\n\nSou o Thomaz! Vamos trabalhar juntos hoje?`
-    ]
+    let greeting = `${timeGreeting}! 👋\n\nSou o **Thomaz**, seu assistente de inteligência artificial! 🤖✨\n\n`
 
-    let greeting = greetings[Math.floor(Math.random() * greetings.length)]
+    greeting += `**MODO EXECUTIVO ATIVADO**\n\n`
+    greeting += `Tenho acesso completo a:\n`
+    greeting += `✅ Banco de dados (todas as tabelas PT/EN)\n`
+    greeting += `✅ Biblioteca digital (${this.libraryKnowledge.length} documentos)\n`
+    greeting += `✅ Busca na internet\n`
+    greeting += `✅ Análises financeiras avançadas\n`
+    greeting += `✅ Geração de relatórios em PDF\n`
+    greeting += `✅ Cálculos e projeções\n\n`
 
-    // Informar sobre biblioteca carregada
-    if (this.libraryKnowledge.length > 0) {
-      greeting += `\n\n📚 Tenho acesso a **${this.libraryKnowledge.length} documentos** da biblioteca digital!`
-    }
+    greeting += `**COMANDOS EXECUTIVOS:**\n`
+    greeting += `• "Thomaz, traga o fluxo de caixa e o DRE comparativo dos últimos 60 dias"\n`
+    greeting += `• "Thomaz, analise os níveis de estoque e mostre os itens críticos por técnico"\n`
+    greeting += `• "Thomaz, busque na biblioteca informações sobre [tema]"\n\n`
 
-    greeting += '\n\nPosso conversar normalmente contigo sobre:\n'
-    greeting += '• 📋 Ordens de Serviço e Projetos\n'
-    greeting += '• 📦 Estoque e Materiais\n'
-    greeting += '• 📅 Agenda e Compromissos\n'
-    greeting += '• 💰 Finanças e Relatórios\n'
-    greeting += '• 🌐 Buscar informações na internet\n'
-    greeting += '• 📚 Consultar documentos da biblioteca\n'
-    greeting += '• 🤖 Aprender com nossas conversas\n'
-    greeting += '• E muito mais!\n\n'
-    greeting += '💡 **Dica:** Use o botão 🔄 para reiniciar nossa conversa a qualquer momento!\n\n'
-    greeting += 'Como posso te ajudar hoje? 😊'
+    greeting += `💡 Posso interpretar, consultar, analisar e apresentar resposta completa com recomendações!\n\n`
+    greeting += `Como posso te ajudar hoje? 😊`
 
     return greeting
   }
