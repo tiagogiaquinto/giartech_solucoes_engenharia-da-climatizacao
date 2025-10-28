@@ -102,6 +102,7 @@ function App() {
   const [thomazInitialized, setThomazInitialized] = useState(false)
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { isSearchOpen, closeSearch } = useGlobalSearch()
 
   useEffect(() => {
     // Inicializar ThomazAI primeiro
@@ -643,6 +644,9 @@ function App() {
 
       {/* Assistente Giartech - Inteligência Corporativa */}
       <GiartechAssistant />
+
+      {/* Busca Global (Cmd+K) */}
+      <GlobalSearch isOpen={isSearchOpen} onClose={closeSearch} />
     </UserProvider>
   )
 }
