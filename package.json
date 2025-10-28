@@ -1,13 +1,60 @@
 {
-  "name": "os-integrated-system",
+  "name": "giartech-desktop",
+  "productName": "Giartech Sistema Integrado",
+  "description": "Sistema completo de gestão empresarial",
+  "author": "Giartech Soluções",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
+    "dev:electron": "concurrently \"cross-env NODE_ENV=development npm run dev\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
     "build": "tsc && vite build",
+    "build:electron": "npm run build && electron-builder",
+    "build:win": "npm run build && electron-builder --win",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:linux": "npm run build && electron-builder --linux",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.giartech.desktop",
+    "productName": "Giartech",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/icon.png"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/icon.png",
+      "artifactName": "Giartech-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Giartech"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "public/icon.png",
+      "category": "public.app-category.business"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "public/icon.png",
+      "category": "Office"
+    }
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
@@ -44,12 +91,17 @@
     "@typescript-eslint/parser": "^6.21.0",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.16",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^8.57.1",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.23",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.18",
     "typescript": "^5.9.3",
-    "vite": "^5.4.20"
+    "vite": "^5.4.20",
+    "wait-on": "^9.0.1"
   }
 }
