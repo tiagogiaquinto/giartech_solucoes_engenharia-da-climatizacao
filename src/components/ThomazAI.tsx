@@ -16,6 +16,8 @@ import {
   MessageSquare
 } from 'lucide-react'
 import { ThomazSuperAdvancedService, ThomazConversationResult } from '../services/thomazSuperAdvancedService'
+import { ThomazReasoningEngine, ReasoningResult } from '../services/thomazReasoningEngine'
+import { DataQueryResult } from '../services/thomazDataService'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -28,6 +30,7 @@ interface Message {
   confidence?: 'high' | 'medium' | 'low'
   sources?: any[]
   isStreaming?: boolean
+  realData?: DataQueryResult
 }
 
 interface ThomazAIProps {
@@ -42,8 +45,9 @@ export function ThomazAI({ userId, userRole = 'user', companyId, userName }: Tho
   const [inputMessage, setInputMessage] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [currentThinking, setCurrentThinking] = useState<string>('')
-  const [thomazService, setThomazService] = useState<ThomazSuperAdvancedService | null>(null)
+  const [reasoningEngine] = useState(() => new ThomazReasoningEngine())
   const [showSources, setShowSources] = useState<string | null>(null)
+  const [showRealData, setShowRealData] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -62,8 +66,6 @@ export function ThomazAI({ userId, userRole = 'user', companyId, userName }: Tho
   }, [inputMessage])
 
   const initializeThomazService = async () => {
-    const service = new ThomazSuperAdvancedService(userId, userRole, companyId)
-    setThomazService(service)
 
     // Saudação contextual e inteligente
     const hour = new Date().getHours()
@@ -82,7 +84,13 @@ Sou o **Thomaz**, a inteligência artificial da Giartech. Trabalho aqui como con
 • Insights sobre o negócio e oportunidades
 
 **Como funciono:**
-Tenho acesso profundo a toda nossa base de conhecimento, dados em tempo real e experiência em gestão empresarial. Penso, analiso e respondo como um consultor especializado.
+Tenho acesso profundo a toda nossa base de conhecimento, **dados em tempo real** do sistema e experiência em gestão empresarial. Penso, analiso e respondo como um consultor especializado.
+
+**Experimente perguntar:**
+• "Mostre o dashboard geral da empresa"
+• "Quantas ordens de serviço temos abertas?"
+• "Qual o status financeiro este mês?"
+• "Quais itens estão em baixa no estoque?"
 
 O que precisa hoje? Pode conversar naturalmente comigo, como faria com qualquer colega de trabalho.`
 
@@ -108,7 +116,7 @@ O que precisa hoje? Pode conversar naturalmente comigo, como faria com qualquer 
   }
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isProcessing || !thomazService) return
+    if (!inputMessage.trim() || isProcessing) return
 
     const userMessage: Message = {
       id: `msg_${Date.now()}`,
@@ -137,22 +145,29 @@ O que precisa hoje? Pode conversar naturalmente comigo, como faria com qualquer 
         await new Promise(resolve => setTimeout(resolve, 300))
       }
 
-      // Processar com Thomaz Super Advanced
-      const result: ThomazConversationResult = await thomazService.processMessage(
-        userMessage.content
-      )
+      // Processar com Reasoning Engine (com dados reais!)
+      const result: ReasoningResult = await reasoningEngine.reason({
+        userMessage: userMessage.content,
+        conversationHistory: messages.map(m => ({
+          role: m.role,
+          content: m.content
+        })),
+        userRole,
+        companyContext: { userId, companyId }
+      })
 
       setCurrentThinking('')
 
-      // Criar mensagem da resposta
+      // Criar mensagem da resposta com dados reais
       const assistantMessage: Message = {
         id: `msg_${Date.now() + 1}`,
         role: 'assistant',
-        content: result.response,
+        content: result.response.answer,
         timestamp: new Date(),
-        confidence: result.confidenceLevel,
-        sources: result.sources,
-        thinking: thinkingSteps.join(' → ')
+        confidence: result.response.confidence > 0.8 ? 'high' : result.response.confidence > 0.6 ? 'medium' : 'low',
+        sources: [],
+        thinking: result.reasoning.thoughtProcess.join(' → '),
+        realData: result.realData
       }
 
       // Simular streaming da resposta (efeito de digitação)

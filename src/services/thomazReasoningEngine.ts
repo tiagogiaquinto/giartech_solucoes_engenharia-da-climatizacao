@@ -7,9 +7,11 @@
  * - Análise de intenção do usuário
  * - Formulação de respostas inteligentes
  * - Conexão de conceitos
+ * - Consulta de dados reais da empresa
  */
 
 import { supabase } from '../lib/supabase'
+import { ThomazDataService, DataQueryResult } from './thomazDataService'
 
 export interface ReasoningContext {
   userMessage: string
@@ -41,9 +43,15 @@ export interface ReasoningResult {
     suggestedFollowUps: string[]
     actionableSteps?: string[]
   }
+  realData?: DataQueryResult
 }
 
 export class ThomazReasoningEngine {
+  private dataService: ThomazDataService
+
+  constructor() {
+    this.dataService = new ThomazDataService()
+  }
   /**
    * NÚCLEO DO RACIOCÍNIO: Processar e entender mensagem
    */
@@ -56,21 +64,26 @@ export class ThomazReasoningEngine {
     // Etapa 2: Raciocinar sobre o contexto
     const reasoning = await this.reasonAboutContext(interpretation, context)
 
-    // Etapa 3: Buscar conhecimento relevante
+    // Etapa 3: Buscar dados reais (NOVO!)
+    const realData = await this.queryRealData(interpretation, reasoning, userMessage)
+
+    // Etapa 4: Buscar conhecimento relevante
     const knowledge = await this.retrieveRelevantKnowledge(interpretation, reasoning)
 
-    // Etapa 4: Formular resposta inteligente
+    // Etapa 5: Formular resposta inteligente com dados reais
     const response = await this.formulateResponse(
       interpretation,
       reasoning,
       knowledge,
-      context
+      context,
+      realData
     )
 
     return {
       interpretation,
       reasoning,
-      response
+      response,
+      realData
     }
   }
 
@@ -182,7 +195,43 @@ export class ThomazReasoningEngine {
   }
 
   /**
-   * ETAPA 3: Buscar Conhecimento Relevante
+   * ETAPA 3: Consultar Dados Reais da Empresa (NOVO!)
+   */
+  private async queryRealData(
+    interpretation: ReasoningResult['interpretation'],
+    reasoning: ReasoningResult['reasoning'],
+    userMessage: string
+  ): Promise<DataQueryResult | undefined> {
+    const { mainIntent, subIntents } = interpretation
+
+    // Detectar se usuário está pedindo dados reais
+    const isDataQuery =
+      /quantos|quanto|qual|mostre|liste|busque|consulte|dados|informa[çc][õo]es/i.test(userMessage) ||
+      mainIntent.includes('consulta') ||
+      mainIntent.includes('análise de dados') ||
+      mainIntent.includes('dashboard')
+
+    if (!isDataQuery) {
+      return undefined
+    }
+
+    try {
+      // Usar query inteligente do DataService
+      const result = await this.dataService.intelligentQuery(userMessage)
+
+      if (result.success && result.data.length > 0) {
+        return result
+      }
+
+      return undefined
+    } catch (error) {
+      console.error('Real data query error:', error)
+      return undefined
+    }
+  }
+
+  /**
+   * ETAPA 4: Buscar Conhecimento Relevante
    */
   private async retrieveRelevantKnowledge(
     interpretation: ReasoningResult['interpretation'],
@@ -214,13 +263,14 @@ export class ThomazReasoningEngine {
   }
 
   /**
-   * ETAPA 4: Formular Resposta Inteligente
+   * ETAPA 5: Formular Resposta Inteligente com Dados Reais
    */
   private async formulateResponse(
     interpretation: ReasoningResult['interpretation'],
     reasoning: ReasoningResult['reasoning'],
     knowledge: any[],
-    context: ReasoningContext
+    context: ReasoningContext,
+    realData?: DataQueryResult
   ): Promise<ReasoningResult['response']> {
     const { mainIntent } = interpretation
     const { missingInformation, connectionsFound } = reasoning
@@ -232,6 +282,21 @@ export class ThomazReasoningEngine {
         confidence: 0.7,
         shouldAskForClarification: true,
         suggestedFollowUps: []
+      }
+    }
+
+    // PRIORIDADE: Se temos dados reais, usá-los!
+    if (realData && realData.success) {
+      return {
+        answer: realData.summary,
+        confidence: 0.95,
+        shouldAskForClarification: false,
+        suggestedFollowUps: realData.insights || [
+          'Quer mais detalhes sobre algum item?',
+          'Posso fazer outra análise?',
+          'Precisa exportar esses dados?'
+        ],
+        actionableSteps: realData.insights
       }
     }
 
