@@ -1,15 +1,14 @@
-import { useContext } from 'react'
 import { ThomazAI } from '../components/ThomazAI'
-import { UserContext } from '../contexts/UserContext'
+import { useUser } from '../contexts/UserContext'
 
 export default function ThomazChat() {
-  const { user } = useContext(UserContext)
+  const { user } = useUser()
 
   return (
     <ThomazAI
       userId={user?.id}
       userRole={user?.role || 'user'}
-      companyId={user?.company_id}
+      companyId={undefined}
       userName={user?.name}
     />
   )

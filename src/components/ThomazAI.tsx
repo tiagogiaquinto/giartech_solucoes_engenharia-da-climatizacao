@@ -139,8 +139,7 @@ O que precisa hoje? Pode conversar naturalmente comigo, como faria com qualquer 
 
       // Processar com Thomaz Super Advanced
       const result: ThomazConversationResult = await thomazService.processMessage(
-        userMessage.content,
-        messages.map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp }))
+        userMessage.content
       )
 
       setCurrentThinking('')
