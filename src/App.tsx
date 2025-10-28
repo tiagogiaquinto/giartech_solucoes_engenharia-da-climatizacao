@@ -46,6 +46,8 @@ import DepartmentalDashboard from './pages/DepartmentalDashboard'
 import DigitalLibrary from './pages/DigitalLibrary'
 import Chat from './components/Chat'
 import WhatsAppCRM from './pages/WhatsAppCRM'
+import WhatsAppCRMNew from './pages/WhatsAppCRM_NEW'
+import ThomazMetrics from './pages/ThomazMetrics'
 import FinancialManagement from './pages/FinancialManagement'
 import FinancialAnalysis from './pages/FinancialAnalysis'
 import BankAccounts from './pages/BankAccounts'
@@ -419,7 +421,15 @@ function App() {
           <Route path="/whatsapp-crm" element={
             <ProtectedRoute>
               <WebLayout>
-                <WhatsAppCRM />
+                <WhatsAppCRMNew />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/thomaz-metrics" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <ThomazMetrics />
               </WebLayout>
             </ProtectedRoute>
           } />

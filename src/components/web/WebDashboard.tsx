@@ -4,6 +4,7 @@ import { TrendingUp, Users, FolderOpen, Clock, Plus, CircleCheck as CheckCircle,
 import { useUser } from '../../contexts/UserContext'
 import { Link } from 'react-router-dom'
 import { useDashboardData } from '../../hooks/useDashboardData'
+import ThomazContextualAssistant from '../ThomazContextualAssistant'
 
 interface WebDashboardProps {
   onPremiumFeature: (feature: string) => void
@@ -52,6 +53,9 @@ const WebDashboard: React.FC<WebDashboardProps> = ({ onPremiumFeature }) => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Thomaz Sugestões Contextuais */}
+      <ThomazContextualAssistant context="dashboard" />
+
       {/* Header para Web */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

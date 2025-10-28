@@ -7,6 +7,9 @@ import {
   RefreshCw, Download, Filter, ChevronDown
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import ThomazContextualAssistant from '../components/ThomazContextualAssistant'
+import DREComparative from '../components/DREComparative'
+import CashFlowProjection from '../components/CashFlowProjection'
 import { Line, Bar, Doughnut } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -697,6 +700,12 @@ const ExecutiveDashboard = () => {
               )}
             </div>
           </motion.div>
+
+          {/* Análises Financeiras Avançadas */}
+          <div className="mt-8 space-y-6">
+            <DREComparative />
+            <CashFlowProjection />
+          </div>
         </div>
       </div>
     </div>
