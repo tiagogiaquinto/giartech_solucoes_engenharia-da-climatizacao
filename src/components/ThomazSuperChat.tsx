@@ -49,44 +49,7 @@ export function ThomazSuperChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const quickActions: QuickAction[] = [
-    {
-      icon: <FileText className="w-4 h-4" />,
-      label: 'OSs Abertas',
-      query: 'Mostre as ordens de serviço abertas',
-      color: 'bg-blue-500'
-    },
-    {
-      icon: <Package className="w-4 h-4" />,
-      label: 'Estoque Baixo',
-      query: 'Quais itens estão com estoque baixo?',
-      color: 'bg-orange-500'
-    },
-    {
-      icon: <Calendar className="w-4 h-4" />,
-      label: 'Agenda Hoje',
-      query: 'Compromissos de hoje',
-      color: 'bg-purple-500'
-    },
-    {
-      icon: <DollarSign className="w-4 h-4" />,
-      label: 'Resumo Financeiro',
-      query: 'Mostre o resumo financeiro do mês',
-      color: 'bg-green-500'
-    },
-    {
-      icon: <TrendingUp className="w-4 h-4" />,
-      label: 'Estatísticas',
-      query: 'Estatísticas gerais do sistema',
-      color: 'bg-indigo-500'
-    },
-    {
-      icon: <Users className="w-4 h-4" />,
-      label: 'Funcionários',
-      query: 'Liste os funcionários ativos',
-      color: 'bg-pink-500'
-    }
-  ]
+  // Removido: quickActions - conversação totalmente natural
 
   useEffect(() => {
     if (isOpen && !thomazService) {
@@ -213,10 +176,7 @@ export function ThomazSuperChat() {
     }
   }
 
-  const handleQuickAction = (query: string) => {
-    setInputMessage(query)
-    handleSendMessage(query)
-  }
+  // Removido: handleQuickAction - não há mais ações rápidas
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)

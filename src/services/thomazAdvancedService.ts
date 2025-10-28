@@ -539,52 +539,50 @@ export class ThomazAdvancedService {
 
     if (intent?.intent === 'greeting') {
       const greetings = [
-        `${hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'}! 😊`,
-        'E aí! Vamos trabalhar juntos? 🚀',
-        'Olá! Pronto para te ajudar! ✨',
-        'Opa! Como posso facilitar seu dia? 😄'
+        `${hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'}! Tudo certo?`,
+        'E aí! Como vai?',
+        'Olá! Precisa de algo?',
+        'Opa! Tudo bem?'
       ]
-      response = greetings[Math.floor(Math.random() * greetings.length)]
-      response += '\n\nSou o Thomaz, seu assistente inteligente! Como posso ajudar você hoje?'
-      return response
+      return greetings[Math.floor(Math.random() * greetings.length)]
     }
 
     if (intent?.intent === 'farewell') {
       const farewells = [
-        'Até mais! Se precisar de algo, é só chamar! 👋',
-        'Tchau! Foi um prazer ajudar! 😊',
-        'Até logo! Estou sempre por aqui! ✨',
-        'Falou! Conte comigo sempre! 🚀'
+        'Até mais! Qualquer coisa, me chama.',
+        'Falou!',
+        'Até logo!',
+        'Beleza, até!'
       ]
       return farewells[Math.floor(Math.random() * farewells.length)]
     }
 
     if (intent?.intent === 'gratitude') {
       const thanks = [
-        'Por nada! Fico feliz em ajudar! 😊',
-        'Sempre às ordens! 🚀',
-        'De nada! Estou aqui para isso! ✨',
-        'Imagina! Foi um prazer! 😄'
+        'De nada!',
+        'Tranquilo!',
+        'Por nada!',
+        'Imagina!'
       ]
       return thanks[Math.floor(Math.random() * thanks.length)]
     }
 
     if (intent?.intent === 'how_are_you') {
       const states = [
-        'Estou ótimo, obrigado por perguntar! 😊 E você?',
-        'Super bem! Pronto para te ajudar! 🚀',
-        'Excelente! E você, como está? ✨',
-        'Muito bem! E aí, tudo certo? 😄'
+        'Tudo certo! E você?',
+        'Tranquilo! Como está aí?',
+        'Ótimo! Tudo bem com você?',
+        'Beleza! E aí?'
       ]
       return states[Math.floor(Math.random() * states.length)]
     }
 
     if (intent?.intent === 'about_self') {
-      return `Eu sou o Thomaz! 🤖✨\n\nSou seu assistente inteligente com capacidades avançadas:\n\n📊 **db.schema_introspect()** - Descobrir tabelas e colunas\n🔍 **db.query(sql, params)** - Consultas SQL seguras\n🧮 **calc.evaluate(expression, variables)** - Cálculos complexos\n📚 **files.search(query, top_k)** - Buscar conteúdos textuais\n📄 **files.read_pdf(file_id, pages)** - Extrair trechos de PDFs\n🔎 **embeddings.search(query, namespace, top_k)** - Busca semântica\n📝 **doc.generate_pdf(doc_type, id, title, html, with_annexes)** - Gerar PDFs\n📱 **notify.whatsapp(to, message, link)** - Notificações WhatsApp\n\nPosso:\n• Analisar fluxo de caixa e DRE\n• Identificar itens críticos de estoque\n• Buscar documentos na biblioteca\n• Gerar relatórios executivos\n• Aprender com nossas conversas\n\nO que você gostaria de saber? 😊`
+      return `Sou o Thomaz, consultor sênior aqui da empresa.\n\nTrabalho com dados do sistema em tempo real e posso ajudar com:\n\n• Análises financeiras e DRE\n• Gestão de OSs e operações\n• Controle de estoque\n• Indicadores e métricas\n• Busca em documentos\n• Insights e recomendações\n\nConheço bem o negócio e acompanho tudo em tempo real. Sobre o que precisa conversar?`
     }
 
     if (intent?.intent === 'help') {
-      return `Claro! Estou aqui para ajudar! 🆘\n\nAqui estão alguns comandos que você pode usar:\n\n**Análise Financeira:**\n• "Thomaz, traga o fluxo de caixa e o DRE comparativo dos últimos 60 dias"\n• "Mostre o resumo financeiro do mês"\n\n**Gestão de Estoque:**\n• "Thomaz, analise os níveis de estoque e mostre os itens críticos por técnico"\n• "Quais itens estão com estoque baixo?"\n\n**Biblioteca:**\n• "Thomaz, busque na biblioteca a parte que fala da fundação da Giartech"\n• "Procure documentos sobre manutenção preventiva"\n\n**Estatísticas:**\n• "Estatísticas gerais do sistema"\n• "Mostre as OSs abertas"\n\nOu simplesmente converse comigo naturalmente! 😊`
+      return `Só me perguntar o que precisa!\n\nPosso ajudar com:\n\n💰 Financeiro - "Como está o caixa?" / "Mostre o resultado do mês"\n🔧 OSs - "Quantas abertas?" / "Qual o status das OS?"\n📦 Estoque - "O que tá faltando?" / "Itens baixos?"\n📄 Documentos - "Busca sobre X" / "Onde tem info sobre Y?"\n📊 Métricas - "Resumo geral" / "Indicadores principais"\n\nNão precisa usar frases específicas. Fale naturalmente que eu entendo!`
     }
 
     // Verificar se é uma pergunta que precisa de busca na internet
