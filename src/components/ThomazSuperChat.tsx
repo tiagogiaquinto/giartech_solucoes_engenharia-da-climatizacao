@@ -292,10 +292,10 @@ export function ThomazSuperChat() {
             </div>
             <div>
               <h3 className="font-bold text-white text-lg flex items-center gap-2">
-                Thomaz AI
+                Thomaz
                 <Sparkles className="w-4 h-4 text-yellow-300" />
               </h3>
-              <p className="text-xs text-blue-100">Seu assistente inteligente</p>
+              <p className="text-xs text-blue-100">Consultor Sênior - Especialista em Gestão</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -321,29 +321,7 @@ export function ThomazSuperChat() {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        {messages.length <= 1 && (
-          <div className="p-4 bg-gray-50 border-b">
-            <p className="text-xs text-gray-600 mb-2 font-medium">Ações Rápidas:</p>
-            <div className="grid grid-cols-3 gap-2">
-              {quickActions.map((action, idx) => (
-                <motion.button
-                  key={idx}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  onClick={() => handleQuickAction(action.query)}
-                  className="flex flex-col items-center gap-1 p-2 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-md transition-all text-center"
-                >
-                  <div className={`${action.color} text-white p-2 rounded-lg`}>
-                    {action.icon}
-                  </div>
-                  <span className="text-xs font-medium text-gray-700">{action.label}</span>
-                </motion.button>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Quick Actions - Removido para deixar mais natural */}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
@@ -370,10 +348,10 @@ export function ThomazSuperChat() {
 
               <div className={`flex-1 ${message.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
                 <div
-                  className={`max-w-[85%] rounded-2xl p-3 ${
+                  className={`max-w-[85%] rounded-2xl p-4 shadow-sm ${
                     message.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-none'
-                      : 'bg-white border-2 border-gray-200 text-gray-900 rounded-bl-none'
+                      ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-br-none'
+                      : 'bg-gradient-to-br from-white to-gray-50 border border-gray-200 text-gray-900 rounded-bl-none'
                   }`}
                 >
                   <div className="text-sm whitespace-pre-wrap">
@@ -457,9 +435,9 @@ export function ThomazSuperChat() {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
-              placeholder="Pergunte algo ao Thomaz..."
+              placeholder="Fale comigo naturalmente..."
               disabled={isLoading}
-              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base"
             />
             <button
               onClick={() => handleSendMessage()}
@@ -474,7 +452,7 @@ export function ThomazSuperChat() {
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-2 text-center">
-            Thomaz pode acessar todos os dados do sistema em tempo real
+            Conversa criptografada e segura • Dados em tempo real
           </p>
         </div>
       </motion.div>

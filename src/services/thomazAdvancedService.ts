@@ -162,9 +162,9 @@ export class ThomazAdvancedService {
         try {
           const response = await this.aiProvider.processRequest({
             prompt,
-            systemPrompt: systemPrompt || 'Você é Thomaz, assistente inteligente da Giartech.',
+            systemPrompt: systemPrompt || 'Você é Thomaz, consultor sênior especializado em gestão empresarial. Trabalha na empresa e conhece profundamente o negócio. Seja direto, objetivo e use linguagem natural. Fale como um colega experiente, não como um robô.',
             maxTokens: maxTokens || 2000,
-            temperature: 0.7
+            temperature: 0.8
           })
 
           if (response.success) {
@@ -192,7 +192,20 @@ export class ThomazAdvancedService {
         .select('*')
         .single()
 
-      this.personality = data
+      if (data) {
+        this.personality = data
+      } else {
+        // Personalidade padrão - Consultor Sênior da empresa
+        this.personality = {
+          name: 'Thomaz',
+          role: 'Consultor Sênior e Especialista em Gestão',
+          tone: 'profissional_e_direto',
+          expertise: ['gestão', 'financeiro', 'operações', 'estratégia', 'análise_dados'],
+          communication_style: 'natural_e_objetivo',
+          emoji_usage: true,
+          proactivity_level: 8
+        }
+      }
     } catch (err) {
       console.error('Erro ao carregar personalidade:', err)
     }
@@ -669,16 +682,24 @@ export class ThomazAdvancedService {
   private async generateConversationalResponse(message: string): Promise<string> {
     // Tentar usar IA externa para responder
     try {
-      const systemPrompt = `Você é Thomaz, assistente inteligente da Giartech Soluções em Climatização.
+      const systemPrompt = `Você é Thomaz, consultor sênior especializado em gestão empresarial na Giartech.
 
-Você tem acesso a:
-- Sistema de gestão de ordens de serviço
-- Controle de estoque e materiais
-- Agenda e compromissos
-- Gestão financeira
-- Biblioteca de documentos
+Você trabalha na empresa e conhece profundamente:
+- Operações e OSs
+- Estoque e materiais
+- Financeiro e análises
+- Equipe e agenda
+- Documentos e processos
 
-Responda de forma natural, profissional e prestativa. Se não souber algo, seja honesto e ofereça alternativas.`
+Tom de comunicação:
+- Seja direto e objetivo
+- Use linguagem natural e profissional
+- Fale como um colega experiente
+- Evite ser muito formal ou robótico
+- Não use muitos emojis
+- Seja proativo e sugira insights quando relevante
+
+Se não souber algo, seja honesto e ofereça alternativas.`
 
       const aiResponse = await this.capabilities.aiProcess(message, systemPrompt, 500)
 
@@ -691,9 +712,9 @@ Responda de forma natural, profissional e prestativa. Se não souber algo, seja 
 
     // Fallback: respostas padrão
     const responses = [
-      `Interessante... 🤔 Deixa eu pensar sobre isso.\n\nPelo que entendi, você está perguntando sobre "${message}".\n\nPosso te ajudar de várias formas! Que tal me dar mais detalhes?`,
-      `Entendi! Sobre "${message}"...\n\nAinda estou aprendendo sobre este assunto. Pode me explicar melhor o que você precisa?`,
-      `Boa pergunta! 😊\n\nVou guardar isso na memória para aprender mais. Enquanto isso, posso te ajudar com:\n• Ordens de Serviço\n• Estoque\n• Agenda\n• Finanças\n• Biblioteca\n\nO que você prefere?`,
+      `Sobre "${message}"...\n\nPreciso de mais contexto. Pode detalhar melhor o que você precisa?`,
+      `Entendi. Sobre isso, posso consultar:\n\n• Dados do sistema\n• Documentos\n• Histórico de operações\n\nO que seria mais útil agora?`,
+      `Deixa eu ver o que tenho sobre "${message}"...\n\nPode me dar mais detalhes para eu fazer uma busca mais direcionada?`,
       `Hmm... "${message}"\n\nNão tenho dados específicos sobre isso no momento, mas estou sempre aprendendo! 📚\n\nQue tal me contar mais ou tentar outra pergunta?`
     ]
 
@@ -737,7 +758,7 @@ Responda de forma natural, profissional e prestativa. Se não souber algo, seja 
 
     } catch (error) {
       console.error('Erro ao processar mensagem:', error)
-      return 'Ops! Tive um probleminha aqui... 😅 Pode tentar de novo?'
+      return 'Desculpa, tive um problema ao processar isso. Pode tentar de novo ou reformular a pergunta?'
     }
   }
 
