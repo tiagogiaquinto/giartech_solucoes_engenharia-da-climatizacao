@@ -209,16 +209,27 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
     if (!isOpen) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Previne Ctrl+K/Cmd+K de reabrir busca do navegador
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
+
       if (e.key === 'Escape') {
+        e.preventDefault()
         onClose()
       } else if (e.key === 'ArrowDown') {
         e.preventDefault()
+        e.stopPropagation()
         setSelectedIndex(prev => Math.min(prev + 1, results.length - 1))
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
+        e.stopPropagation()
         setSelectedIndex(prev => Math.max(prev - 1, 0))
       } else if (e.key === 'Enter') {
         e.preventDefault()
+        e.stopPropagation()
         if (results[selectedIndex]) {
           navigate(results[selectedIndex].url)
           onClose()
@@ -226,8 +237,9 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    // Capture phase para pegar antes do navegador
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
   }, [isOpen, results, selectedIndex, navigate, onClose])
 
   // Reset quando abre
