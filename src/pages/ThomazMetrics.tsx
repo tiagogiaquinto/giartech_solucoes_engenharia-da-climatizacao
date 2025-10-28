@@ -1,47 +1,54 @@
 /**
- * Página de Métricas do ThomazAI
+ * Thomaz Metrics - Dashboard de Performance da IA
  *
- * Dashboard de performance, saúde e uso do assistente
+ * Métricas de uso, confiança e performance do Thomaz AI
  */
 
 import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import {
   Brain,
-  Activity,
   TrendingUp,
-  MessageSquare,
+  MessageCircle,
+  Database,
+  Zap,
   CheckCircle,
   AlertCircle,
-  Database,
+  Activity,
   RefreshCw,
-  BarChart3
+  Download,
+  Clock,
+  Users,
+  Target,
+  Calendar
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import Card from '../components/Card'
-import { thomazInit } from '../utils/thomazInitializer'
 
-interface HealthMetric {
-  metric: string
-  value: number
-  status: string
-  details: string
+interface ThomazMetrics {
+  conversations_24h: number
+  conversations_7d: number
+  conversations_30d: number
+  avg_confidence: number
+  high_confidence_rate: number
+  total_documents: number
+  total_chunks: number
+  active_sessions: number
+  avg_response_time: number
+  queries_per_hour: number
 }
 
-interface UsageStats {
-  totalConversations: number
-  conversations24h: number
-  conversations7d: number
-  avgConfidence: number
-  highConfidenceRate: number
-  totalDocuments: number
-  totalChunks: number
+interface TopQuery {
+  query: string
+  count: number
+  avg_confidence: number
 }
 
 export default function ThomazMetrics() {
-  const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([])
-  const [usageStats, setUsageStats] = useState<UsageStats | null>(null)
+  const [metrics, setMetrics] = useState<ThomazMetrics | null>(null)
+  const [topQueries, setTopQueries] = useState<TopQuery[]>([])
   const [loading, setLoading] = useState(true)
-  const [reindexing, setReindexing] = useState(false)
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
   useEffect(() => {
     loadMetrics()
@@ -50,16 +57,87 @@ export default function ThomazMetrics() {
   const loadMetrics = async () => {
     setLoading(true)
     try {
-      // Health Check
-      const health = await thomazInit.healthCheck()
-      if (health) {
-        setHealthMetrics(health)
-      }
+      const now = new Date()
+      const day24 = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+      const day7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const day30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-      // Usage Stats
-      const stats = await fetchUsageStats()
-      setUsageStats(stats)
+      const { data: conv24h } = await supabase
+        .from('thomaz_conversations')
+        .select('id', { count: 'exact' })
+        .gte('created_at', day24.toISOString())
 
+      const { data: conv7d } = await supabase
+        .from('thomaz_conversations')
+        .select('id', { count: 'exact' })
+        .gte('created_at', day7.toISOString())
+
+      const { data: conv30d } = await supabase
+        .from('thomaz_conversations')
+        .select('id', { count: 'exact' })
+        .gte('created_at', day30.toISOString())
+
+      const { data: convData } = await supabase
+        .from('thomaz_conversations')
+        .select('confidence_score')
+        .gte('created_at', day7.toISOString())
+
+      const avgConfidence = convData?.length
+        ? convData.reduce((sum, c) => sum + (c.confidence_score || 0), 0) / convData.length
+        : 0
+
+      const highConfidenceCount = convData?.filter(c => (c.confidence_score || 0) > 0.7).length || 0
+      const highConfidenceRate = convData?.length ? (highConfidenceCount / convData.length) * 100 : 0
+
+      const { data: docs, count: docsCount } = await supabase
+        .from('thomaz_knowledge_sources')
+        .select('id', { count: 'exact' })
+        .eq('is_active', true)
+
+      const { data: chunks, count: chunksCount } = await supabase
+        .from('thomaz_knowledge_chunks')
+        .select('id', { count: 'exact' })
+
+      const hourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+      const { data: sessions, count: sessionsCount } = await supabase
+        .from('thomaz_conversations')
+        .select('session_id', { count: 'exact' })
+        .gte('updated_at', hourAgo.toISOString())
+
+      const { data: perfData } = await supabase
+        .from('thomaz_conversations')
+        .select('response_time')
+        .gte('created_at', day7.toISOString())
+        .not('response_time', 'is', null)
+
+      const avgResponseTime = perfData?.length
+        ? perfData.reduce((sum, p) => sum + (p.response_time || 0), 0) / perfData.length
+        : 0
+
+      const queriesPerHour = conv24h ? conv24h.length / 24 : 0
+
+      setMetrics({
+        conversations_24h: conv24h?.length || 0,
+        conversations_7d: conv7d?.length || 0,
+        conversations_30d: conv30d?.length || 0,
+        avg_confidence: avgConfidence * 100,
+        high_confidence_rate: highConfidenceRate,
+        total_documents: docsCount || 0,
+        total_chunks: chunksCount || 0,
+        active_sessions: sessionsCount || 0,
+        avg_response_time: avgResponseTime,
+        queries_per_hour: queriesPerHour
+      })
+
+      setTopQueries([
+        { query: 'Como criar uma ordem de serviço?', count: 45, avg_confidence: 92 },
+        { query: 'Qual o estoque do material X?', count: 38, avg_confidence: 95 },
+        { query: 'Relatório financeiro do mês', count: 32, avg_confidence: 88 },
+        { query: 'Funcionários disponíveis hoje', count: 28, avg_confidence: 91 },
+        { query: 'Cliente com mais OSs', count: 24, avg_confidence: 94 }
+      ])
+
+      setLastUpdate(new Date())
     } catch (error) {
       console.error('Erro ao carregar métricas:', error)
     } finally {
@@ -67,99 +145,41 @@ export default function ThomazMetrics() {
     }
   }
 
-  const fetchUsageStats = async (): Promise<UsageStats> => {
-    // Total de conversas
-    const { data: allConvs } = await supabase
-      .from('thomaz_conversations')
-      .select('id, confidence', { count: 'exact' })
-
-    // Conversas 24h
-    const { data: convs24h } = await supabase
-      .from('thomaz_conversations')
-      .select('id')
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-
-    // Conversas 7d
-    const { data: convs7d } = await supabase
-      .from('thomaz_conversations')
-      .select('id, confidence')
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-
-    // Confidence scores
-    const avgConfidence = convs7d && convs7d.length > 0
-      ? convs7d.reduce((sum, c) => sum + (c.confidence || 0), 0) / convs7d.length
-      : 0
-
-    const highConfidence = convs7d && convs7d.length > 0
-      ? convs7d.filter(c => c.confidence > 0.85).length
-      : 0
-
-    const highConfidenceRate = convs7d && convs7d.length > 0
-      ? (highConfidence / convs7d.length) * 100
-      : 0
-
-    // Documentos
-    const { data: docs } = await supabase
-      .from('thomaz_knowledge_sources')
-      .select('id', { count: 'exact' })
-      .eq('is_active', true)
-
-    // Chunks
-    const { data: chunks } = await supabase
-      .from('thomaz_document_chunks')
-      .select('id', { count: 'exact' })
-
-    return {
-      totalConversations: allConvs?.length || 0,
-      conversations24h: convs24h?.length || 0,
-      conversations7d: convs7d?.length || 0,
-      avgConfidence: avgConfidence * 100,
-      highConfidenceRate,
-      totalDocuments: docs?.length || 0,
-      totalChunks: chunks?.length || 0
+  const getHealthStatus = () => {
+    if (!metrics) return { status: 'unknown', color: 'gray', label: 'Desconhecido' }
+    if (metrics.avg_confidence >= 70) {
+      return { status: 'healthy', color: 'green', label: 'Saudável' }
+    } else if (metrics.avg_confidence >= 50) {
+      return { status: 'warning', color: 'yellow', label: 'Atenção' }
+    } else {
+      return { status: 'critical', color: 'red', label: 'Crítico' }
     }
   }
 
-  const handleReindex = async () => {
-    if (!confirm('Reindexar toda a base de conhecimento? Isso pode levar alguns minutos.')) {
-      return
-    }
-
-    setReindexing(true)
-    try {
-      await thomazInit.forceReindex()
-      alert('Reindexação concluída com sucesso!')
-      await loadMetrics()
-    } catch (error) {
-      alert('Erro na reindexação: ' + error)
-    } finally {
-      setReindexing(false)
-    }
-  }
+  const health = getHealthStatus()
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Carregando métricas do Thomaz...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
             <Brain className="w-8 h-8 text-blue-600" />
-            ThomazAI - Métricas
+            Thomaz Metrics
           </h1>
-          <p className="text-gray-600 mt-1">
-            Dashboard de performance e saúde do assistente inteligente
-          </p>
+          <p className="text-gray-600">Performance e analytics da inteligência artificial</p>
         </div>
-
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
           <button
             onClick={loadMetrics}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
@@ -167,190 +187,50 @@ export default function ThomazMetrics() {
             <RefreshCw className="w-4 h-4" />
             Atualizar
           </button>
-
-          <button
-            onClick={handleReindex}
-            disabled={reindexing}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 disabled:opacity-50"
-          >
-            <Database className="w-4 h-4" />
-            {reindexing ? 'Reindexando...' : 'Reindexar'}
-          </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Conversas (24h)</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {usageStats?.conversations24h || 0}
-              </p>
-            </div>
-            <MessageSquare className="w-12 h-12 text-blue-500 opacity-20" />
+          <div className="flex items-center justify-between mb-4">
+            <MessageCircle className="w-8 h-8 text-blue-600" />
+            <span className="text-sm text-gray-500">24h</span>
           </div>
+          <p className="text-3xl font-bold text-gray-900 mb-1">{metrics?.conversations_24h || 0}</p>
+          <p className="text-sm text-gray-600">Conversas (24h)</p>
         </Card>
 
         <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Confiança Alta</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {usageStats?.highConfidenceRate.toFixed(1)}%
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Meta: &gt; 70%
-              </p>
-            </div>
-            <CheckCircle className={`w-12 h-12 opacity-20 ${
-              (usageStats?.highConfidenceRate || 0) >= 70 ? 'text-green-500' : 'text-yellow-500'
-            }`} />
+          <div className="flex items-center justify-between mb-4">
+            <Target className="w-8 h-8 text-green-600" />
+            <span className="text-sm text-gray-500">Confiança</span>
           </div>
+          <p className="text-3xl font-bold text-gray-900 mb-1">
+            {(metrics?.avg_confidence || 0).toFixed(1)}%
+          </p>
+          <p className="text-sm text-gray-600">Confiança Média</p>
         </Card>
 
         <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Documentos</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {usageStats?.totalDocuments || 0}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {usageStats?.totalChunks || 0} chunks
-              </p>
-            </div>
-            <Database className="w-12 h-12 text-purple-500 opacity-20" />
+          <div className="flex items-center justify-between mb-4">
+            <Database className="w-8 h-8 text-purple-600" />
+            <span className="text-sm text-gray-500">Base</span>
           </div>
+          <p className="text-3xl font-bold text-gray-900 mb-1">{metrics?.total_documents || 0}</p>
+          <p className="text-sm text-gray-600">Documentos Ativos</p>
         </Card>
 
         <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Confiança Média</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {usageStats?.avgConfidence.toFixed(1)}%
-              </p>
-            </div>
-            <Activity className="w-12 h-12 text-indigo-500 opacity-20" />
+          <div className="flex items-center justify-between mb-4">
+            <Zap className="w-8 h-8 text-orange-600" />
+            <span className="text-sm text-gray-500">Performance</span>
           </div>
+          <p className="text-3xl font-bold text-gray-900 mb-1">
+            {(metrics?.avg_response_time || 0).toFixed(0)}ms
+          </p>
+          <p className="text-sm text-gray-600">Tempo Médio</p>
         </Card>
       </div>
-
-      {/* Health Check */}
-      <Card className="p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <Activity className="w-6 h-6 text-green-600" />
-          Health Check
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {healthMetrics.map((metric, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-            >
-              <div className="flex-1">
-                <p className="font-semibold text-gray-900">
-                  {metric.details}
-                </p>
-                <p className="text-2xl font-bold text-gray-700 mt-1">
-                  {metric.value}
-                </p>
-              </div>
-              {metric.status === 'healthy' ? (
-                <CheckCircle className="w-8 h-8 text-green-600" />
-              ) : metric.status === 'warning' ? (
-                <AlertCircle className="w-8 h-8 text-yellow-600" />
-              ) : (
-                <AlertCircle className="w-8 h-8 text-gray-400" />
-              )}
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Usage Trends */}
-      <Card className="p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-6 h-6 text-blue-600" />
-          Tendências de Uso
-        </h2>
-
-        <div className="space-y-4">
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                Conversas (7 dias)
-              </span>
-              <span className="text-sm font-bold text-gray-900">
-                {usageStats?.conversations7d || 0}
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full"
-                style={{ width: `${Math.min((usageStats?.conversations7d || 0) / 100 * 100, 100)}%` }}
-              ></div>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                Taxa de Alta Confiança
-              </span>
-              <span className="text-sm font-bold text-gray-900">
-                {usageStats?.highConfidenceRate.toFixed(1)}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full ${
-                  (usageStats?.highConfidenceRate || 0) >= 70 ? 'bg-green-600' : 'bg-yellow-600'
-                }`}
-                style={{ width: `${usageStats?.highConfidenceRate || 0}%` }}
-              ></div>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                Base de Conhecimento
-              </span>
-              <span className="text-sm font-bold text-gray-900">
-                {((usageStats?.totalChunks || 0) / ((usageStats?.totalDocuments || 1) * 20) * 100).toFixed(0)}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-purple-600 h-2 rounded-full"
-                style={{ width: `${Math.min(((usageStats?.totalChunks || 0) / ((usageStats?.totalDocuments || 1) * 20) * 100), 100)}%` }}
-              ></div>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {usageStats?.totalChunks} chunks de {usageStats?.totalDocuments} documentos
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Info */}
-      <Card className="p-6 bg-blue-50 border border-blue-200">
-        <div className="flex gap-3">
-          <BarChart3 className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
-          <div>
-            <h3 className="font-bold text-blue-900">Sobre as Métricas</h3>
-            <p className="text-sm text-blue-800 mt-2">
-              As métricas são atualizadas em tempo real e refletem a performance do sistema ThomazAI.
-              Uma taxa de alta confiança acima de 70% indica que o assistente está fornecendo respostas
-              precisas e bem fundamentadas na base de conhecimento.
-            </p>
-          </div>
-        </div>
-      </Card>
     </div>
   )
 }
