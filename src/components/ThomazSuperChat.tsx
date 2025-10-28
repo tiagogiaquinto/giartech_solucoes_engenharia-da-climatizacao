@@ -20,7 +20,7 @@ import {
   Home,
   RotateCcw
 } from 'lucide-react'
-import ThomazAdvancedService from '../services/thomazAdvancedService'
+import { ThomazSuperAdvancedService } from '../services/thomazSuperAdvancedService'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -45,7 +45,7 @@ export function ThomazSuperChat() {
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
-  const [thomazService, setThomazService] = useState<ThomazAdvancedService | null>(null)
+  const [thomazService, setThomazService] = useState<ThomazSuperAdvancedService | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -68,17 +68,23 @@ export function ThomazSuperChat() {
   }, [isOpen])
 
   const initializeThomazService = async () => {
-    const service = new ThomazAdvancedService()
+    // Usar novo serviço super avançado com RAG completo
+    const service = new ThomazSuperAdvancedService(
+      undefined, // userId (TODO: pegar do context)
+      'user',    // userRole (TODO: pegar do context)
+      undefined  // companyId (TODO: pegar do context)
+    )
     setThomazService(service)
 
-    // Obter saudação inicial
-    const greeting = await service.getInitialGreeting()
+    // Saudação inicial
+    const hour = new Date().getHours()
+    const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
 
     setMessages([
       {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: greeting,
+        content: `${greeting}! Sou o Thomaz, seu consultor empresarial.\n\nPosso ajudar com análises financeiras, procedimentos operacionais, consultoria estratégica e muito mais.\n\nSobre o que precisa conversar?`,
         timestamp: new Date()
       }
     ])
@@ -105,16 +111,18 @@ export function ThomazSuperChat() {
     setInputMessage('')
     setIsLoading(true)
 
-    // Reinicializar serviço
-    const service = new ThomazAdvancedService()
-    setThomazService(service)
-
     try {
-      const greeting = await service.getInitialGreeting()
+      // Reinicializar com novo serviço
+      const service = new ThomazSuperAdvancedService()
+      setThomazService(service)
+
+      const hour = new Date().getHours()
+      const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
+
       const welcomeMessage: Message = {
         id: `msg_${Date.now()}_welcome`,
         role: 'assistant',
-        content: greeting,
+        content: `${greeting}! Nova conversa iniciada. Como posso ajudar?`,
         timestamp: new Date()
       }
       setMessages([welcomeMessage])
@@ -147,14 +155,14 @@ export function ThomazSuperChat() {
       // Simular digitação
       await simulateTyping(textToSend)
 
-      // Processar com o Thomaz Super Service
-      const response = await thomazService.processMessage(textToSend)
+      // Processar com o Thomaz Super Advanced Service (RAG completo)
+      const result = await thomazService.processMessage(textToSend)
 
       // Adicionar resposta do Thomaz
       const assistantMessage: Message = {
         id: `msg_${Date.now()}_assistant`,
         role: 'assistant',
-        content: response,
+        content: result.response,
         timestamp: new Date()
       }
 
