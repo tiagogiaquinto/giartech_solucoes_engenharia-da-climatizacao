@@ -489,6 +489,14 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/automacoes" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <Automations />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/automations" element={
             <ProtectedRoute>
               <WebLayout>
