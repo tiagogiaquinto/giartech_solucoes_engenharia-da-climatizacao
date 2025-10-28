@@ -3,7 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Plus, Trash2, Save, X, User, Calendar, FileText, Package, Users, Clock, DollarSign, TrendingUp, CircleAlert as AlertCircle, Check, Printer, Send, Download, Eye, FileDown, Search } from 'lucide-react'
 import { supabase, getServiceOrderById } from '../lib/supabase'
-import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
+import { generateDocumentPDFUnified } from '../utils/generateDocumentPDFUnified'
+import { DocumentTemplate } from '../config/brandingConfig'
 import { getCompanyInfo } from '../utils/companyData'
 import { mapServiceItems } from '../utils/serviceOrderDataMapper'
 import { useAutoSave } from '../hooks/useAutoSave'
@@ -826,7 +827,7 @@ const ServiceOrderCreate = () => {
         additional_info: formData.notes || 'Trabalhamos para que seus projetos, se tornem realidade.'
       }
 
-      await generateServiceOrderPDFGiartech(giartechData); // OLD: 
+      await generateDocumentPDFUnified(
         {
           order_number: orderData.order_number,
           document_type: 'order',
@@ -858,6 +859,9 @@ const ServiceOrderCreate = () => {
           }
         },
         {
+          template: DocumentTemplate.PROFESSIONAL,
+          includeDetails: true,
+          includeCosts: formData.show_material_costs || false
         }
       )
       alert('PDF gerado com sucesso!')
@@ -931,7 +935,7 @@ const ServiceOrderCreate = () => {
         additional_info: 'Trabalhamos para que seus projetos, se tornem realidade.'
       }
 
-      await generateServiceOrderPDFGiartech(giartechData); // OLD: 
+      await generateDocumentPDFUnified(
         {
           order_number: orderData.order_number,
           document_type: 'order',
@@ -963,6 +967,9 @@ const ServiceOrderCreate = () => {
           }
         },
         {
+          template: DocumentTemplate.PROFESSIONAL,
+          includeDetails: true,
+          includeCosts: formData.show_material_costs || false
         }
       )
     } catch (error) {
@@ -1033,7 +1040,7 @@ const ServiceOrderCreate = () => {
         additional_info: 'Trabalhamos para que seus projetos, se tornem realidade.'
       }
 
-      await generateServiceOrderPDFGiartech(giartechData); // OLD: 
+      await generateDocumentPDFUnified(
         {
           order_number: orderData.order_number,
           document_type: 'order',
@@ -1065,6 +1072,9 @@ const ServiceOrderCreate = () => {
           }
         },
         {
+          template: DocumentTemplate.PROFESSIONAL,
+          includeDetails: true,
+          includeCosts: formData.show_material_costs || false
         }
       )
     } catch (error) {
