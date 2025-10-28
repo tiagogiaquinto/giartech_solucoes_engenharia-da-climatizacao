@@ -59,11 +59,14 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'financial', path: '/financial', icon: DollarSign, label: 'Integração Financeira', description: 'Dashboard financeiro integrado' },
   { id: 'gestao-financeira', path: '/financial-management', icon: TrendingUp, label: 'Gestão Financeira', description: 'Receitas, despesas e DRE' },
   { id: 'analise-financeira', path: '/financial-analysis', icon: Activity, label: 'Análise Financeira', description: 'EBITDA, ROI, Margens e Gráficos' },
+  { id: 'cfo-dashboard', path: '/cfo-dashboard', icon: TrendingUp, label: 'Dashboard CFO', description: 'Inteligência Financeira Executiva' },
   { id: 'categorias-financeiras', path: '/financial-categories', icon: FolderKanban, label: 'Categorias Financeiras', description: 'Categorias e subcategorias' },
   { id: 'contas-bancarias', path: '/bank-accounts', icon: CreditCard, label: 'Contas Bancárias', description: 'Gerenciar contas e saldos' },
   { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis' },
   { id: 'inventory', path: '/inventory', icon: Package, label: 'Estoque', description: 'Controle de materiais' },
   { id: 'reports', path: '/reports', icon: PieChart, label: 'Relatórios', description: 'Análises e dashboards' },
+  { id: 'reports-advanced', path: '/reports-advanced', icon: FileText, label: 'Relatórios Avançados', description: 'PDFs profissionais e análises' },
+  { id: 'automations', path: '/automations', icon: Activity, label: 'Automações', description: 'Workflows e automações' },
   { id: 'whatsapp-crm', path: '/whatsapp-crm', icon: MessageCircle, label: 'WhatsApp CRM', description: 'Gestão de conversas' },
   { id: 'thomaz', path: '/thomaz', icon: Brain, label: 'Thomaz AI', description: 'Consultor Empresarial' },
   { id: 'thomaz-metrics', path: '/thomaz-metrics', icon: Brain, label: 'Métricas Thomaz', description: 'Performance da IA' },
@@ -237,7 +240,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
       initial={{ x: 0 }}
       animate={{ width: isCollapsed ? '80px' : '280px' }}
       transition={{ duration: 0.3 }}
-      className="fixed left-0 top-0 bg-gradient-to-b from-gray-900 to-gray-800 text-white h-screen flex flex-col shadow-2xl z-40"
+      className="fixed left-0 top-0 bg-gradient-to-b from-gray-900 to-gray-800 text-white h-screen flex flex-col shadow-2xl z-50"
     >
       {/* Header */}
       <div className="p-4 border-b border-gray-700">

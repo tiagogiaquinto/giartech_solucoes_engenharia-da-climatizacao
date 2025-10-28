@@ -77,6 +77,9 @@ import { AIChatbot } from './components/AIChatbot'
 import ThomazSuperChat from './components/ThomazSuperChat'
 import { GiartechAssistant } from './components/GiartechAssistant'
 import ThomazChat from './pages/ThomazChat'
+import CFODashboard from './pages/CFODashboard'
+import ReportsAdvanced from './pages/ReportsAdvanced'
+import Automations from './pages/Automations'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -462,6 +465,30 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <FinancialAnalysis />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/cfo-dashboard" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <CFODashboard />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/reports-advanced" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <ReportsAdvanced />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/automations" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <Automations />
               </WebLayout>
             </ProtectedRoute>
           } />
