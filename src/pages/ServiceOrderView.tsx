@@ -16,6 +16,7 @@ import { OSAuditLog } from '../components/OSAuditLog'
 import { OSChecklist } from '../components/OSChecklist'
 import { ServiceDetailedInfo } from '../components/ServiceDetailedInfo'
 import { ServiceInfoEditModal } from '../components/ServiceInfoEditModal'
+import { ServiceOrderDocuments } from '../components/ServiceOrderDocuments'
 
 const ServiceOrderView = () => {
   const { id } = useParams()
@@ -31,6 +32,7 @@ const ServiceOrderView = () => {
   const [showTimelineModal, setShowTimelineModal] = useState(false)
   const [showAuditModal, setShowAuditModal] = useState(false)
   const [showChecklistModal, setShowChecklistModal] = useState(false)
+  const [showDocumentsModal, setShowDocumentsModal] = useState(false)
   const [bankAccounts, setBankAccounts] = useState<any[]>([])
   const [companySettings, setCompanySettings] = useState<any>(null)
   const [showServiceInfoModal, setShowServiceInfoModal] = useState(false)
@@ -496,6 +498,13 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
             Auditoria
           </button>
           <button
+            onClick={() => setShowDocumentsModal(true)}
+            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 flex items-center gap-2 shadow-lg"
+          >
+            <FileText className="h-4 w-4" />
+            Documentos
+          </button>
+          <button
             onClick={handleDeleteClick}
             className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 flex items-center gap-2 shadow-lg"
           >
@@ -958,6 +967,34 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
             </div>
             <div className="p-6">
               <OSChecklist serviceOrderId={id} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Documentos */}
+      {showDocumentsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-7xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+              <div>
+                <h2 className="text-2xl font-bold">Documentos da OS</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Gerencie fotos, contratos, notas fiscais e outros documentos
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDocumentsModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6">
+              <ServiceOrderDocuments
+                serviceOrderId={id!}
+                onDocumentsChange={loadOrder}
+              />
             </div>
           </div>
         </div>
