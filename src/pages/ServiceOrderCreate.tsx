@@ -3,7 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Plus, Trash2, Save, X, User, Calendar, FileText, Package, Users, Clock, DollarSign, TrendingUp, CircleAlert as AlertCircle, Check, Printer, Send, Download, Eye, FileDown, Search } from 'lucide-react'
 import { supabase, getServiceOrderById } from '../lib/supabase'
-import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
+import { generateDocumentPDFUnified } from '../utils/generateDocumentPDFUnified'
+import { DocumentTemplate } from '../config/brandingConfig'
 import { getCompanyInfo } from '../utils/companyData'
 import { mapServiceItems } from '../utils/serviceOrderDataMapper'
 import { useAutoSave } from '../hooks/useAutoSave'
@@ -826,7 +827,43 @@ const ServiceOrderCreate = () => {
         additional_info: formData.notes || 'Trabalhamos para que seus projetos, se tornem realidade.'
       }
 
-      await generateServiceOrderPDFGiartech(giartechData)
+      await generateDocumentPDFUnified(
+        {
+          order_number: orderData.order_number,
+          document_type: 'order',
+          date: orderData.created_at,
+          client: {
+            name: orderData.customer.nome_razao,
+            cnpj: orderData.customer.cnpj_cpf,
+            address: orderData.customer.endereco,
+            city: orderData.customer.cidade,
+            state: orderData.customer.estado,
+            cep: orderData.customer.cep,
+            email: orderData.customer.email,
+            phone: orderData.customer.telefone
+          },
+          items: orderData.items.map(item => ({
+            descricao: item.descricao,
+            quantidade: item.quantidade,
+            preco_unitario: item.preco_unitario,
+            preco_total: item.preco_total,
+            materiais: item.materiais,
+            funcionarios: item.funcionarios
+          })),
+          subtotal: orderData.subtotal,
+          discount: orderData.discount_amount,
+          total: orderData.final_total,
+          payment: {
+            methods: orderData.payment_method || 'A definir',
+            conditions: `${orderData.payment_installments || 1}x`
+          }
+        },
+        {
+          template: DocumentTemplate.PROFESSIONAL,
+          includeDetails: true,
+          includeCosts: formData.show_material_costs || false
+        }
+      )
       alert('PDF gerado com sucesso!')
     } catch (error) {
       console.error('Erro ao gerar PDF:', error)
@@ -898,7 +935,43 @@ const ServiceOrderCreate = () => {
         additional_info: 'Trabalhamos para que seus projetos, se tornem realidade.'
       }
 
-      await generateServiceOrderPDFGiartech(giartechData)
+      await generateDocumentPDFUnified(
+        {
+          order_number: orderData.order_number,
+          document_type: 'order',
+          date: orderData.created_at,
+          client: {
+            name: orderData.customer.nome_razao,
+            cnpj: orderData.customer.cnpj_cpf,
+            address: orderData.customer.endereco,
+            city: orderData.customer.cidade,
+            state: orderData.customer.estado,
+            cep: orderData.customer.cep,
+            email: orderData.customer.email,
+            phone: orderData.customer.telefone
+          },
+          items: orderData.items.map(item => ({
+            descricao: item.descricao,
+            quantidade: item.quantidade,
+            preco_unitario: item.preco_unitario,
+            preco_total: item.preco_total,
+            materiais: item.materiais,
+            funcionarios: item.funcionarios
+          })),
+          subtotal: orderData.subtotal,
+          discount: orderData.discount_amount,
+          total: orderData.final_total,
+          payment: {
+            methods: orderData.payment_method || 'A definir',
+            conditions: `${orderData.payment_installments || 1}x`
+          }
+        },
+        {
+          template: DocumentTemplate.PROFESSIONAL,
+          includeDetails: true,
+          includeCosts: formData.show_material_costs || false
+        }
+      )
     } catch (error) {
       console.error('Error printing:', error)
       alert('Erro ao gerar PDF!')
@@ -967,7 +1040,43 @@ const ServiceOrderCreate = () => {
         additional_info: 'Trabalhamos para que seus projetos, se tornem realidade.'
       }
 
-      await generateServiceOrderPDFGiartech(giartechData)
+      await generateDocumentPDFUnified(
+        {
+          order_number: orderData.order_number,
+          document_type: 'order',
+          date: orderData.created_at,
+          client: {
+            name: orderData.customer.nome_razao,
+            cnpj: orderData.customer.cnpj_cpf,
+            address: orderData.customer.endereco,
+            city: orderData.customer.cidade,
+            state: orderData.customer.estado,
+            cep: orderData.customer.cep,
+            email: orderData.customer.email,
+            phone: orderData.customer.telefone
+          },
+          items: orderData.items.map(item => ({
+            descricao: item.descricao,
+            quantidade: item.quantidade,
+            preco_unitario: item.preco_unitario,
+            preco_total: item.preco_total,
+            materiais: item.materiais,
+            funcionarios: item.funcionarios
+          })),
+          subtotal: orderData.subtotal,
+          discount: orderData.discount_amount,
+          total: orderData.final_total,
+          payment: {
+            methods: orderData.payment_method || 'A definir',
+            conditions: `${orderData.payment_installments || 1}x`
+          }
+        },
+        {
+          template: DocumentTemplate.PROFESSIONAL,
+          includeDetails: true,
+          includeCosts: formData.show_material_costs || false
+        }
+      )
     } catch (error) {
       console.error('Error downloading:', error)
       alert('Erro ao baixar PDF!')
