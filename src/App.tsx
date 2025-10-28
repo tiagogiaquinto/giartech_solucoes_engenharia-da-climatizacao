@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import LoadingScreen from './components/LoadingScreen'
+import { autoInitialize } from './utils/thomazInitializer'
 import WebLayout from './components/layouts/WebLayout'
 import Dashboard from './pages/Dashboard'
 import ServiceOrders from './pages/ServiceOrders'
@@ -96,10 +97,33 @@ function App() {
   const [enterpriseFeature, setEnterpriseFeature] = useState('')
   const [restrictedAccess] = useState<'admin' | 'premium' | 'enterprise'>('admin')
   const [showPremiumBanner, setShowPremiumBanner] = useState(false)
+  const [thomazInitialized, setThomazInitialized] = useState(false)
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
+    // Inicializar ThomazAI primeiro
+    const initializeThomazAI = async () => {
+      try {
+        console.log('🤖 Inicializando ThomazAI...')
+        const result = await autoInitialize()
+
+        if (result.success) {
+          console.log('✅ ThomazAI inicializado com sucesso!')
+          console.log(`📚 ${result.metrics.totalDocuments} documentos | ${result.metrics.totalChunks} chunks`)
+          setThomazInitialized(true)
+        } else {
+          console.warn('⚠️ ThomazAI iniciado com avisos:', result.errors)
+          setThomazInitialized(true) // Continuar mesmo com avisos
+        }
+      } catch (error) {
+        console.error('❌ Erro ao inicializar ThomazAI:', error)
+        setThomazInitialized(true) // Continuar mesmo com erro
+      }
+    }
+
+    initializeThomazAI()
+
     // Simular carregamento inicial
     const timer = setTimeout(() => {
       setIsLoading(false)
