@@ -7,6 +7,8 @@ import {
   Users, Package, FileText, Briefcase, Shield, Zap
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { InteractiveKPICard } from '../components/InteractiveKPICard'
+import { useNavigate } from 'react-router-dom'
 import { Line, Bar, Doughnut, Radar } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -108,6 +110,7 @@ interface CustomerIntelligence {
 }
 
 const CFODashboard = () => {
+  const navigate = useNavigate()
   const [kpis, setKpis] = useState<CFOKPIs | null>(null)
   const [alerts, setAlerts] = useState<FinancialAlert[]>([])
   const [topCustomers, setTopCustomers] = useState<CustomerIntelligence[]>([])
@@ -314,24 +317,77 @@ const CFODashboard = () => {
 
         {/* Executive KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {executiveKPIs.map((kpi, index) => (
-            <motion.div
-              key={kpi.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-100"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-14 h-14 bg-gradient-to-br ${kpi.color} rounded-xl flex items-center justify-center shadow-lg`}>
-                  <kpi.icon className="h-7 w-7 text-white" />
-                </div>
-              </div>
-              <h3 className="text-sm font-medium text-gray-600 mb-1">{kpi.title}</h3>
-              <p className="text-3xl font-bold text-gray-900 mb-1">{kpi.value}</p>
-              <p className="text-xs text-gray-500">{kpi.subtitle}</p>
-            </motion.div>
-          ))}
+          <InteractiveKPICard
+            title="Receita Total"
+            value={formatCurrency(kpis?.total_revenue || 0)}
+            subtitle={`Lucro: ${formatCurrency(kpis?.net_profit || 0)}`}
+            icon={DollarSign}
+            color="from-green-500 to-emerald-600"
+            trend={{
+              value: kpis?.profit_margin || 0,
+              label: 'Margem de lucro'
+            }}
+            onClick={() => navigate('/financeiro')}
+            details={[
+              { label: 'Despesas', value: formatCurrency(kpis?.total_expenses || 0) },
+              { label: 'Lucro Líquido', value: formatCurrency(kpis?.net_profit || 0) },
+              { label: 'Margem', value: formatPercent(kpis?.profit_margin || 0) }
+            ]}
+          />
+
+          <InteractiveKPICard
+            title="EBITDA"
+            value={formatCurrency(kpis?.ebitda || 0)}
+            subtitle={`Margem: ${formatPercent(kpis?.ebitda_margin || 0)}`}
+            icon={TrendingUp}
+            color="from-blue-500 to-cyan-600"
+            trend={{
+              value: kpis?.ebitda_margin || 0,
+              label: 'Margem EBITDA'
+            }}
+            onClick={() => navigate('/financeiro')}
+            details={[
+              { label: 'Margem Bruta', value: formatPercent(kpis?.gross_margin || 0) },
+              { label: 'Margem Operacional', value: formatPercent(kpis?.operating_margin || 0) },
+              { label: 'Margem EBITDA', value: formatPercent(kpis?.ebitda_margin || 0) }
+            ]}
+          />
+
+          <InteractiveKPICard
+            title="ROI"
+            value={formatPercent(kpis?.roi_percentage || 0)}
+            subtitle={`Break-even: ${formatCurrency(kpis?.break_even_point || 0)}`}
+            icon={Target}
+            color="from-purple-500 to-pink-600"
+            trend={{
+              value: kpis?.roi_percentage || 0,
+              label: 'Retorno sobre investimento'
+            }}
+            onClick={() => navigate('/financeiro')}
+            details={[
+              { label: 'Break-even', value: formatCurrency(kpis?.break_even_point || 0) },
+              { label: 'Payback', value: `${kpis?.payback_period_days || 0} dias` },
+              { label: 'ROI', value: formatPercent(kpis?.roi_percentage || 0) }
+            ]}
+          />
+
+          <InteractiveKPICard
+            title="Capital de Giro"
+            value={formatCurrency(kpis?.net_working_capital || 0)}
+            subtitle={`Eficiência: ${formatPercent(kpis?.operational_efficiency || 0)}`}
+            icon={Activity}
+            color="from-orange-500 to-red-600"
+            trend={{
+              value: kpis?.operational_efficiency || 0,
+              label: 'Eficiência operacional'
+            }}
+            onClick={() => navigate('/financeiro')}
+            details={[
+              { label: 'A Receber', value: formatCurrency(kpis?.accounts_receivable || 0) },
+              { label: 'A Pagar', value: formatCurrency(kpis?.accounts_payable || 0) },
+              { label: 'Capital Líquido', value: formatCurrency(kpis?.net_working_capital || 0) }
+            ]}
+          />
         </div>
 
         {/* Alertas Financeiros */}

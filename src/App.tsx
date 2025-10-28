@@ -80,6 +80,10 @@ import ThomazChat from './pages/ThomazChat'
 import CFODashboard from './pages/CFODashboard'
 import ReportsAdvanced from './pages/ReportsAdvanced'
 import Automations from './pages/Automations'
+import CreditScoring from './pages/CreditScoring'
+import FinanceiroConsolidado from './pages/FinanceiroConsolidado'
+import ExecutivoConsolidado from './pages/ExecutivoConsolidado'
+import RelatoriosConsolidado from './pages/RelatoriosConsolidado'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -489,6 +493,38 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <Automations />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/financeiro" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <FinanceiroConsolidado />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/executivo" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <ExecutivoConsolidado />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/relatorios" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <RelatoriosConsolidado />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/credit-scoring" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <CreditScoring />
               </WebLayout>
             </ProtectedRoute>
           } />
