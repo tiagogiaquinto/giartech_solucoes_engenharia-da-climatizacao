@@ -3,6 +3,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { Search, Bell, User, Menu, X, Crown } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { motion, AnimatePresence } from 'framer-motion'
+import { NotificationCenter } from '../NotificationCenter'
 
 const Header = () => {
   const { user, isPremium } = useUser()
@@ -62,11 +63,8 @@ const Header = () => {
             />
           </div>
           
-          <button className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-          
+          <NotificationCenter />
+
           <button 
             className="flex items-center space-x-2"
             onClick={() => navigate('/profile')}

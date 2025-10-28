@@ -5,6 +5,9 @@ import LoadingScreen from './components/LoadingScreen'
 import { autoInitialize } from './utils/thomazInitializer'
 import GlobalSearch from './components/GlobalSearch'
 import { useGlobalSearch } from './hooks/useGlobalSearch'
+import { CommandPalette, useCommandPalette } from './components/CommandPalette'
+import { MobileBottomNav } from './components/MobileBottomNav'
+import { registerServiceWorker, isMobile } from './utils/pwa'
 import WebLayout from './components/layouts/WebLayout'
 import Dashboard from './pages/Dashboard'
 import ServiceOrders from './pages/ServiceOrders'
@@ -106,6 +109,12 @@ function App() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { isSearchOpen, closeSearch } = useGlobalSearch()
+  const commandPalette = useCommandPalette()
+
+  useEffect(() => {
+    // Registrar Service Worker para PWA
+    registerServiceWorker()
+  }, [])
 
   useEffect(() => {
     // Inicializar ThomazAI primeiro
@@ -664,6 +673,15 @@ function App() {
 
       {/* Busca Global (Cmd+K) */}
       <GlobalSearch isOpen={isSearchOpen} onClose={closeSearch} />
+
+      {/* Command Palette (Ctrl/Cmd + K) */}
+      <CommandPalette
+        isOpen={commandPalette.isOpen}
+        onClose={commandPalette.close}
+      />
+
+      {/* Mobile Bottom Navigation */}
+      {isMobile() && <MobileBottomNav />}
     </UserProvider>
   )
 }
