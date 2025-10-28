@@ -65,6 +65,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'inventory', path: '/inventory', icon: Package, label: 'Estoque', description: 'Controle de materiais' },
   { id: 'reports', path: '/reports', icon: PieChart, label: 'Relatórios', description: 'Análises e dashboards' },
   { id: 'whatsapp-crm', path: '/whatsapp-crm', icon: MessageCircle, label: 'WhatsApp CRM', description: 'Gestão de conversas' },
+  { id: 'thomaz', path: '/thomaz', icon: Brain, label: 'Thomaz AI', description: 'Consultor Empresarial' },
   { id: 'thomaz-metrics', path: '/thomaz-metrics', icon: Brain, label: 'Métricas Thomaz', description: 'Performance da IA' },
   { id: 'email', path: '/email/inbox', icon: Mail, label: 'Email Corporativo', description: 'Enviar e receber emails' },
   { id: 'library', path: '/digital-library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos' },

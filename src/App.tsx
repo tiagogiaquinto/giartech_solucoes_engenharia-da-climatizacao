@@ -73,6 +73,7 @@ import EmailCompose from './pages/EmailCompose'
 import { AIChatbot } from './components/AIChatbot'
 import ThomazSuperChat from './components/ThomazSuperChat'
 import { GiartechAssistant } from './components/GiartechAssistant'
+import ThomazChat from './pages/ThomazChat'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -431,6 +432,12 @@ function App() {
               <WebLayout>
                 <ThomazMetrics />
               </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/thomaz" element={
+            <ProtectedRoute>
+              <ThomazChat />
             </ProtectedRoute>
           } />
 
