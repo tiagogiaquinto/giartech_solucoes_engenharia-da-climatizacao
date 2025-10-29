@@ -1896,8 +1896,9 @@ const ServiceOrderCreate = () => {
                       <label className="block text-sm font-medium text-green-900 mb-2">
                         🔍 Buscar do Inventário/Estoque
                       </label>
-                      <select
-                        onChange={(e) => {
+                      <div className="flex gap-2">
+                        <select
+                          onChange={(e) => {
                           const invItem = inventory.find(inv => inv.id === e.target.value)
                           if (invItem && item.materiais.length > 0) {
                             const lastMaterial = item.materiais[item.materiais.length - 1]
@@ -1914,14 +1915,24 @@ const ServiceOrderCreate = () => {
                           }
                           e.target.value = ''
                         }}
-                        className="w-full px-4 py-2 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white">
-                        <option value="">Selecione um item do estoque...</option>
-                        {inventory.map(inv => (
-                          <option key={inv.id} value={inv.id}>
-                            {inv.name} - Estoque: {inv.quantity || 0} {inv.unit || 'UN'} - R$ {Number(inv.sale_price || 0).toFixed(2)}
-                          </option>
-                        ))}
-                      </select>
+                          className="flex-1 px-4 py-2 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white">
+                          <option value="">Selecione um item do estoque...</option>
+                          {inventory.map(inv => (
+                            <option key={inv.id} value={inv.id}>
+                              {inv.name} - Estoque: {inv.quantity || 0} {inv.unit || 'UN'} - R$ {Number(inv.sale_price || 0).toFixed(2)}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => setShowNewMaterialModal(true)}
+                          className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-1 whitespace-nowrap"
+                          title="Novo Material"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Novo
+                        </button>
+                      </div>
                       <p className="text-xs text-green-600 mt-1">
                         Preenche o último material vazio adicionado
                       </p>
