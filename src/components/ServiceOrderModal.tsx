@@ -260,7 +260,8 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
             preco: item.unit_price || 0,
             preco_unitario: item.unit_price || 0,
             preco_total: item.total_price || 0,
-            difficulty_level: item.difficulty_level || 'medium',
+            difficulty_level: typeof item.difficulty_level === 'number' ? item.difficulty_level : 1,
+            complexity_level: typeof item.difficulty_level === 'string' ? item.difficulty_level : 'medium',
             notes: item.notes || '',
             materiais: itemMateriais,
             mao_obra: itemFuncionarios,
@@ -723,7 +724,8 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
           quantity: itemAny.quantity || 1,
           unit_price: itemAny.preco || itemAny.preco_unitario || 0,
           total_price: (itemAny.quantity || 1) * (itemAny.preco || itemAny.preco_unitario || 0),
-          difficulty_level: itemAny.difficulty_level || 'medium',
+          difficulty_level: typeof itemAny.difficulty_level === 'number' ? itemAny.difficulty_level : 1,
+          complexity_level: typeof itemAny.difficulty_level === 'string' ? itemAny.difficulty_level : 'medium',
           notes: itemAny.notes || ''
         }
 
