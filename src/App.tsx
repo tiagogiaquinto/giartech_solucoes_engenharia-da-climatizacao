@@ -31,7 +31,7 @@ import MonitoringConfig from './pages/MonitoringConfig'
 import Calendar from './pages/Calendar'
 import Projects from './pages/Projects'
 import Profile from './pages/Profile'
-import ExecutiveDashboard from './pages/ExecutiveDashboard'
+import CFODashboard from './pages/CFODashboard'
 import ServiceOrdersKanban from './pages/ServiceOrdersKanban'
 import Homepage from './pages/Homepage'
 import Home from './pages/Home'
@@ -77,7 +77,6 @@ import { AIChatbot } from './components/AIChatbot'
 import ThomazSuperChat from './components/ThomazSuperChat'
 import { GiartechAssistant } from './components/GiartechAssistant'
 import ThomazChat from './pages/ThomazChat'
-import CFODashboard from './pages/CFODashboard'
 import ReportsAdvanced from './pages/ReportsAdvanced'
 import Automations from './pages/Automations'
 import CreditScoring from './pages/CreditScoring'
@@ -224,7 +223,7 @@ function App() {
           <Route path="/" element={
             <ProtectedRoute>
               <WebLayout>
-                <ExecutiveDashboard />
+                <CFODashboard />
               </WebLayout>
             </ProtectedRoute>
           } />
@@ -237,13 +236,6 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/dashboard-executivo" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <ExecutiveDashboard />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
 
           <Route path="/ordens-servico-kanban" element={
             <ProtectedRoute>

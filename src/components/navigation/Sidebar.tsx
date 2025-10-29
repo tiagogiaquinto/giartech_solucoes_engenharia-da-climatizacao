@@ -49,7 +49,7 @@ interface MenuItem {
 }
 
 const DEFAULT_MENU_ITEMS: MenuItem[] = [
-  { id: 'inicio', path: '/', icon: BarChart3, label: 'Início', description: 'Página inicial do sistema' },
+  { id: 'inicio', path: '/', icon: BarChart3, label: 'Dashboard CFO', description: '20+ KPIs executivos em tempo real para decisões estratégicas' },
   { id: 'agenda', path: '/calendar', icon: Calendar, label: 'Agenda', description: 'Compromissos e eventos' },
   { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes', description: 'Gestão de clientes PF/PJ' },
   { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores' },
@@ -57,7 +57,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'service-orders', path: '/service-orders', icon: ClipboardList, label: 'Ordens de Serviço', description: 'Gestão de OS' },
   { id: 'rotas', path: '/rotas', icon: Navigation, label: 'Rotas', description: 'Rastreamento e gestão de rotas' },
   { id: 'financeiro', path: '/financeiro', icon: DollarSign, label: 'Financeiro', description: 'Centro financeiro completo com dashboard, movimentações, análises, contas e categorias' },
-  { id: 'executivo', path: '/executivo', icon: TrendingUp, label: 'CFO & Executivo', description: 'Inteligência executiva com Dashboard CFO, Credit Scoring e análises estratégicas' },
+  { id: 'executivo', path: '/executivo', icon: TrendingUp, label: 'Consolidado Executivo', description: 'Visão consolidada com Credit Scoring, Metas & Targets e análises estratégicas' },
   { id: 'relatorios', path: '/relatorios', icon: FileText, label: 'Relatórios', description: 'Todos os relatórios: dashboards interativos, PDFs profissionais e análises customizadas' },
   { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis' },
   { id: 'inventory', path: '/inventory', icon: Package, label: 'Estoque', description: 'Controle de materiais' },

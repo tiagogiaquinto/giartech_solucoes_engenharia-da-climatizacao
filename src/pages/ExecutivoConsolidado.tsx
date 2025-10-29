@@ -1,7 +1,6 @@
 import React from 'react';
 import { TabContainer, TabItem } from '../components/TabContainer';
-import { TrendingUp, Shield, Target, AlertTriangle } from 'lucide-react';
-import CFODashboard from './CFODashboard';
+import { Shield, Target, AlertTriangle } from 'lucide-react';
 import CreditScoring from './CreditScoring';
 
 function FinancialTargets() {
@@ -45,13 +44,6 @@ function FinancialAlerts() {
 export default function ExecutivoConsolidado() {
   const tabs: TabItem[] = [
     {
-      id: 'dashboard-cfo',
-      label: 'Dashboard CFO',
-      icon: TrendingUp,
-      component: CFODashboard,
-      description: '20+ KPIs executivos em tempo real para decisões estratégicas'
-    },
-    {
       id: 'credit-scoring',
       label: 'Credit Scoring',
       icon: Shield,
@@ -76,14 +68,14 @@ export default function ExecutivoConsolidado() {
 
   return (
     <div className="h-full">
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white px-6 py-8">
-        <h1 className="text-3xl font-bold mb-2">👔 CFO & Executivo</h1>
-        <p className="text-purple-100">
-          Inteligência executiva e decisões estratégicas baseadas em dados
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-6 py-8">
+        <h1 className="text-3xl font-bold mb-2">📊 Consolidado Executivo</h1>
+        <p className="text-blue-100">
+          Análises estratégicas complementares: Credit Scoring, Metas e Alertas
         </p>
       </div>
 
-      <TabContainer tabs={tabs} defaultTab="dashboard-cfo" />
+      <TabContainer tabs={tabs} defaultTab="credit-scoring" />
     </div>
   );
 }
