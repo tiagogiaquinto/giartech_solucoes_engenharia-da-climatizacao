@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Plus, Trash2, Save, X, User, Calendar, FileText, Package, Users, Clock, DollarSign, TrendingUp, CircleAlert as AlertCircle, Check, Printer, Send, Download, Eye, FileDown, Search } from 'lucide-react'
+import { Plus, Trash2, Save, X, User, Calendar, FileText, Package, Users, Clock, DollarSign, TrendingUp, CircleAlert as AlertCircle, Check, Printer, Send, Download, Eye, FileDown, Search, ChevronDown, ChevronUp, Building2, CreditCard, FileSignature } from 'lucide-react'
 import { supabase, getServiceOrderById } from '../lib/supabase'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { getCompanyInfo } from '../utils/companyData'
@@ -105,6 +105,20 @@ const ServiceOrderCreate = () => {
     custo_pedagio: number
     custo_outros: number
     descricao_outros: string
+    company_name: string
+    company_cnpj: string
+    company_address: string
+    company_phone: string
+    company_email: string
+    payment_methods_text: string
+    payment_pix: string
+    bank_name: string
+    bank_agency: string
+    bank_account: string
+    bank_account_type: string
+    bank_holder: string
+    contract_clauses: string
+    additional_info: string
   }>({
     customer_id: '',
     description: '',
@@ -132,7 +146,21 @@ const ServiceOrderCreate = () => {
     custo_estacionamento: 0,
     custo_pedagio: 0,
     custo_outros: 0,
-    descricao_outros: ''
+    descricao_outros: '',
+    company_name: '',
+    company_cnpj: '',
+    company_address: '',
+    company_phone: '',
+    company_email: '',
+    payment_methods_text: 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
+    payment_pix: '',
+    bank_name: '',
+    bank_agency: '',
+    bank_account: '',
+    bank_account_type: 'Corrente',
+    bank_holder: '',
+    contract_clauses: '',
+    additional_info: 'Trabalhamos para que seus projetos, se tornem realidade.'
   })
 
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([{
@@ -163,6 +191,15 @@ const ServiceOrderCreate = () => {
   })
 
   const [searchStaffTerm, setSearchStaffTerm] = useState<Record<string, string>>({})
+  const [expandedSections, setExpandedSections] = useState({
+    company: false,
+    bankData: false,
+    additionalClauses: false
+  })
+
+  const toggleSection = (section: 'company' | 'bankData' | 'additionalClauses') => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }
 
   // Auto-Save - Pacote B
   const { isSaving, lastSaved, error: saveError } = useAutoSave({
@@ -230,7 +267,21 @@ const ServiceOrderCreate = () => {
           custo_estacionamento: orderData.custo_estacionamento || 0,
           custo_pedagio: orderData.custo_pedagio || 0,
           custo_outros: orderData.custo_outros || 0,
-          descricao_outros: orderData.descricao_outros || ''
+          descricao_outros: orderData.descricao_outros || '',
+          company_name: orderData.company_name || '',
+          company_cnpj: orderData.company_cnpj || '',
+          company_address: orderData.company_address || '',
+          company_phone: orderData.company_phone || '',
+          company_email: orderData.company_email || '',
+          payment_methods_text: orderData.payment_methods_text || 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
+          payment_pix: orderData.payment_pix || '',
+          bank_name: orderData.bank_name || '',
+          bank_agency: orderData.bank_agency || '',
+          bank_account: orderData.bank_account || '',
+          bank_account_type: orderData.bank_account_type || 'Corrente',
+          bank_holder: orderData.bank_holder || '',
+          contract_clauses: orderData.contract_clauses || '',
+          additional_info: orderData.additional_info || 'Trabalhamos para que seus projetos, se tornem realidade.'
         })
 
         setOrderNumber(orderData.order_number || '')
@@ -1420,6 +1471,217 @@ const ServiceOrderCreate = () => {
                   placeholder="Cláusulas especiais, condições particulares..." />
               </div>
             </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 shadow-md border-2 border-blue-300">
+            <button
+              type="button"
+              onClick={() => toggleSection('company')}
+              className="w-full flex items-center justify-between text-lg font-semibold mb-4 hover:text-blue-700 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-blue-600" />
+                🏢 Dados da Empresa no Documento
+              </div>
+              {expandedSections.company ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+            </button>
+            {expandedSections.company && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Nome da Empresa</label>
+                  <input
+                    type="text"
+                    value={formData.company_name}
+                    onChange={(e) => setFormData({...formData, company_name: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Deixe vazio para usar configuração padrão"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">CNPJ</label>
+                  <input
+                    type="text"
+                    value={formData.company_cnpj}
+                    onChange={(e) => setFormData({...formData, company_cnpj: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="00.000.000/0000-00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Telefone</label>
+                  <input
+                    type="text"
+                    value={formData.company_phone}
+                    onChange={(e) => setFormData({...formData, company_phone: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={formData.company_email}
+                    onChange={(e) => setFormData({...formData, company_email: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="contato@empresa.com.br"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Endereço Completo</label>
+                  <textarea
+                    value={formData.company_address}
+                    onChange={(e) => setFormData({...formData, company_address: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    rows={2}
+                    placeholder="Rua, número, complemento, bairro, cidade - UF, CEP"
+                  />
+                </div>
+                <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>💡 Dica:</strong> Estes dados sobrescrevem as configurações padrão apenas para este documento.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-xl p-6 shadow-md border-2 border-green-300">
+            <button
+              type="button"
+              onClick={() => toggleSection('bankData')}
+              className="w-full flex items-center justify-between text-lg font-semibold mb-4 hover:text-green-700 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-green-600" />
+                💳 Dados Bancários e Formas de Pagamento
+              </div>
+              {expandedSections.bankData ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+            </button>
+            {expandedSections.bankData && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Formas de Pagamento Aceitas</label>
+                  <input
+                    type="text"
+                    value={formData.payment_methods_text}
+                    onChange={(e) => setFormData({...formData, payment_methods_text: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="Ex: Transferência bancária, dinheiro, cartão de crédito..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Chave PIX</label>
+                  <input
+                    type="text"
+                    value={formData.payment_pix}
+                    onChange={(e) => setFormData({...formData, payment_pix: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="CPF/CNPJ ou chave aleatória"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Banco</label>
+                  <input
+                    type="text"
+                    value={formData.bank_name}
+                    onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="Nome do Banco"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Agência</label>
+                  <input
+                    type="text"
+                    value={formData.bank_agency}
+                    onChange={(e) => setFormData({...formData, bank_agency: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="0000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Conta</label>
+                  <input
+                    type="text"
+                    value={formData.bank_account}
+                    onChange={(e) => setFormData({...formData, bank_account: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="00000-0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Tipo de Conta</label>
+                  <select
+                    value={formData.bank_account_type}
+                    onChange={(e) => setFormData({...formData, bank_account_type: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="Corrente">Corrente</option>
+                    <option value="Poupança">Poupança</option>
+                    <option value="Salário">Salário</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Titular da Conta</label>
+                  <input
+                    type="text"
+                    value={formData.bank_holder}
+                    onChange={(e) => setFormData({...formData, bank_holder: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="Nome completo do titular"
+                  />
+                </div>
+                <div className="md:col-span-2 bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-sm text-green-800">
+                    <strong>💡 Dica:</strong> Estes dados bancários aparecerão no documento para facilitar o pagamento do cliente.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 shadow-md border-2 border-purple-300">
+            <button
+              type="button"
+              onClick={() => toggleSection('additionalClauses')}
+              className="w-full flex items-center justify-between text-lg font-semibold mb-4 hover:text-purple-700 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <FileSignature className="h-5 w-5 text-purple-600" />
+                📋 Cláusulas e Informações Adicionais
+              </div>
+              {expandedSections.additionalClauses ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+            </button>
+            {expandedSections.additionalClauses && (
+              <div className="space-y-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Cláusulas Contratuais Adicionais</label>
+                  <textarea
+                    value={formData.contract_clauses}
+                    onChange={(e) => setFormData({...formData, contract_clauses: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                    rows={5}
+                    placeholder="Digite cláusulas contratuais específicas, termos e condições adicionais..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Informações Adicionais / Rodapé</label>
+                  <textarea
+                    value={formData.additional_info}
+                    onChange={(e) => setFormData({...formData, additional_info: e.target.value})}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                    rows={3}
+                    placeholder="Mensagem de rodapé, slogan, avisos importantes..."
+                  />
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                  <p className="text-sm text-purple-800">
+                    <strong>💡 Dica:</strong> Use este espaço para adicionar informações que devem aparecer no final do documento.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {serviceItems.map((item, index) => (
