@@ -220,7 +220,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
             .eq('service_order_item_id', item.id)
 
           const itemLaborRes = await supabase
-            .from('service_order_team')
+            .from('service_order_labor')
             .select('*')
             .eq('service_order_id', id)
             .eq('service_order_item_id', item.id)
@@ -230,33 +230,37 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
             material_id: mat.material_id || '',
             nome: mat.material_name || '',
             quantidade: mat.quantity || 0,
-            unidade_medida: mat.unit || 'un',
+            unidade_medida: mat.material_unit || mat.unit || 'un',
             preco_compra_unitario: mat.unit_cost || 0,
             preco_venda_unitario: mat.unit_price || 0,
-            custo_total: (mat.unit_cost || 0) * (mat.quantity || 0),
-            valor_total: (mat.unit_price || 0) * (mat.quantity || 0),
+            custo_total: mat.total_cost || (mat.unit_cost || 0) * (mat.quantity || 0),
+            valor_total: mat.total_price || (mat.unit_price || 0) * (mat.quantity || 0),
             lucro: ((mat.unit_price || 0) - (mat.unit_cost || 0)) * (mat.quantity || 0)
           }))
 
           const itemFuncionarios = (itemLaborRes.data || []).map((member: any) => ({
             id: member.id,
-            staff_id: member.employee_id || '',
-            nome: member.employee_name || '',
-            tempo_minutos: member.hours_worked ? member.hours_worked * 60 : 0,
+            staff_id: member.staff_id || '',
+            nome: member.nome_funcionario || '',
+            tempo_minutos: member.hours ? member.hours * 60 : 0,
             custo_hora: member.hourly_rate || 0,
-            custo_total: (member.hourly_rate || 0) * (member.hours_worked || 0)
+            custo_total: member.total_cost || ((member.hourly_rate || 0) * (member.hours || 0))
           }))
 
           return {
             id: item.id,
-            catalog_service_id: item.service_catalog_id || '',
-            descricao: item.service_name || item.description || 'Serviço',
-            quantidade: item.quantity || 1,
+            service_catalog_id: item.service_catalog_id || '',
+            descricao: item.descricao || item.notes || 'Serviço',
+            escopo: item.escopo_detalhado || '',
+            escopo_detalhado: item.escopo_detalhado || '',
+            quantity: item.quantity || 1,
+            preco: item.unit_price || 0,
             preco_unitario: item.unit_price || 0,
             preco_total: item.total_price || 0,
-            tempo_estimado_minutos: item.estimated_duration || 0,
+            difficulty_level: item.difficulty_level || 'medium',
+            notes: item.notes || '',
             materiais: itemMateriais,
-            funcionarios: itemFuncionarios,
+            mao_obra: itemFuncionarios,
             custo_materiais: itemMateriais.reduce((sum, m) => sum + m.custo_total, 0),
             custo_mao_obra: itemFuncionarios.reduce((sum, f) => sum + f.custo_total, 0),
             custo_total: item.total_cost || 0,
@@ -266,7 +270,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
         }))
 
         console.log('🔧 Serviços carregados com materiais e mão de obra:', loadedServiceItems)
-        setServiceItems(loadedServiceItems)
+        setServiceItems(loadedServiceItems as any)
       }
 
       // Carregar materiais GLOBAIS (não vinculados a serviços específicos)
@@ -277,30 +281,20 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
           material_id: mat.material_id || '',
           nome: mat.material_name || '',
           quantidade: mat.quantity || 0,
-          unidade_medida: mat.unit || 'un',
-          preco_compra_unitario: mat.unit_cost || 0,
-          preco_venda_unitario: mat.unit_price || 0,
-          custo_total: (mat.unit_cost || 0) * (mat.quantity || 0),
-          valor_total: (mat.unit_price || 0) * (mat.quantity || 0),
+          unidade_medida: mat.material_unit || mat.unit || 'un',
+          preco_custo: mat.unit_cost || 0,
+          preco_unitario: mat.unit_price || 0,
+          custo_total: mat.total_cost || (mat.unit_cost || 0) * (mat.quantity || 0),
+          valor_total: mat.total_price || (mat.unit_price || 0) * (mat.quantity || 0),
           lucro: ((mat.unit_price || 0) - (mat.unit_cost || 0)) * (mat.quantity || 0)
         }))
         console.log('📦 Materiais globais:', loadedMaterials)
-        setGlobalMaterials(loadedMaterials)
+        setGlobalMaterials(loadedMaterials as any)
       }
 
-      // Carregar mão de obra GLOBAL (não vinculada a serviços específicos)
+      // Equipe será carregada quando implementarmos o state teamMembers
       if (teamRes.data && teamRes.data.length > 0) {
-        const globalLabor = teamRes.data.filter((member: any) => !member.service_order_item_id)
-        const loadedLabor = globalLabor.map((member: any) => ({
-          id: member.id,
-          staff_id: member.employee_id || '',
-          nome: member.employee_name || '',
-          tempo_minutos: member.hours_worked ? member.hours_worked * 60 : 0,
-          custo_hora: member.hourly_rate || 0,
-          custo_total: (member.hourly_rate || 0) * (member.hours_worked || 0)
-        }))
-        console.log('👷 Mão de obra global:', loadedLabor)
-        setGlobalLabor(loadedLabor)
+        console.log('👥 Equipe disponível:', teamRes.data)
       }
 
       console.log('✅ Carregamento completo!')
@@ -625,6 +619,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       }
 
       setLoading(true)
+      console.log('🔄 Iniciando salvamento da OS...')
 
       const totals = calculateTotals()
 
@@ -690,13 +685,19 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       let orderIdToUse = orderId
 
       if (orderId) {
+        console.log('✏️ Atualizando OS existente:', orderId)
         const { error } = await supabase
           .from('service_orders')
           .update(orderData)
           .eq('id', orderId)
 
         if (error) throw error
+
+        await supabase.from('service_order_items').delete().eq('service_order_id', orderId)
+        await supabase.from('service_order_materials').delete().eq('service_order_id', orderId)
+        await supabase.from('service_order_labor').delete().eq('service_order_id', orderId)
       } else {
+        console.log('➕ Criando nova OS')
         const { data: order, error } = await supabase
           .from('service_orders')
           .insert([orderData])
@@ -705,14 +706,133 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
 
         if (error) throw error
         orderIdToUse = order.id
+        console.log('✅ OS criada com ID:', orderIdToUse)
       }
 
+      console.log(`📦 Salvando ${serviceItems.length} itens de serviço...`)
+      for (const item of serviceItems) {
+        const itemAny = item as any
+        const itemData = {
+          service_order_id: orderIdToUse,
+          service_catalog_id: itemAny.service_catalog_id || null,
+          descricao: itemAny.descricao || '',
+          escopo_detalhado: itemAny.escopo || itemAny.escopo_detalhado || '',
+          quantity: itemAny.quantity || 1,
+          unit_price: itemAny.preco || itemAny.preco_unitario || 0,
+          total_price: (itemAny.quantity || 1) * (itemAny.preco || itemAny.preco_unitario || 0),
+          difficulty_level: itemAny.difficulty_level || 'medium',
+          notes: itemAny.notes || ''
+        }
+
+        const { data: savedItem, error: itemError } = await supabase
+          .from('service_order_items')
+          .insert([itemData])
+          .select()
+          .single()
+
+        if (itemError) {
+          console.error('❌ Erro ao salvar item:', itemError)
+          throw itemError
+        }
+
+        console.log('✅ Item salvo:', savedItem.id)
+
+        if (itemAny.materiais && itemAny.materiais.length > 0) {
+          console.log(`  📦 Salvando ${itemAny.materiais.length} materiais do item...`)
+          for (const material of itemAny.materiais) {
+            const matAny = material as any
+            const materialData = {
+              service_order_id: orderIdToUse,
+              service_order_item_id: savedItem.id,
+              material_id: matAny.material_id || null,
+              material_name: matAny.nome || matAny.name || '',
+              material_unit: matAny.unidade_medida || matAny.unit || 'un',
+              quantity: matAny.quantidade || matAny.quantity || 0,
+              unit_cost: matAny.preco_custo || matAny.unit_cost || 0,
+              unit_price: matAny.preco_unitario || matAny.unit_price || 0,
+              total_cost: matAny.custo_total || matAny.total_cost || 0,
+              total_price: matAny.valor_total || matAny.total_price || 0
+            }
+
+            const { error: matError } = await supabase
+              .from('service_order_materials')
+              .insert([materialData])
+
+            if (matError) {
+              console.error('❌ Erro ao salvar material:', matError)
+              throw matError
+            }
+          }
+          console.log('  ✅ Materiais salvos')
+        }
+
+        if (itemAny.mao_obra && itemAny.mao_obra.length > 0) {
+          console.log(`  👷 Salvando ${itemAny.mao_obra.length} funcionários do item...`)
+          for (const labor of itemAny.mao_obra) {
+            const laborAny = labor as any
+            const laborData = {
+              service_order_id: orderIdToUse,
+              service_order_item_id: savedItem.id,
+              staff_id: laborAny.employee_id || laborAny.staff_id || null,
+              nome_funcionario: laborAny.nome || laborAny.name || '',
+              hours: laborAny.tempo_minutos ? laborAny.tempo_minutos / 60 : (laborAny.hours || 0),
+              hourly_rate: laborAny.custo_hora || laborAny.hourly_rate || 0,
+              total_cost: laborAny.custo_total || laborAny.total_cost || 0
+            }
+
+            const { error: laborError } = await supabase
+              .from('service_order_labor')
+              .insert([laborData])
+
+            if (laborError) {
+              console.error('❌ Erro ao salvar mão de obra:', laborError)
+              throw laborError
+            }
+          }
+          console.log('  ✅ Mão de obra salva')
+        }
+      }
+
+      if (globalMaterials && globalMaterials.length > 0) {
+        console.log(`📦 Salvando ${globalMaterials.length} materiais globais...`)
+        for (const material of globalMaterials) {
+          const matAny = material as any
+          const materialData = {
+            service_order_id: orderIdToUse,
+            service_order_item_id: null,
+            material_id: matAny.material_id || null,
+            material_name: matAny.nome || matAny.name || '',
+            material_unit: matAny.unidade_medida || matAny.unit || 'un',
+            quantity: matAny.quantidade || matAny.quantity || 0,
+            unit_cost: matAny.preco_custo || matAny.unit_cost || 0,
+            unit_price: matAny.preco_unitario || matAny.unit_price || 0,
+            total_cost: matAny.custo_total || matAny.total_cost || 0,
+            total_price: matAny.valor_total || matAny.total_price || 0
+          }
+
+          const { error: matError } = await supabase
+            .from('service_order_materials')
+            .insert([materialData])
+
+          if (matError) {
+            console.error('❌ Erro ao salvar material global:', matError)
+            throw matError
+          }
+        }
+        console.log('✅ Materiais globais salvos')
+      }
+
+      // Equipe será salva quando implementarmos o state teamMembers
+      console.log('ℹ️ Salvamento de equipe será implementado')
+
+      console.log('✅ OS salva com sucesso! ID:', orderIdToUse)
       clearDraft()
+      alert('✅ Ordem de Serviço salva com sucesso!')
       onSave()
       onClose()
     } catch (error) {
-      console.error('Error saving order:', error)
-      alert('Erro ao salvar ordem de serviço!')
+      console.error('❌ Erro ao salvar ordem:', error)
+      alert('❌ Erro ao salvar ordem de serviço! Verifique o console.')
     } finally {
       setLoading(false)
     }
