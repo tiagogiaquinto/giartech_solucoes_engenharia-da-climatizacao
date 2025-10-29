@@ -304,6 +304,30 @@ export default function ServiceOrderViewGiartech({ isOpen, onClose, data }: Prop
                                 {item.scope || item.service_scope || item.escopo_detalhado}
                               </p>
                             )}
+
+                            {/* Materiais */}
+                            {item.materials && item.materials.length > 0 && (
+                              <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
+                                <p className="text-xs font-semibold text-green-900 mb-1">📦 Materiais:</p>
+                                {item.materials.map((mat: any, idx: number) => (
+                                  <p key={idx} className="text-xs text-green-800 ml-2">
+                                    • {mat.nome || mat.material_name || mat.name} - {mat.quantidade || mat.quantity} {mat.unidade_medida || mat.unit || 'un'} - {formatCurrency(mat.preco_venda || mat.unit_price || 0)}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Equipe */}
+                            {item.team && item.team.length > 0 && (
+                              <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                                <p className="text-xs font-semibold text-blue-900 mb-1">👷 Equipe:</p>
+                                {item.team.map((func: any, idx: number) => (
+                                  <p key={idx} className="text-xs text-blue-800 ml-2">
+                                    • {func.nome || func.employee_name || func.name} {func.cargo || func.role ? `(${func.cargo || func.role})` : ''}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
                           </td>
                           <td className="text-center py-3 text-gray-700">{item.unit}</td>
                           <td className="text-right py-3 text-gray-900">{formatCurrency(item.unit_price)}</td>
