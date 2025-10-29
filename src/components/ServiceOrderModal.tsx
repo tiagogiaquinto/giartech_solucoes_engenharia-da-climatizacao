@@ -95,6 +95,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
   const [bankAccounts, setBankAccounts] = useState<any[]>([])
   const [contractTemplates, setContractTemplates] = useState<any[]>([])
   const [serviceCatalog, setServiceCatalog] = useState<any[]>([])
+  const [companySettings, setCompanySettings] = useState<any>(null)
 
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([])
   const [globalMaterials, setGlobalMaterials] = useState<MaterialItem[]>([])
@@ -136,13 +137,14 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
 
   const loadData = async () => {
     try {
-      const [customersRes, materialsRes, staffRes, bankAccountsRes, contractsRes, catalogRes] = await Promise.all([
+      const [customersRes, materialsRes, staffRes, bankAccountsRes, contractsRes, catalogRes, companyRes] = await Promise.all([
         supabase.from('customers').select('*, customer_addresses(*)').order('nome_razao'),
         supabase.from('materials').select('*').eq('active', true).order('name'),
         supabase.from('employees').select('id, name, role, custo_hora, especialidade, nivel').eq('active', true).order('name'),
         supabase.from('bank_accounts').select('*').eq('active', true).order('account_name'),
         supabase.from('contract_templates').select('*').order('name'),
-        supabase.from('service_catalog').select('*, service_catalog_materials(*)').eq('active', true).order('name')
+        supabase.from('service_catalog').select('*, service_catalog_materials(*)').eq('active', true).order('name'),
+        supabase.from('company_settings').select('*').limit(1)
       ])
 
       setCustomers(customersRes.data || [])
@@ -151,6 +153,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       setBankAccounts(bankAccountsRes.data || [])
       setContractTemplates(contractsRes.data || [])
       setServiceCatalog(catalogRes.data || [])
+      setCompanySettings(companyRes.data?.[0] || null)
     } catch (error) {
       console.error('Error loading data:', error)
     }
@@ -670,7 +673,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
         client_state: selectedCustomer?.endereco_estado || '',
         client_cep: selectedCustomer?.endereco_cep || '',
         payment_methods: 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
-        payment_pix: selectedCustomer?.cnpj || selectedCustomer?.cpf || '',
+        payment_pix: companySettings?.cnpj || companySettings?.cpf || '00.000.000/0000-00',
         title: (formData as any).title || '',
         brand: (formData as any).brand || '',
         model: (formData as any).model || '',
