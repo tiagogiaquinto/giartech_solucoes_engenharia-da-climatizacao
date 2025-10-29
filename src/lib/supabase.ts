@@ -481,11 +481,18 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder | nu
         if (itemId) {
           if (!materialsByItem.has(itemId)) materialsByItem.set(itemId, [])
           materialsByItem.get(itemId).push({
+            id: mat.id,
+            material_id: mat.material_id,
             nome: mat.material_name || mat.nome_material || mat.material?.name || 'Material',
             quantidade: mat.quantity || mat.quantidade || 0,
             unidade_medida: mat.material_unit || mat.material?.unit || 'un',
-            preco_unitario: mat.unit_sale_price || mat.preco_venda || mat.unit_price || 0,
-            valor_total: mat.total_sale_price || mat.valor_total || mat.total_price || 0
+            preco_compra_unitario: mat.unit_cost_at_time || mat.preco_compra || mat.unit_price || 0,
+            preco_venda_unitario: mat.unit_sale_price || mat.preco_venda || mat.unit_price || 0,
+            preco_compra: mat.total_cost || mat.custo_total || 0,
+            preco_venda: mat.total_sale_price || mat.valor_total || mat.total_price || 0,
+            custo_total: mat.total_cost || mat.custo_total || 0,
+            valor_total: mat.total_sale_price || mat.valor_total || mat.total_price || 0,
+            lucro: mat.lucro || 0
           })
         }
       })
@@ -495,6 +502,8 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder | nu
         if (itemId) {
           if (!laborByItem.has(itemId)) laborByItem.set(itemId, [])
           laborByItem.get(itemId).push({
+            id: lab.id,
+            staff_id: lab.staff_id,
             nome: lab.nome_funcionario || lab.employee?.name || 'Funcionário',
             tempo_minutos: lab.tempo_minutos || (lab.hours ? lab.hours * 60 : 0) || 0,
             custo_hora: lab.custo_hora || lab.hourly_rate || 0,
@@ -508,9 +517,11 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder | nu
         service_order_id: item.service_order_id,
         service_catalog_id: item.service_catalog_id,
         service_name: item.service_catalog?.name || '',
-        descricao: item.notes || item.descricao || item.service_catalog?.description || item.service_catalog?.name || '',
+        descricao: item.descricao || item.notes || item.service_catalog?.description || item.service_catalog?.name || '',
         description: item.notes || item.service_catalog?.description || item.service_catalog?.name || '',
         name: item.service_catalog?.name || '',
+        escopo: item.escopo_detalhado || item.escopo || item.service_catalog?.escopo_servico || '',
+        escopo_detalhado: item.escopo_detalhado || item.escopo || item.service_catalog?.escopo_servico || '',
         quantidade: item.quantity || item.quantidade || 1,
         quantity: item.quantity || 1,
         preco_unitario: item.unit_price || item.preco_unitario || 0,
@@ -519,6 +530,11 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder | nu
         total_price: item.total_price || 0,
         tempo_estimado_minutos: item.estimated_duration || item.tempo_estimado_minutos || 0,
         estimated_duration: item.estimated_duration || 0,
+        custo_materiais: item.custo_materiais || 0,
+        custo_mao_obra: item.custo_mao_obra || 0,
+        custo_total: item.custo_total || 0,
+        lucro: item.lucro || 0,
+        margem_lucro: item.margem_lucro || 0,
         notes: item.notes || '',
         difficulty_level: item.difficulty_level || 1,
         difficulty_multiplier: item.difficulty_multiplier || 1.0,

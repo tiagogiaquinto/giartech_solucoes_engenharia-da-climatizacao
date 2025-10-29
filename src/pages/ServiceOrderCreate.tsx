@@ -240,21 +240,50 @@ const ServiceOrderCreate = () => {
         }
 
         if (orderData.items && orderData.items.length > 0) {
-          const mappedItems = orderData.items.map((item: any) => ({
-            id: item.id || crypto.randomUUID(),
-            descricao: item.descricao || item.description || item.service_name || item.service_catalog?.name || '',
-            quantidade: item.quantidade || item.quantity || 1,
-            preco_unitario: item.preco_unitario || item.unit_price || 0,
-            preco_total: item.preco_total || item.total_price || 0,
-            tempo_estimado_minutos: item.tempo_estimado_minutos || item.estimated_time || 0,
-            materiais: item.materiais || item.materials || [],
-            funcionarios: item.funcionarios || item.labor || [],
-            custo_materiais: item.custo_materiais || item.cost_materials || 0,
-            custo_mao_obra: item.custo_mao_obra || item.cost_labor || 0,
-            custo_total: item.custo_total || item.total_cost || 0,
-            lucro: item.lucro || item.profit || 0,
-            margem_lucro: item.margem_lucro || item.profit_margin || 0
-          }))
+          const mappedItems = orderData.items.map((item: any) => {
+            const materiaisData = (item.materiais || item.materials || []).map((mat: any) => ({
+              id: mat.id || crypto.randomUUID(),
+              material_id: mat.material_id || '',
+              nome: mat.nome || mat.material_name || mat.name || '',
+              quantidade: mat.quantidade || mat.quantity || 0,
+              unidade_medida: mat.unidade_medida || mat.material_unit || mat.unit || 'un',
+              preco_compra_unitario: mat.preco_compra_unitario || mat.unit_cost_at_time || mat.unit_price || 0,
+              preco_venda_unitario: mat.preco_venda_unitario || mat.unit_sale_price || mat.preco_unitario || 0,
+              preco_compra: mat.preco_compra || mat.total_cost || 0,
+              preco_venda: mat.preco_venda || mat.valor_total || mat.total_sale_price || mat.total_price || 0,
+              custo_total: mat.custo_total || mat.total_cost || 0,
+              valor_total: mat.valor_total || mat.total_sale_price || mat.total_price || 0,
+              lucro: mat.lucro || 0
+            }))
+
+            const funcionariosData = (item.funcionarios || item.labor || []).map((func: any) => ({
+              id: func.id || crypto.randomUUID(),
+              staff_id: func.staff_id || func.employee_id || '',
+              nome: func.nome || func.nome_funcionario || func.name || '',
+              tempo_minutos: func.tempo_minutos || func.time_minutes || 0,
+              custo_hora: func.custo_hora || func.hourly_rate || 0,
+              custo_total: func.custo_total || func.total_cost || 0
+            }))
+
+            return {
+              id: item.id || crypto.randomUUID(),
+              service_catalog_id: item.service_catalog_id || null,
+              descricao: item.descricao || item.description || item.service_name || item.service_catalog?.name || '',
+              escopo: item.escopo || item.escopo_detalhado || item.service_scope || '',
+              escopo_detalhado: item.escopo_detalhado || item.escopo || item.service_scope || '',
+              quantidade: item.quantidade || item.quantity || 1,
+              preco_unitario: item.preco_unitario || item.unit_price || 0,
+              preco_total: item.preco_total || item.total_price || 0,
+              tempo_estimado_minutos: item.tempo_estimado_minutos || item.estimated_duration || item.estimated_time || 0,
+              materiais: materiaisData,
+              funcionarios: funcionariosData,
+              custo_materiais: item.custo_materiais || item.cost_materials || 0,
+              custo_mao_obra: item.custo_mao_obra || item.cost_labor || 0,
+              custo_total: item.custo_total || item.total_cost || 0,
+              lucro: item.lucro || item.profit || 0,
+              margem_lucro: item.margem_lucro || item.profit_margin || 0
+            }
+          })
           setServiceItems(mappedItems)
         }
       }
