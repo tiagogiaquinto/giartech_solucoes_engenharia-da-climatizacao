@@ -2592,15 +2592,24 @@ const ServiceOrderCreate = () => {
         </div>
       </div>
 
+      {/* DEBUG: Indicador Visual de Modal Aberto */}
+      {(showNewCustomerModal || showNewServiceModal || showNewMaterialModal) && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg z-[10000] shadow-lg font-bold animate-pulse">
+          ✅ MODAL ABERTO: {showNewCustomerModal ? 'CLIENTE' : showNewServiceModal ? 'SERVIÇO' : 'MATERIAL'}
+        </div>
+      )}
+
       {/* Modal Novo Cliente */}
       {showNewCustomerModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4" onClick={(e) => {
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[9999] p-4" onClick={(e) => {
+          console.log('Click no backdrop do modal cliente')
           if (e.target === e.currentTarget) {
+            console.log('🚪 Fechando modal cliente')
             setShowNewCustomerModal(false)
             setNewCustomerData({ nome_razao: '', telefone: '', email: '', cnpj_cpf: '' })
           }
         }}>
-          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <User className="h-5 w-5 text-green-600" />
               Novo Cliente
@@ -2670,13 +2679,15 @@ const ServiceOrderCreate = () => {
 
       {/* Modal Novo Serviço */}
       {showNewServiceModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4" onClick={(e) => {
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[9999] p-4" onClick={(e) => {
+          console.log('Click no backdrop do modal serviço')
           if (e.target === e.currentTarget) {
+            console.log('🚪 Fechando modal serviço')
             setShowNewServiceModal(false)
             setNewServiceData({ name: '', description: '', base_price: 0, estimated_time_minutes: 60 })
           }
         }}>
-          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Package className="h-5 w-5 text-blue-600" />
               Novo Serviço
@@ -2747,13 +2758,15 @@ const ServiceOrderCreate = () => {
 
       {/* Modal Novo Material */}
       {showNewMaterialModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4" onClick={(e) => {
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[9999] p-4" onClick={(e) => {
+          console.log('Click no backdrop do modal material')
           if (e.target === e.currentTarget) {
+            console.log('🚪 Fechando modal material')
             setShowNewMaterialModal(false)
             setNewMaterialData({ name: '', unit: 'un', unit_cost: 0, unit_price: 0, quantity: 1 })
           }
         }}>
-          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Package className="h-5 w-5 text-orange-600" />
               Novo Material
