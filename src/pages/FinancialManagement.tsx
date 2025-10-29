@@ -202,18 +202,12 @@ const FinancialManagement = () => {
   }
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return '-'
     const date = new Date(dateString)
-    const today = new Date()
-    const diffTime = date.getTime() - today.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-    if (diffDays === 0) return 'Hoje'
-    if (diffDays === 1) return 'Amanhã'
-    if (diffDays === -1) return 'Ontem'
-    if (diffDays > 0) return `${diffDays} dias`
-    if (diffDays < 0) return `${Math.abs(diffDays)} dias atrás`
-
-    return date.toLocaleDateString('pt-BR')
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
   }
 
   const getStatusIcon = (status: string) => {
