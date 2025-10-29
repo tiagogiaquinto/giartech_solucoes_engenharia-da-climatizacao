@@ -978,11 +978,25 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
               <motion.div key="servicos" initial={{opacity: 0, x: -20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: 20}} className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Serviços da OS</h3>
-                  <button onClick={addServiceItem}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Adicionar Serviço
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('Abrindo modal de cadastro de novo serviço')
+                        setShowNewServiceModal(true)
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                      title="Cadastrar Novo Serviço no Sistema"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Cadastrar Novo
+                    </button>
+                    <button onClick={addServiceItem}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Adicionar Serviço
+                    </button>
+                  </div>
                 </div>
 
                 {serviceItems.length === 0 && (
@@ -1103,11 +1117,25 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
                     <h3 className="text-lg font-semibold">Materiais da OS</h3>
                     <p className="text-sm text-gray-600">Materiais que serão consumidos nesta ordem de serviço</p>
                   </div>
-                  <button onClick={addMaterial}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Adicionar Material
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('Abrindo modal de cadastro de novo material')
+                        setShowNewMaterialModal(true)
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                      title="Cadastrar Novo Material no Sistema"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Cadastrar Novo
+                    </button>
+                    <button onClick={addMaterial}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Adicionar Material
+                    </button>
+                  </div>
                 </div>
 
                 {globalMaterials.length === 0 && (
