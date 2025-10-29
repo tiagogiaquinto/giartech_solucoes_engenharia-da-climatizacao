@@ -1094,6 +1094,8 @@ const ServiceOrderCreate = () => {
 
   const handleCreateCustomer = async () => {
     try {
+      console.log('📝 Iniciando cadastro de cliente:', newCustomerData)
+
       if (!newCustomerData.nome_razao) {
         alert('Nome/Razão Social é obrigatório!')
         return
@@ -1101,24 +1103,32 @@ const ServiceOrderCreate = () => {
 
       const { data, error } = await supabase
         .from('customers')
-        .insert([newCustomerData])
+        .insert([{ ...newCustomerData, tipo: 'fisica', active: true }])
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Erro ao cadastrar cliente:', error)
+        throw error
+      }
 
-      alert('Cliente cadastrado com sucesso!')
+      console.log('✅ Cliente cadastrado:', data)
+      alert('✅ Cliente cadastrado com sucesso!')
+
       setCustomers([...customers, data])
       setFormData({...formData, customer_id: data.id})
       setShowNewCustomerModal(false)
       setNewCustomerData({ nome_razao: '', telefone: '', email: '', cnpj_cpf: '' })
     } catch (error: any) {
-      alert(`Erro ao cadastrar cliente: ${error.message}`)
+      console.error('❌ Erro completo:', error)
+      alert(`❌ Erro ao cadastrar cliente: ${error.message}`)
     }
   }
 
   const handleCreateService = async () => {
     try {
+      console.log('🛠️ Iniciando cadastro de serviço:', newServiceData)
+
       if (!newServiceData.name) {
         alert('Nome do serviço é obrigatório!')
         return
@@ -1126,23 +1136,31 @@ const ServiceOrderCreate = () => {
 
       const { data, error } = await supabase
         .from('service_catalog')
-        .insert([{ ...newServiceData, active: true }])
+        .insert([{ ...newServiceData, active: true, unit: 'un' }])
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Erro ao cadastrar serviço:', error)
+        throw error
+      }
 
-      alert('Serviço cadastrado com sucesso!')
+      console.log('✅ Serviço cadastrado:', data)
+      alert('✅ Serviço cadastrado com sucesso!')
+
       setServiceCatalog([...serviceCatalog, data])
       setShowNewServiceModal(false)
       setNewServiceData({ name: '', description: '', base_price: 0, estimated_time_minutes: 60 })
     } catch (error: any) {
-      alert(`Erro ao cadastrar serviço: ${error.message}`)
+      console.error('❌ Erro completo:', error)
+      alert(`❌ Erro ao cadastrar serviço: ${error.message}`)
     }
   }
 
   const handleCreateMaterial = async () => {
     try {
+      console.log('📦 Iniciando cadastro de material:', newMaterialData)
+
       if (!newMaterialData.name) {
         alert('Nome do material é obrigatório!')
         return
@@ -1150,18 +1168,32 @@ const ServiceOrderCreate = () => {
 
       const { data, error } = await supabase
         .from('inventory_items')
-        .insert([{ ...newMaterialData, active: true, min_quantity: 1 }])
+        .insert([{
+          name: newMaterialData.name,
+          unit: newMaterialData.unit,
+          purchase_price: newMaterialData.unit_cost,
+          sale_price: newMaterialData.unit_price,
+          quantity: newMaterialData.quantity,
+          active: true,
+          min_quantity: 1
+        }])
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Erro ao cadastrar material:', error)
+        throw error
+      }
 
-      alert('Material cadastrado com sucesso!')
+      console.log('✅ Material cadastrado:', data)
+      alert('✅ Material cadastrado com sucesso!')
+
       setInventory([...inventory, data])
       setShowNewMaterialModal(false)
       setNewMaterialData({ name: '', unit: 'un', unit_cost: 0, unit_price: 0, quantity: 1 })
     } catch (error: any) {
-      alert(`Erro ao cadastrar material: ${error.message}`)
+      console.error('❌ Erro completo:', error)
+      alert(`❌ Erro ao cadastrar material: ${error.message}`)
     }
   }
 
@@ -1223,7 +1255,10 @@ const ServiceOrderCreate = () => {
                   </select>
                   <button
                     type="button"
-                    onClick={() => setShowNewCustomerModal(true)}
+                    onClick={() => {
+                      console.log('Abrindo modal de novo cliente')
+                      setShowNewCustomerModal(true)
+                    }}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
                     title="Novo Cliente"
                   >
@@ -1834,7 +1869,10 @@ const ServiceOrderCreate = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setShowNewServiceModal(true)}
+                      onClick={() => {
+                        console.log('Abrindo modal de novo serviço')
+                        setShowNewServiceModal(true)
+                      }}
                       className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1 whitespace-nowrap"
                       title="Novo Serviço"
                     >
@@ -1925,7 +1963,10 @@ const ServiceOrderCreate = () => {
                         </select>
                         <button
                           type="button"
-                          onClick={() => setShowNewMaterialModal(true)}
+                          onClick={() => {
+                            console.log('Abrindo modal de novo material')
+                            setShowNewMaterialModal(true)
+                          }}
                           className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-1 whitespace-nowrap"
                           title="Novo Material"
                         >
@@ -2553,7 +2594,12 @@ const ServiceOrderCreate = () => {
 
       {/* Modal Novo Cliente */}
       {showNewCustomerModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowNewCustomerModal(false)
+            setNewCustomerData({ nome_razao: '', telefone: '', email: '', cnpj_cpf: '' })
+          }
+        }}>
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <User className="h-5 w-5 text-green-600" />
@@ -2624,7 +2670,12 @@ const ServiceOrderCreate = () => {
 
       {/* Modal Novo Serviço */}
       {showNewServiceModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowNewServiceModal(false)
+            setNewServiceData({ name: '', description: '', base_price: 0, estimated_time_minutes: 60 })
+          }
+        }}>
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Package className="h-5 w-5 text-blue-600" />
@@ -2696,7 +2747,12 @@ const ServiceOrderCreate = () => {
 
       {/* Modal Novo Material */}
       {showNewMaterialModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowNewMaterialModal(false)
+            setNewMaterialData({ name: '', unit: 'un', unit_cost: 0, unit_price: 0, quantity: 1 })
+          }
+        }}>
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Package className="h-5 w-5 text-orange-600" />
