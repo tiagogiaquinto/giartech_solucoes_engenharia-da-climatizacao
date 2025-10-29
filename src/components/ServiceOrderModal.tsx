@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Plus, Trash2, Package, Users, DollarSign, Info, Calculator, Shield, User, Calendar, FileText, Clock, Search } from 'lucide-react'
+import { X, Save, Plus, Trash2, Package, Users, DollarSign, Info, Calculator, Shield, User, Calendar, FileText, Clock, Search, Receipt } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import ServiceOrderCostManager from './ServiceOrderCostManager'
 
 interface ServiceItem {
   id: string
@@ -52,7 +53,7 @@ interface ServiceOrderModalProps {
 const STORAGE_KEY = 'serviceOrderDraft'
 
 const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderModalProps) => {
-  const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'materiais' | 'mao-obra' | 'pagamento' | 'garantia' | 'resumo'>('dados')
+  const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'materiais' | 'mao-obra' | 'pagamento' | 'garantia' | 'custos-extras' | 'resumo'>('dados')
   const [loading, setLoading] = useState(false)
   const [materialSearch, setMaterialSearch] = useState('')
   const [laborSearch, setLaborSearch] = useState('')
@@ -880,6 +881,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
             { id: 'mao-obra', label: 'Mão de Obra', icon: Users },
             { id: 'pagamento', label: 'Pagamento', icon: DollarSign },
             { id: 'garantia', label: 'Garantia & Contrato', icon: Shield },
+            { id: 'custos-extras', label: 'Custos Extras', icon: Receipt },
             { id: 'resumo', label: 'Resumo Financeiro', icon: Calculator }
           ].map(tab => {
             const Icon = tab.icon
@@ -1613,6 +1615,29 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
                         placeholder="Observações adicionais..." />
                     </div>
                   </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'custos-extras' && orderId && (
+              <motion.div key="custos-extras" initial={{opacity: 0, x: -20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: 20}} className="space-y-6">
+                <ServiceOrderCostManager
+                  serviceOrderId={orderId}
+                  onUpdate={() => {
+                    console.log('Custos atualizados')
+                  }}
+                />
+              </motion.div>
+            )}
+
+            {activeTab === 'custos-extras' && !orderId && (
+              <motion.div key="custos-extras-disabled" initial={{opacity: 0, x: -20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: 20}} className="space-y-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                  <Receipt className="h-12 w-12 text-yellow-600 mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-yellow-900 mb-2">Salve a OS primeiro</h3>
+                  <p className="text-yellow-700">
+                    Para adicionar custos extras, você precisa primeiro salvar a Ordem de Serviço.
+                  </p>
                 </div>
               </motion.div>
             )}
