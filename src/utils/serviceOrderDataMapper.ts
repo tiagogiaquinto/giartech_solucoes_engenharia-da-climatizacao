@@ -35,6 +35,10 @@ export interface ServiceItemComplete {
   // Tempo
   estimated_duration?: number
   tempo_estimado_minutos?: number
+
+  // Materiais e Equipe
+  materials?: any[]
+  team?: any[]
 }
 
 /**
@@ -74,7 +78,11 @@ export function mapServiceItem(item: any, catalogData?: any): ServiceItemComplet
 
     // Tempo
     estimated_duration: item.tempo_estimado_minutos || catalog.tempo_estimado_minutos || 0,
-    tempo_estimado_minutos: item.tempo_estimado_minutos || catalog.tempo_estimado_minutos || 0
+    tempo_estimado_minutos: item.tempo_estimado_minutos || catalog.tempo_estimado_minutos || 0,
+
+    // Materiais e Equipe
+    materials: item.materiais || item.materials || [],
+    team: item.funcionarios || item.team || []
   }
 }
 
@@ -177,6 +185,32 @@ export function generateServiceDescription(item: ServiceItemComplete): string {
     } else {
       desc += `\n\n⏱ Tempo estimado: ${minutes} minutos`
     }
+  }
+
+  // Adicionar materiais utilizados
+  if (item.materials && item.materials.length > 0) {
+    desc += `\n\n📦 MATERIAIS UTILIZADOS:`
+    item.materials.forEach((mat: any) => {
+      const matName = mat.nome || mat.material_name || mat.name || 'Material'
+      const matQty = mat.quantidade || mat.quantity || 1
+      const matUnit = mat.unidade_medida || mat.unit || 'un'
+      const matPrice = mat.preco_venda || mat.unit_price || mat.preco_venda_unitario || 0
+      desc += `\n  • ${matName} - ${matQty} ${matUnit} - R$ ${matPrice.toFixed(2)}`
+    })
+  }
+
+  // Adicionar equipe/funcionários
+  if (item.team && item.team.length > 0) {
+    desc += `\n\n👷 EQUIPE RESPONSÁVEL:`
+    item.team.forEach((func: any) => {
+      const funcName = func.nome || func.employee_name || func.name || 'Funcionário'
+      const funcRole = func.cargo || func.role || func.position || ''
+      if (funcRole) {
+        desc += `\n  • ${funcName} (${funcRole})`
+      } else {
+        desc += `\n  • ${funcName}`
+      }
+    })
   }
 
   return desc

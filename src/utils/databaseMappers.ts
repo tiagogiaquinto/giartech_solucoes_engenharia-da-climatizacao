@@ -12,44 +12,56 @@
 // ========================================
 
 export const serviceOrderStatusUIToDb = {
-  'pendente': 'pending',
-  'em_andamento': 'in_progress',
-  'pausada': 'on_hold',
-  'concluida': 'completed',
-  'cancelada': 'cancelled',
-  'aberta': 'pending',
-  'agendada': 'pending',
-  'aguardando_pecas': 'on_hold'
+  'pendente': 'pendente',
+  'em_andamento': 'em_andamento',
+  'pausado': 'pausado',
+  'pausada': 'pausado',
+  'concluido': 'concluido',
+  'concluida': 'concluido',
+  'cancelado': 'cancelado',
+  'cancelada': 'cancelado',
+  'aberta': 'pendente',
+  'agendada': 'pendente',
+  'aguardando_pecas': 'pausado',
+  'on_hold': 'pausado',
+  'pending': 'pendente',
+  'in_progress': 'em_andamento',
+  'completed': 'concluido',
+  'cancelled': 'cancelado'
 } as const
 
 export const serviceOrderStatusDbToUI = {
+  'pendente': 'pendente',
+  'em_andamento': 'em_andamento',
+  'pausado': 'pausado',
+  'concluido': 'concluido',
+  'cancelado': 'cancelado',
   'pending': 'pendente',
   'in_progress': 'em_andamento',
-  'on_hold': 'pausada',
-  'completed': 'concluida',
-  'cancelled': 'cancelada',
+  'on_hold': 'pausado',
+  'completed': 'concluido',
+  'cancelled': 'cancelado',
   'aberta': 'pendente',
-  'em_andamento': 'em_andamento',
-  'concluida': 'concluida',
-  'cancelada': 'cancelada',
   'agendada': 'pendente',
-  'aguardando_pecas': 'pausada',
-  'pausada': 'pausada'
+  'aguardando_pecas': 'pausado',
+  'pausada': 'pausado'
 } as const
 
 export const serviceOrderStatusLabels = {
+  'pendente': 'Pendente',
+  'em_andamento': 'Em Andamento',
+  'pausado': 'Pausado',
+  'concluido': 'Concluída',
+  'cancelado': 'Cancelada',
   'pending': 'Pendente',
   'in_progress': 'Em Andamento',
   'on_hold': 'Pausado',
   'completed': 'Concluída',
   'cancelled': 'Cancelada',
   'aberta': 'Aberta',
-  'em_andamento': 'Em Andamento',
-  'concluida': 'Concluída',
-  'cancelada': 'Cancelada',
   'agendada': 'Agendada',
   'aguardando_pecas': 'Aguardando Peças',
-  'pausada': 'Pausada'
+  'pausada': 'Pausado'
 } as const
 
 // ========================================
