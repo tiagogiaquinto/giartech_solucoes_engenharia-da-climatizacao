@@ -95,16 +95,8 @@ const EmailCompose = () => {
     setLoading(true)
 
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/send-smtp-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({
+      const { data: result, error } = await supabase.functions.invoke('send-smtp-email', {
+        body: {
           account_id: formData.account_id,
           to: formData.to.split(',').map(e => e.trim()).filter(e => e),
           cc: formData.cc ? formData.cc.split(',').map(e => e.trim()).filter(e => e) : undefined,
@@ -112,13 +104,15 @@ const EmailCompose = () => {
           subject: formData.subject,
           body_text: formData.body_text,
           body_html: formData.body_html,
-        }),
+        },
       })
 
-      const result = await response.json()
+      if (error) {
+        throw error
+      }
 
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao enviar email')
+      if (!result?.success) {
+        throw new Error(result?.error || 'Erro ao enviar email')
       }
 
       alert('Email enviado com sucesso!')
