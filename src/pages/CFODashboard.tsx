@@ -157,12 +157,14 @@ const CFODashboard = () => {
 
       if (customersError) throw customersError
 
+      console.log('KPIs carregados:', kpisData)
       setKpis(kpisData)
       setAlerts(alertsData || [])
       setTopCustomers(customersData || [])
 
     } catch (error: any) {
       console.error('Erro ao carregar dados CFO:', error)
+      alert(`Erro ao carregar Dashboard CFO: ${error.message}`)
     } finally {
       setLoading(false)
     }

@@ -196,6 +196,12 @@ const ServiceOrderCreate = () => {
     bankData: false,
     additionalClauses: false
   })
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false)
+  const [showNewServiceModal, setShowNewServiceModal] = useState(false)
+  const [showNewMaterialModal, setShowNewMaterialModal] = useState(false)
+  const [newCustomerData, setNewCustomerData] = useState({ nome_razao: '', telefone: '', email: '', cnpj_cpf: '' })
+  const [newServiceData, setNewServiceData] = useState({ name: '', description: '', base_price: 0, estimated_time_minutes: 60 })
+  const [newMaterialData, setNewMaterialData] = useState({ name: '', unit: 'un', unit_cost: 0, unit_price: 0, quantity: 1 })
 
   const toggleSection = (section: 'company' | 'bankData' | 'additionalClauses') => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
@@ -1086,6 +1092,79 @@ const ServiceOrderCreate = () => {
     }
   }
 
+  const handleCreateCustomer = async () => {
+    try {
+      if (!newCustomerData.nome_razao) {
+        alert('Nome/Razão Social é obrigatório!')
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('customers')
+        .insert([newCustomerData])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      alert('Cliente cadastrado com sucesso!')
+      setCustomers([...customers, data])
+      setFormData({...formData, customer_id: data.id})
+      setShowNewCustomerModal(false)
+      setNewCustomerData({ nome_razao: '', telefone: '', email: '', cnpj_cpf: '' })
+    } catch (error: any) {
+      alert(`Erro ao cadastrar cliente: ${error.message}`)
+    }
+  }
+
+  const handleCreateService = async () => {
+    try {
+      if (!newServiceData.name) {
+        alert('Nome do serviço é obrigatório!')
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('service_catalog')
+        .insert([{ ...newServiceData, active: true }])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      alert('Serviço cadastrado com sucesso!')
+      setServiceCatalog([...serviceCatalog, data])
+      setShowNewServiceModal(false)
+      setNewServiceData({ name: '', description: '', base_price: 0, estimated_time_minutes: 60 })
+    } catch (error: any) {
+      alert(`Erro ao cadastrar serviço: ${error.message}`)
+    }
+  }
+
+  const handleCreateMaterial = async () => {
+    try {
+      if (!newMaterialData.name) {
+        alert('Nome do material é obrigatório!')
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .insert([{ ...newMaterialData, active: true, min_quantity: 1 }])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      alert('Material cadastrado com sucesso!')
+      setInventory([...inventory, data])
+      setShowNewMaterialModal(false)
+      setNewMaterialData({ name: '', unit: 'un', unit_cost: 0, unit_price: 0, quantity: 1 })
+    } catch (error: any) {
+      alert(`Erro ao cadastrar material: ${error.message}`)
+    }
+  }
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen pb-24">
       <div className="flex items-center justify-between">
@@ -1136,11 +1215,22 @@ const ServiceOrderCreate = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Cliente *</label>
-                <select value={formData.customer_id} onChange={(e) => handleCustomerChange(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-                  <option value="">Selecione...</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.nome_razao}</option>)}
-                </select>
+                <div className="flex gap-2">
+                  <select value={formData.customer_id} onChange={(e) => handleCustomerChange(e.target.value)}
+                    className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Selecione...</option>
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.nome_razao}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCustomerModal(true)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
+                    title="Novo Cliente"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Novo
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Data Agendada</label>
@@ -1699,15 +1789,17 @@ const ServiceOrderCreate = () => {
 
               <div className="space-y-4">
                 <div className="mb-4">
-                  <SmartServiceSearch
-                    services={serviceCatalog.map(s => ({
-                      id: s.id,
-                      name: s.name,
-                      description: s.description,
-                      category: s.category,
-                      base_price: s.base_price
-                    }))}
-                    onSelect={(service) => {
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <SmartServiceSearch
+                        services={serviceCatalog.map(s => ({
+                          id: s.id,
+                          name: s.name,
+                          description: s.description,
+                          category: s.category,
+                          base_price: s.base_price
+                        }))}
+                        onSelect={(service) => {
                       if (service) {
                         const catalog = serviceCatalog.find(s => s.id === service.id)
                         if (catalog) {
@@ -1738,7 +1830,18 @@ const ServiceOrderCreate = () => {
                         }
                       }
                     }}
-                  />
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewServiceModal(true)}
+                      className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1 whitespace-nowrap"
+                      title="Novo Serviço"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Novo Serviço
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -2436,6 +2539,237 @@ const ServiceOrderCreate = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal Novo Cliente */}
+      {showNewCustomerModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <User className="h-5 w-5 text-green-600" />
+              Novo Cliente
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nome/Razão Social *</label>
+                <input
+                  type="text"
+                  value={newCustomerData.nome_razao}
+                  onChange={(e) => setNewCustomerData({...newCustomerData, nome_razao: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="Nome completo ou razão social"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">CPF/CNPJ</label>
+                <input
+                  type="text"
+                  value={newCustomerData.cnpj_cpf}
+                  onChange={(e) => setNewCustomerData({...newCustomerData, cnpj_cpf: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="000.000.000-00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Telefone</label>
+                <input
+                  type="text"
+                  value={newCustomerData.telefone}
+                  onChange={(e) => setNewCustomerData({...newCustomerData, telefone: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Email</label>
+                <input
+                  type="email"
+                  value={newCustomerData.email}
+                  onChange={(e) => setNewCustomerData({...newCustomerData, email: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowNewCustomerModal(false)
+                  setNewCustomerData({ nome_razao: '', telefone: '', email: '', cnpj_cpf: '' })
+                }}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateCustomer}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Cadastrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Novo Serviço */}
+      {showNewServiceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Package className="h-5 w-5 text-blue-600" />
+              Novo Serviço
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nome do Serviço *</label>
+                <input
+                  type="text"
+                  value={newServiceData.name}
+                  onChange={(e) => setNewServiceData({...newServiceData, name: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ex: Instalação de Ar Condicionado"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Descrição</label>
+                <textarea
+                  value={newServiceData.description}
+                  onChange={(e) => setNewServiceData({...newServiceData, description: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Descrição detalhada do serviço"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Preço Base (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newServiceData.base_price}
+                  onChange={(e) => setNewServiceData({...newServiceData, base_price: Number(e.target.value)})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Tempo Estimado (minutos)</label>
+                <input
+                  type="number"
+                  value={newServiceData.estimated_time_minutes}
+                  onChange={(e) => setNewServiceData({...newServiceData, estimated_time_minutes: Number(e.target.value)})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="60"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowNewServiceModal(false)
+                  setNewServiceData({ name: '', description: '', base_price: 0, estimated_time_minutes: 60 })
+                }}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateService}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Cadastrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Novo Material */}
+      {showNewMaterialModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Package className="h-5 w-5 text-orange-600" />
+              Novo Material
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nome do Material *</label>
+                <input
+                  type="text"
+                  value={newMaterialData.name}
+                  onChange={(e) => setNewMaterialData({...newMaterialData, name: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  placeholder="Ex: Tubo PVC 100mm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Unidade</label>
+                <select
+                  value={newMaterialData.unit}
+                  onChange={(e) => setNewMaterialData({...newMaterialData, unit: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="un">Unidade (un)</option>
+                  <option value="m">Metro (m)</option>
+                  <option value="kg">Quilograma (kg)</option>
+                  <option value="l">Litro (l)</option>
+                  <option value="cx">Caixa (cx)</option>
+                  <option value="pç">Peça (pç)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Quantidade Inicial</label>
+                <input
+                  type="number"
+                  value={newMaterialData.quantity}
+                  onChange={(e) => setNewMaterialData({...newMaterialData, quantity: Number(e.target.value)})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  placeholder="1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Preço de Custo (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newMaterialData.unit_cost}
+                  onChange={(e) => setNewMaterialData({...newMaterialData, unit_cost: Number(e.target.value)})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Preço de Venda (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newMaterialData.unit_price}
+                  onChange={(e) => setNewMaterialData({...newMaterialData, unit_price: Number(e.target.value)})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowNewMaterialModal(false)
+                  setNewMaterialData({ name: '', unit: 'un', unit_cost: 0, unit_price: 0, quantity: 1 })
+                }}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateMaterial}
+                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+              >
+                Cadastrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
