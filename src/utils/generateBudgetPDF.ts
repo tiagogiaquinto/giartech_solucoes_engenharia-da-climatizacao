@@ -433,7 +433,7 @@ export const generateBudgetPDF = async (budgetData: BudgetData): Promise<void> =
     margin: { left: margin, right: margin }
   })
 
-  yPos = (doc as any).autoTable.previous.finalY + 5
+  yPos = (doc as any).lastAutoTable.finalY + 5
 
   if (showValues) {
     const totalsX = pageWidth - margin - 50

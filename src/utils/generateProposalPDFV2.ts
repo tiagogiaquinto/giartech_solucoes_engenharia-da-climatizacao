@@ -359,7 +359,7 @@ export const generateProposalPDFV2 = (proposalData: ProposalData) => {
     margin: { left: margin, right: margin }
   })
 
-  yPos = (doc as any).autoTable.previous.finalY + 5
+  yPos = (doc as any).lastAutoTable.finalY + 5
 
   // Totais
   if (proposalData.show_value !== false) {

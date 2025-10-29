@@ -402,7 +402,7 @@ export const generateServiceOrderPDF = async (
       margin: { left: margin, right: margin }
     })
 
-    yPos = (doc as any).autoTable.previous.finalY + 5
+    yPos = (doc as any).lastAutoTable.finalY + 5
   }
 
   // PRAZOS

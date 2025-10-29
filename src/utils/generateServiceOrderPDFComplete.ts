@@ -226,7 +226,7 @@ export const generateServiceOrderPDFComplete = async (orderData: ServiceOrderDat
     margin: { left: margin, right: margin }
   })
 
-  yPos = (doc as any).autoTable.previous.finalY + 10
+  yPos = (doc as any).lastAutoTable.finalY + 10
 
   // =====================================================
   // MATERIAIS
@@ -277,7 +277,7 @@ export const generateServiceOrderPDFComplete = async (orderData: ServiceOrderDat
       margin: { left: margin, right: margin }
     })
 
-    yPos = (doc as any).autoTable.previous.finalY + 10
+    yPos = (doc as any).lastAutoTable.finalY + 10
   }
 
   // =====================================================
