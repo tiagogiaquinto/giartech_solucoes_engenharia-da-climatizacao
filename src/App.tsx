@@ -9,6 +9,7 @@ import { CommandPalette, useCommandPalette } from './components/CommandPalette'
 import { MobileBottomNav } from './components/MobileBottomNav'
 import { registerServiceWorker, isMobile } from './utils/pwa'
 import WebLayout from './components/layouts/WebLayout'
+import GlobalSearchModal from './components/GlobalSearchModal'
 import Dashboard from './pages/Dashboard'
 import ServiceOrders from './pages/ServiceOrders'
 import ServiceOrderCreate from './pages/ServiceOrderCreate'
@@ -116,10 +117,24 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { isSearchOpen, closeSearch } = useGlobalSearch()
   const commandPalette = useCommandPalette()
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false)
 
   useEffect(() => {
     // Registrar Service Worker para PWA
     registerServiceWorker()
+  }, [])
+
+  // Atalho global Cmd+K para busca
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowGlobalSearch(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   useEffect(() => {
@@ -736,6 +751,12 @@ function App() {
 
       {/* Busca Global (Cmd+K) */}
       <GlobalSearch isOpen={isSearchOpen} onClose={closeSearch} />
+
+      {/* Nova Busca Global Avançada (Cmd+K) */}
+      <GlobalSearchModal
+        isOpen={showGlobalSearch}
+        onClose={() => setShowGlobalSearch(false)}
+      />
 
       {/* Command Palette (Ctrl/Cmd + K) */}
       <CommandPalette
