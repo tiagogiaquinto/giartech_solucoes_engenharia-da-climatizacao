@@ -109,6 +109,7 @@ export interface AgendaEvent {
   event_type?: string
   customer_id?: string
   employee_id?: string
+  service_order_id?: string
   status?: string
   location?: string
   notes?: string

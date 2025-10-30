@@ -7,13 +7,15 @@ export interface CalendarEvent {
   time: string
   endDate?: string
   endTime?: string
-  type: 'pessoal' | 'networking' | 'financeiro' | 'cobrar' | 'pagar' | 'operacional'
+  type: 'pessoal' | 'networking' | 'financeiro' | 'cobrar' | 'pagar' | 'operacional' | 'service_order'
   priority: 'low' | 'medium' | 'high'
   status: 'a_fazer' | 'em_andamento' | 'feito' | 'cancelado'
   assignedTo?: string
   location?: string
   description?: string
   color?: string
+  serviceOrderId?: string
+  customerId?: string
 }
 
 export const eventTypeColors = {
@@ -22,7 +24,8 @@ export const eventTypeColors = {
   financeiro: '#10b981',
   cobrar: '#f59e0b',
   pagar: '#ef4444',
-  operacional: '#06b6d4'
+  operacional: '#06b6d4',
+  service_order: '#f97316'
 }
 
 export const eventTypeLabels = {
@@ -31,7 +34,8 @@ export const eventTypeLabels = {
   financeiro: 'Financeiro',
   cobrar: 'Cobrar',
   pagar: 'Pagar',
-  operacional: 'Operacional'
+  operacional: 'Operacional',
+  service_order: 'Ordem de Serviço'
 }
 
 const statusUIToDb = {
@@ -63,7 +67,7 @@ const typeUIToDb = {
 const typeDbToUI = {
   'meeting': 'pessoal',
   'task': 'operacional',
-  'service_order': 'operacional',
+  'service_order': 'service_order',
   'appointment': 'pessoal',
   'reminder': 'cobrar',
   'other': 'pessoal'
@@ -115,7 +119,9 @@ export const mapAgendaEventToCalendarEvent = (agendaEvent: AgendaEvent): Calenda
     assignedTo: agendaEvent.employee_id,
     location: agendaEvent.location,
     description: agendaEvent.description || agendaEvent.notes,
-    color: eventTypeColors[uiType] || eventTypeColors.pessoal
+    color: eventTypeColors[uiType] || eventTypeColors.pessoal,
+    serviceOrderId: agendaEvent.service_order_id,
+    customerId: agendaEvent.customer_id
   }
 }
 
