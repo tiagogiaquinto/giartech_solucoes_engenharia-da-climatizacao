@@ -49,6 +49,14 @@ export default function Automations() {
   const [loading, setLoading] = useState(true)
   const [selectedRule, setSelectedRule] = useState<AutomationRule | null>(null)
   const [showLogs, setShowLogs] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    trigger_type: 'service_order_created',
+    actions: [] as any[],
+    priority: 1
+  })
   const toast = useToast()
 
   useEffect(() => {
@@ -126,6 +134,46 @@ export default function Automations() {
     }
   }
 
+  const handleSaveAutomation = async () => {
+    try {
+      if (!formData.name || !formData.description) {
+        toast.error('Preencha nome e descrição')
+        return
+      }
+
+      const { error } = await supabase
+        .from('automation_rules')
+        .insert({
+          name: formData.name,
+          description: formData.description,
+          trigger_type: formData.trigger_type,
+          trigger_conditions: {},
+          actions: formData.actions.length > 0 ? formData.actions : [
+            { type: 'notification', config: { message: 'Automação executada' } }
+          ],
+          is_active: true,
+          priority: formData.priority,
+          execution_count: 0
+        })
+
+      if (error) throw error
+
+      toast.success('Automação criada com sucesso!')
+      setShowModal(false)
+      setFormData({
+        name: '',
+        description: '',
+        trigger_type: 'service_order_created',
+        actions: [],
+        priority: 1
+      })
+      loadRules()
+    } catch (error: any) {
+      console.error('Error saving automation:', error)
+      toast.error('Erro ao salvar: ' + error.message)
+    }
+  }
+
   const getTriggerLabel = (type: string) => {
     const labels: Record<string, string> = {
       service_order_created: 'OS Criada',
@@ -169,7 +217,7 @@ export default function Automations() {
         </div>
         <button
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          onClick={() => toast.info('Criação de automação em desenvolvimento')}
+          onClick={() => setShowModal(true)}
         >
           <Plus className="h-4 w-4" />
           Nova Automação
@@ -296,7 +344,7 @@ export default function Automations() {
           </p>
           <button
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
-            onClick={() => toast.info('Criação de automação em desenvolvimento')}
+            onClick={() => setShowModal(true)}
           >
             <Plus className="h-4 w-4" />
             Criar Primeira Automação
@@ -380,6 +428,120 @@ export default function Automations() {
                   ))}
                 </div>
               )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Create/Edit Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+          >
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Nova Automação
+                </h2>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nome da Automação *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ex: Notificar OS Concluída"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descrição *
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Descreva o que esta automação faz"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Gatilho (Quando Executar)
+                  </label>
+                  <select
+                    value={formData.trigger_type}
+                    onChange={(e) => setFormData({ ...formData, trigger_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="service_order_created">Quando OS for Criada</option>
+                    <option value="service_order_completed">Quando OS for Concluída</option>
+                    <option value="payment_received">Quando Pagamento for Recebido</option>
+                    <option value="payment_overdue">Quando Pagamento Atrasar</option>
+                    <option value="stock_low">Quando Estoque Baixo</option>
+                    <option value="customer_created">Quando Cliente for Cadastrado</option>
+                    <option value="custom_date">Em Data Específica</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prioridade
+                  </label>
+                  <select
+                    value={formData.priority}
+                    onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="1">Baixa</option>
+                    <option value="5">Média</option>
+                    <option value="10">Alta</option>
+                  </select>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex gap-2">
+                    <AlertTriangle className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium mb-1">Ação Padrão</p>
+                      <p>Esta automação criará uma notificação quando for acionada. Você poderá adicionar mais ações após criar a automação.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveAutomation}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Criar Automação
+              </button>
             </div>
           </motion.div>
         </div>
