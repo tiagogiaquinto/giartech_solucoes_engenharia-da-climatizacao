@@ -49,7 +49,6 @@ interface ServiceOrderData {
   }
   contract_clauses?: any[]
   additional_info?: string
-  hide_material_prices?: boolean
 }
 
 export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): Promise<void> => {
@@ -140,28 +139,19 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     doc.setFontSize(9)
     doc.setTextColor(...darkGray)
 
-    doc.setFontSize(8)
-    doc.setTextColor(...mediumGray)
-    doc.text('Data:', rightX - 50, yPos + 5)
-    doc.setTextColor(...darkGray)
+    doc.text('📅', rightX - 35, yPos + 5)
     doc.text(new Date(data.date).toLocaleDateString('pt-BR'), rightX - 5, yPos + 5, { align: 'right' })
 
     let yContact = yPos + 11
-    doc.setTextColor(...mediumGray)
-    doc.text('Email:', rightX - 60, yContact)
-    doc.setTextColor(...darkGray)
+    doc.text('✉', rightX - 60, yContact)
     doc.text(companyInfo.email, rightX - 5, yContact, { align: 'right' })
     yContact += 4
-    doc.setTextColor(...mediumGray)
-    doc.text('Tel:', rightX - 60, yContact)
-    doc.setTextColor(...darkGray)
+    doc.text('📞', rightX - 60, yContact)
     doc.text(companyInfo.phone, rightX - 5, yContact, { align: 'right' })
     yContact += 4
 
     if (companyInfo.instagram) {
-      doc.setTextColor(...mediumGray)
-      doc.text('Instagram:', rightX - 60, yContact)
-      doc.setTextColor(...darkGray)
+      doc.text('📱', rightX - 60, yContact)
       doc.text(companyInfo.instagram, rightX - 5, yContact, { align: 'right' })
     }
   }
@@ -179,24 +169,24 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
     let yFooter = footerY + 5
     doc.text(companyInfo.owner || 'TIAGO BRUNO GIAQUINTO', margin, yFooter)
-    doc.text('Email:', pageWidth - 85, yFooter)
+    doc.text('✉', pageWidth - 80, yFooter)
     doc.text(companyInfo.email, pageWidth - margin, yFooter, { align: 'right' })
 
     yFooter += 4
     doc.text(`CNPJ: ${companyInfo.cnpj}`, margin, yFooter)
-    doc.text('Tel:', pageWidth - 85, yFooter)
+    doc.text('📞', pageWidth - 80, yFooter)
     doc.text(companyInfo.phone, pageWidth - margin, yFooter, { align: 'right' })
 
     yFooter += 4
     doc.text(companyInfo.address, margin, yFooter)
     if (companyInfo.instagram) {
-      doc.text('Instagram:', pageWidth - 85, yFooter)
+      doc.text('📱', pageWidth - 80, yFooter)
       doc.text(companyInfo.instagram, pageWidth - margin, yFooter, { align: 'right' })
     }
 
     yFooter += 4
     doc.text(`${companyInfo.city}-${companyInfo.state}`, margin, yFooter)
-    doc.text('Site:', pageWidth - 85, yFooter)
+    doc.text('🌐', pageWidth - 80, yFooter)
     doc.text(companyInfo.website || 'tgarconnection.com.br', pageWidth - margin, yFooter, { align: 'right' })
 
     yFooter += 4
@@ -279,20 +269,12 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
   }
 
   if (data.client.email) {
-    doc.setFontSize(9)
-    doc.setTextColor(...mediumGray)
-    doc.text('Email:', margin, yPos)
-    doc.setTextColor(...darkGray)
-    doc.text(data.client.email, margin + 15, yPos)
+    doc.text(`✉ ${data.client.email}`, margin, yPos)
     yPos += 4
   }
 
   if (data.client.phone) {
-    doc.setFontSize(9)
-    doc.setTextColor(...mediumGray)
-    doc.text('Tel:', margin, yPos)
-    doc.setTextColor(...darkGray)
-    doc.text(data.client.phone, margin + 15, yPos)
+    doc.text(`📞 ${data.client.phone}`, margin, yPos)
     yPos += 4
   }
 
@@ -354,35 +336,18 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
   yPos += 12
 
   const tableBody: any[] = []
-  const materialsBody: any[] = []
-
   data.items.forEach(item => {
+    // Usar função centralizada para gerar descrição completa
     const descText = generateServiceDescription(item)
 
-    // Separar serviços de materiais
-    const isMaterial = item.service_description?.toLowerCase().includes('material') ||
-                      item.service_description?.toLowerCase().includes('peça') ||
-                      descText.toLowerCase().includes('material')
-
-    const rowData = [
+    tableBody.push([
       descText,
       item.unit,
-      data.hide_material_prices && isMaterial ? '-' : `R$ ${item.unit_price.toFixed(2)}`,
+      `R$ ${item.unit_price.toFixed(2)}`,
       item.quantity.toString(),
-      data.hide_material_prices && isMaterial ? '-' : `R$ ${item.total_price.toFixed(2)}`
-    ]
-
-    if (isMaterial && data.hide_material_prices) {
-      materialsBody.push(rowData)
-    } else {
-      tableBody.push(rowData)
-    }
+      `R$ ${item.total_price.toFixed(2)}`
+    ])
   })
-
-  // Adicionar materiais ao final sem preços se hide_material_prices
-  if (data.hide_material_prices && materialsBody.length > 0) {
-    tableBody.push(...materialsBody)
-  }
 
   const tableResult = autoTable(doc, {
     startY: yPos,
@@ -483,10 +448,12 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
   doc.text(data.payment.pix || companyInfo.cnpj, margin + halfWidth, yPos)
 
-  addFooter(1, 4)
+  addFooter(1, 3)
 
   doc.addPage()
-  yPos = 20
+  yPos = 15
+  await addHeader(2)
+  yPos = 60
 
   if (data.payment.bank_details) {
     doc.setFont('helvetica', 'bold')
@@ -633,50 +600,11 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     { align: 'center' }
   )
 
-  yPos += 10
-
-  doc.setFillColor(...lightBlue)
-  doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F')
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.setTextColor(255, 255, 255)
-  doc.setFillColor(...primaryBlue)
-  doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F')
-  doc.text('Termos e Condições do Contrato', margin + 3, yPos + 5)
-  yPos += 12
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-  doc.setTextColor(...darkGray)
-
-  const contractTerms = [
-    '1. OBJETO: Este contrato tem como objeto a prestação de serviços conforme descritos nesta Ordem de Serviço.',
-    '2. PRAZO: Os serviços serão executados no prazo especificado, salvo em casos de força maior.',
-    '3. PAGAMENTO: O pagamento deverá ser realizado conforme condições especificadas neste documento.',
-    '4. GARANTIA: A garantia dos serviços está sujeita às condições descritas na seção de Garantia.',
-    '5. RESPONSABILIDADES: O contratante deve fornecer acesso adequado e condições necessárias para execução dos serviços.',
-    '6. CANCELAMENTO: Cancelamentos devem ser comunicados com antecedência mínima de 24 horas.',
-    '7. MANUTENÇÃO: Para manter a validade da garantia estendida, as manutenções preventivas devem ser realizadas nos prazos estabelecidos.',
-    '8. ACEITAÇÃO: A assinatura deste documento implica na aceitação integral de todos os termos aqui descritos.'
-  ]
-
-  contractTerms.forEach((term) => {
-    const lines = doc.splitTextToSize(term, pageWidth - 2 * margin - 4)
-    lines.forEach((line: string) => {
-      if (yPos > pageHeight - 40) {
-        addFooter(2, 4)
-        doc.addPage()
-        yPos = 20
-      }
-      doc.text(line, margin + 2, yPos)
-      yPos += 4
-    })
-    yPos += 2
-  })
-
-  addFooter(2, 4)
+  addFooter(2, 3)
 
   doc.addPage()
+  yPos = 15
+  await addHeader(3)
   yPos = pageHeight / 2 - 40
 
   const sigWidth = (pageWidth - 2 * margin - 20) / 2
@@ -714,7 +642,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
   doc.setTextColor(...mediumGray)
   doc.text('diretor técnico', leftSigX + sigWidth / 2, yPos, { align: 'center' })
 
-  addFooter(3, 4)
+  addFooter(3, 3)
 
   doc.save(`Ordem_de_servico_${data.order_number}_${new Date().toISOString().split('T')[0]}.pdf`)
 }
