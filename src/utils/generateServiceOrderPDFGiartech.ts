@@ -445,6 +445,9 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
   yPos += 15
 
+  // =====================================================
+  // SEÇÃO: PAGAMENTO
+  // =====================================================
   doc.setFillColor(...lightBlue)
   doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F')
 
@@ -453,37 +456,54 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
   doc.setTextColor(...primaryBlue)
   doc.text('Pagamento', margin + 3, yPos + 5.5)
 
-  yPos += 12
+  yPos += 14
 
+  // Layout em duas colunas
+  const halfWidth = (pageWidth - 2 * margin) / 2
+
+  // COLUNA ESQUERDA: Meios de pagamento
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
   doc.setTextColor(...darkGray)
   doc.text('Meios de pagamento', margin, yPos)
 
-  const halfWidth = (pageWidth - 2 * margin) / 2
-  doc.text('PIX', margin + halfWidth, yPos)
-  yPos += 4
+  yPos += 5
 
   doc.setFont('times', 'normal')
   const methodsLines = doc.splitTextToSize(data.payment.methods, halfWidth - 10)
   doc.text(methodsLines, margin, yPos)
 
-  doc.text(data.payment.pix || companyInfo.cnpj, margin + halfWidth, yPos)
+  const methodsHeight = methodsLines.length * 4
+
+  // COLUNA DIREITA: PIX
+  let yPix = yPos - 5
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.setTextColor(...darkGray)
+  doc.text('PIX', margin + halfWidth, yPix)
+
+  yPix += 5
+
+  doc.setFont('times', 'normal')
+  doc.text(data.payment.pix || companyInfo.cnpj, margin + halfWidth, yPix)
+
+  yPos += methodsHeight + 10
 
   addFooter()
 
   doc.addPage()
   yPos = 20
 
+  // =====================================================
+  // DADOS BANCÁRIOS E CONDIÇÕES
+  // =====================================================
   if (data.payment.bank_details) {
+    // COLUNA ESQUERDA: Dados bancários
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(9)
     doc.setTextColor(...darkGray)
     doc.text('Dados bancários', margin, yPos)
-
-    const halfWidth = (pageWidth - 2 * margin) / 2
-    doc.text('Condições de pagamento', margin + halfWidth, yPos)
-    yPos += 4
+    yPos += 5
 
     doc.setFont('times', 'normal')
     const bank = data.payment.bank_details
@@ -497,11 +517,22 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     yPos += 4
     doc.text(`Titular da conta (CPF/CNPJ): ${bank.holder}`, margin, yPos)
 
-    yPos -= 20
+    const bankHeight = yPos
+
+    // COLUNA DIREITA: Condições de pagamento
+    yPos = 20
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(...darkGray)
+    doc.text('Condições de pagamento', margin + halfWidth, yPos)
+    yPos += 5
+
+    doc.setFont('times', 'normal')
     const conditionsLines = doc.splitTextToSize(data.payment.conditions, halfWidth - 10)
     doc.text(conditionsLines, margin + halfWidth, yPos)
 
-    yPos += Math.max(20, conditionsLines.length * 4) + 8
+    // Calcular altura final
+    yPos = Math.max(bankHeight, yPos + conditionsLines.length * 4) + 10
   }
 
   if (data.warranty) {
