@@ -715,7 +715,25 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       }
 
       console.log(`📦 Salvando ${serviceItems.length} itens de serviço...`)
-      for (const item of serviceItems) {
+      console.log('🔍 Items antes de salvar:', serviceItems.map((i: any) => ({
+        id: i.id,
+        descricao: i.descricao?.substring(0, 50),
+        service_catalog_id: i.service_catalog_id
+      })))
+
+      // Remover duplicatas baseado em service_catalog_id + descricao
+      const uniqueItems = serviceItems.filter((item: any, index, self) => {
+        const key = `${item.service_catalog_id || 'null'}_${item.descricao || ''}`
+        return index === self.findIndex((t: any) =>
+          `${t.service_catalog_id || 'null'}_${t.descricao || ''}` === key
+        )
+      })
+
+      if (uniqueItems.length !== serviceItems.length) {
+        console.warn(`⚠️ Removidas ${serviceItems.length - uniqueItems.length} duplicatas!`)
+      }
+
+      for (const item of uniqueItems) {
         const itemAny = item as any
         const itemData = {
           service_order_id: orderIdToUse,
