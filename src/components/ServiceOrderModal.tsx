@@ -101,6 +101,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([])
   const [globalMaterials, setGlobalMaterials] = useState<MaterialItem[]>([])
   const [globalLabor, setGlobalLabor] = useState<LaborItem[]>([])
+  const [isSaving, setIsSaving] = useState(false)
 
   // Estados para modais de criação rápida
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false)
@@ -617,12 +618,19 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
   }
 
   const handleSave = async () => {
+    // Proteção contra salvamentos múltiplos simultâneos
+    if (isSaving) {
+      console.warn('⚠️ Salvamento já em andamento, ignorando...')
+      return
+    }
+
     try {
       if (!formData.customer_id || serviceItems.length === 0) {
         alert('Selecione um cliente e adicione pelo menos um serviço!')
         return
       }
 
+      setIsSaving(true)
       setLoading(true)
       console.log('🔄 Iniciando salvamento da OS...')
 
@@ -858,6 +866,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       console.error('❌ Erro ao salvar ordem:', error)
       alert('❌ Erro ao salvar ordem de serviço! Verifique o console.')
     } finally {
+      setIsSaving(false)
       setLoading(false)
     }
   }
