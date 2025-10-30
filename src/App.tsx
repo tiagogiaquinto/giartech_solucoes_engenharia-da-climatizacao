@@ -84,6 +84,7 @@ import CreditScoring from './pages/CreditScoring'
 import FinanceiroConsolidado from './pages/FinanceiroConsolidado'
 import ExecutivoConsolidado from './pages/ExecutivoConsolidado'
 import RelatoriosConsolidado from './pages/RelatoriosConsolidado'
+import CustomerRFM from './pages/CustomerRFM'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -541,6 +542,13 @@ function App() {
               <WebLayout>
                 <CreditScoring />
               </WebLayout>
+          <Route path="/customer-rfm" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <CustomerRFM />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
             </ProtectedRoute>
           } />
 
