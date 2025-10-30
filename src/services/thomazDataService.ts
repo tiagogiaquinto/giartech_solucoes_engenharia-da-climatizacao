@@ -3,6 +3,11 @@
  *
  * Integra o Thomaz AI com todas as tabelas do banco de dados
  * para fornecer respostas baseadas em dados reais e atualizados.
+ *
+ * SEGURANÇA: Thomaz NÃO tem acesso a:
+ * - email_accounts (senhas SMTP/IMAP)
+ * - email_messages (conteúdo de emails)
+ * - email_attachments (anexos)
  */
 
 import { supabase } from '../lib/supabase'
@@ -16,7 +21,75 @@ export interface DataQueryResult {
   visualizationType?: 'table' | 'chart' | 'metric' | 'timeline'
 }
 
+// Tabelas bloqueadas para Thomaz (dados sensíveis)
+const BLOCKED_TABLES = [
+  'email_accounts',
+  'email_messages',
+  'email_attachments'
+]
+
 export class ThomazDataService {
+  /**
+   * Verificar se tabela está bloqueada
+   */
+  private isTableBlocked(tableName: string): boolean {
+    return BLOCKED_TABLES.includes(tableName.toLowerCase())
+  }
+
+  /**
+   * ESTATÍSTICAS DE EMAIL (Sem Conteúdo Sensível)
+   */
+  async getEmailStatistics(): Promise<DataQueryResult> {
+    try {
+      const { data, error } = await supabase
+        .from('v_email_statistics')
+        .select('*')
+        .order('month', { ascending: false })
+        .limit(6)
+
+      if (error) throw error
+
+      const latest = data?.[0] || {
+        total_emails: 0,
+        emails_sent: 0,
+        emails_received: 0,
+        emails_pending: 0,
+        emails_unread: 0,
+        customers_contacted: 0
+      }
+
+      const summary = `**Estatísticas de Email (Últimos 6 Meses)**
+
+📧 **Total de Emails:** ${latest.total_emails}
+📤 **Enviados:** ${latest.emails_sent}
+📥 **Recebidos:** ${latest.emails_received}
+⏳ **Pendentes:** ${latest.emails_pending}
+📬 **Não Lidos:** ${latest.emails_unread}
+👥 **Clientes Contatados:** ${latest.customers_contacted}
+
+*Nota: Por questões de privacidade, não tenho acesso ao conteúdo dos emails.*`
+
+      return {
+        success: true,
+        data: data || [],
+        summary,
+        totalRecords: data?.length || 0,
+        visualizationType: 'metric',
+        insights: [
+          latest.emails_pending > 5 ? `${latest.emails_pending} emails aguardando envio` : 'Fila de envio em dia',
+          latest.emails_unread > 10 ? 'Muitos emails não lidos' : 'Caixa de entrada organizada'
+        ]
+      }
+    } catch (error) {
+      console.error('Email statistics error:', error)
+      return {
+        success: false,
+        data: [],
+        summary: '⚠️ Por questões de privacidade, não tenho acesso direto a emails. Posso ver apenas estatísticas agregadas.',
+        totalRecords: 0
+      }
+    }
+  }
   /**
    * DASHBOARD E MÉTRICAS PRINCIPAIS
    */
