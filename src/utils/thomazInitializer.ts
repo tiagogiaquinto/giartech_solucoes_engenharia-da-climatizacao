@@ -226,7 +226,7 @@ export class ThomazInitializer {
     // Conversas nas últimas 24h
     const { data: conversations, error: convError } = await supabase
       .from('thomaz_conversations')
-      .select('id, confidence')
+      .select('id, intent_confidence')
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
 
     if (convError) {
@@ -237,7 +237,7 @@ export class ThomazInitializer {
     }
 
     const total = conversations?.length || 0
-    const highConfidence = conversations?.filter(c => c.confidence > 0.85).length || 0
+    const highConfidence = conversations?.filter(c => c.intent_confidence > 0.85).length || 0
 
     return {
       conversations24h: total,
