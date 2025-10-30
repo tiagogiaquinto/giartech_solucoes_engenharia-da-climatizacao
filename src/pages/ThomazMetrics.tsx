@@ -79,14 +79,14 @@ export default function ThomazMetrics() {
 
       const { data: convData } = await supabase
         .from('thomaz_conversations')
-        .select('confidence_score')
+        .select('intent_confidence')
         .gte('created_at', day7.toISOString())
 
       const avgConfidence = convData?.length
-        ? convData.reduce((sum, c) => sum + (c.confidence_score || 0), 0) / convData.length
+        ? convData.reduce((sum, c) => sum + (c.intent_confidence || 0), 0) / convData.length
         : 0
 
-      const highConfidenceCount = convData?.filter(c => (c.confidence_score || 0) > 0.7).length || 0
+      const highConfidenceCount = convData?.filter(c => (c.intent_confidence || 0) > 0.7).length || 0
       const highConfidenceRate = convData?.length ? (highConfidenceCount / convData.length) * 100 : 0
 
       const { data: docs, count: docsCount } = await supabase
