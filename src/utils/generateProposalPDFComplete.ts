@@ -94,17 +94,40 @@ export const generateProposalPDFComplete = async (proposalData: ProposalData) =>
   }
 
   const addFooter = () => {
-    const currentPage = doc.getCurrentPageInfo().pageNumber
-    const totalPages = doc.getNumberOfPages()
+    const footerY = pageHeight - 18
 
-    doc.setDrawColor(...lightGray)
-    doc.setLineWidth(0.5)
-    doc.line(margin, pageHeight - 5, pageWidth - margin, pageHeight - 5)
+    // Linha separadora discreta
+    doc.setDrawColor(220, 220, 220)
+    doc.setLineWidth(0.3)
+    doc.line(margin, footerY, pageWidth - margin, footerY)
 
-    doc.setFont('helvetica', 'normal')
+    // Fonte pequena e discreta (Times New Roman)
+    doc.setFont('times', 'normal')
     doc.setFontSize(7)
-    doc.setTextColor(...darkGray)
-    doc.text(`Página ${currentPage} de ${totalPages}`, pageWidth / 2, pageHeight - 2, { align: 'center' })
+    doc.setTextColor(120, 120, 120)
+
+    let yFooter = footerY + 3
+
+    // Linha 1: Nome e Email
+    doc.text(companyInfo.owner || 'TIAGO BRUNO GIAQUINTO', margin, yFooter)
+    doc.text(`Email: ${companyInfo.email}`, pageWidth - margin, yFooter, { align: 'right' })
+
+    yFooter += 3
+    // Linha 2: CNPJ e Telefone
+    doc.text(`CNPJ: ${companyInfo.cnpj}`, margin, yFooter)
+    doc.text(`Tel: ${companyInfo.phone}`, pageWidth - margin, yFooter, { align: 'right' })
+
+    yFooter += 3
+    // Linha 3: Endereço e Instagram
+    doc.text(companyInfo.address, margin, yFooter)
+    if (companyInfo.instagram) {
+      doc.text(`@${companyInfo.instagram}`, pageWidth - margin, yFooter, { align: 'right' })
+    }
+
+    yFooter += 3
+    // Linha 4: Cidade/Estado e Site
+    doc.text(`${companyInfo.city}-${companyInfo.state} - CEP ${companyInfo.zip || '02734-010'}`, margin, yFooter)
+    doc.text(companyInfo.website || 'tgarconnection.com.br', pageWidth - margin, yFooter, { align: 'right' })
   }
 
   // =====================================================
@@ -130,7 +153,7 @@ export const generateProposalPDFComplete = async (proposalData: ProposalData) =>
   doc.text(companyInfo.name, 42, 22)
 
   // Dados da empresa
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   doc.setFontSize(8)
   let yHeader = 28
   doc.text(companyInfo.owner || 'Proprietário', 42, yHeader)
@@ -178,7 +201,7 @@ export const generateProposalPDFComplete = async (proposalData: ProposalData) =>
 
   yPos += 12
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   doc.setFontSize(9)
   doc.setTextColor(...darkGray)
 
@@ -217,7 +240,7 @@ export const generateProposalPDFComplete = async (proposalData: ProposalData) =>
 
     yPos += 12
 
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     doc.setFontSize(9)
     doc.setTextColor(...darkGray)
     doc.text(`Prazo: ${proposalData.service_info.deadline}`, margin + 3, yPos)
@@ -352,7 +375,7 @@ export const generateProposalPDFComplete = async (proposalData: ProposalData) =>
   // Totais
   const totalsX = pageWidth - margin - 50
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   doc.setFontSize(10)
   doc.setTextColor(...darkGray)
 
@@ -400,7 +423,7 @@ export const generateProposalPDFComplete = async (proposalData: ProposalData) =>
 
   yPos += 12
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   doc.setFontSize(9)
   doc.setTextColor(...darkGray)
 
@@ -449,7 +472,7 @@ export const generateProposalPDFComplete = async (proposalData: ProposalData) =>
 
   yPos += 12
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   doc.setFontSize(9)
   doc.setTextColor(...darkGray)
 
@@ -484,7 +507,7 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
 
   yPos += 12
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   doc.setFontSize(8)
   doc.setTextColor(...darkGray)
 
@@ -543,7 +566,7 @@ Fica eleito o foro da comarca de ${companyInfo.city || 'São Paulo'}-${companyIn
 
   yPos += 12
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   doc.setFontSize(9)
   doc.setTextColor(...darkGray)
 
@@ -561,7 +584,7 @@ Fica eleito o foro da comarca de ${companyInfo.city || 'São Paulo'}-${companyIn
   const totalPages = doc.getNumberOfPages()
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i)
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     doc.setFontSize(7)
     doc.setTextColor(...darkGray)
     doc.text(`Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 2, { align: 'center' })

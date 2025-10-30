@@ -122,7 +122,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     doc.setTextColor(...primaryBlue)
     doc.text(companyInfo.name, margin + 45, yPos + 5)
 
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     doc.setFontSize(9)
     doc.setTextColor(...darkGray)
     let yHeader = yPos + 11
@@ -166,61 +166,48 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     }
   }
 
-  const addFooter = (pageNum: number, totalPages: number) => {
-    const footerY = pageHeight - 25
+  const addFooter = () => {
+    const footerY = pageHeight - 18
 
-    doc.setDrawColor(200, 200, 200)
-    doc.setLineWidth(0.5)
+    // Linha separadora discreta
+    doc.setDrawColor(220, 220, 220)
+    doc.setLineWidth(0.3)
     doc.line(margin, footerY, pageWidth - margin, footerY)
 
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.setTextColor(...mediumGray)
+    // Fonte pequena e discreta (Times New Roman)
+    doc.setFont('times', 'normal')
+    doc.setFontSize(7)
+    doc.setTextColor(120, 120, 120)
 
-    let yFooter = footerY + 5
+    let yFooter = footerY + 3
+
+    // Linha 1: Nome e Email
     doc.text(companyInfo.owner || 'TIAGO BRUNO GIAQUINTO', margin, yFooter)
-    doc.text('Email:', pageWidth - 85, yFooter)
-    doc.text(companyInfo.email, pageWidth - margin, yFooter, { align: 'right' })
+    doc.text(`Email: ${companyInfo.email}`, pageWidth - margin, yFooter, { align: 'right' })
 
-    yFooter += 4
+    yFooter += 3
+    // Linha 2: CNPJ e Telefone
     doc.text(`CNPJ: ${companyInfo.cnpj}`, margin, yFooter)
-    doc.text('Tel:', pageWidth - 85, yFooter)
-    doc.text(companyInfo.phone, pageWidth - margin, yFooter, { align: 'right' })
+    doc.text(`Tel: ${companyInfo.phone}`, pageWidth - margin, yFooter, { align: 'right' })
 
-    yFooter += 4
+    yFooter += 3
+    // Linha 3: Endereço e Instagram
     doc.text(companyInfo.address, margin, yFooter)
     if (companyInfo.instagram) {
-      doc.text('Instagram:', pageWidth - 85, yFooter)
-      doc.text(companyInfo.instagram, pageWidth - margin, yFooter, { align: 'right' })
+      doc.text(`@${companyInfo.instagram}`, pageWidth - margin, yFooter, { align: 'right' })
     }
 
-    yFooter += 4
-    doc.text(`${companyInfo.city}-${companyInfo.state}`, margin, yFooter)
-    doc.text('Site:', pageWidth - 85, yFooter)
+    yFooter += 3
+    // Linha 4: Cidade/Estado e Site
+    doc.text(`${companyInfo.city}-${companyInfo.state} - CEP ${companyInfo.zip || '02734-010'}`, margin, yFooter)
     doc.text(companyInfo.website || 'tgarconnection.com.br', pageWidth - margin, yFooter, { align: 'right' })
-
-    yFooter += 4
-    doc.text(`CEP ${companyInfo.zip || '02734-010'}`, margin, yFooter)
-
-    yFooter += 8
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.text(
-      `@${companyInfo.instagram || 'tg.arconnection'}     ${companyInfo.website || 'tgarconnection.com.br'}`,
-      margin,
-      yFooter
-    )
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.text(`Página ${pageNum}/${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' })
   }
 
   await addHeader(1)
 
   yPos = 60
 
-  doc.setFont('helvetica', 'italic')
+  doc.setFont('times', 'italic')
   doc.setFontSize(9)
   doc.setTextColor(...mediumGray)
   doc.text('Sua satisfação é o que motiva a nossa dedicação.', pageWidth / 2, yPos, { align: 'center' })
@@ -236,7 +223,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
   doc.text(`Ordem de serviço ${data.order_number}`, margin + 5, yPos + 7)
 
   if (data.title) {
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     doc.setFontSize(11)
     doc.text(data.title, margin + 5, yPos + 12)
   }
@@ -250,7 +237,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
   yPos += 6
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   doc.setFontSize(9)
   if (data.client.company_name) {
     doc.text(data.client.company_name, margin, yPos)
@@ -309,7 +296,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
     yPos += 12
 
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     doc.setFontSize(9)
     doc.setTextColor(...darkGray)
 
@@ -320,7 +307,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     doc.text('Marca', margin + halfWidth, yPos)
     yPos += 4
 
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     doc.text(data.basic_info.deadline, margin, yPos)
     if (data.basic_info.brand) {
       doc.text(data.basic_info.brand, margin + halfWidth, yPos)
@@ -332,7 +319,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     doc.text('Aparelho', margin + halfWidth, yPos)
     yPos += 4
 
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     if (data.basic_info.model) {
       doc.text(data.basic_info.model, margin, yPos)
     }
@@ -423,7 +410,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
   yPos = (doc as any).lastAutoTable.finalY + 5
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   doc.setFontSize(9)
   doc.setTextColor(...darkGray)
 
@@ -440,7 +427,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
   yPos += 6
 
   if (data.discount > 0) {
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     doc.setTextColor(...darkGray)
     doc.text('Desconto sobre serviços', totalsX, yPos, { align: 'right' })
     doc.text(`- R$ ${data.discount.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' })
@@ -477,13 +464,13 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
   doc.text('PIX', margin + halfWidth, yPos)
   yPos += 4
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   const methodsLines = doc.splitTextToSize(data.payment.methods, halfWidth - 10)
   doc.text(methodsLines, margin, yPos)
 
   doc.text(data.payment.pix || companyInfo.cnpj, margin + halfWidth, yPos)
 
-  addFooter(1, 4)
+  addFooter()
 
   doc.addPage()
   yPos = 20
@@ -498,7 +485,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     doc.text('Condições de pagamento', margin + halfWidth, yPos)
     yPos += 4
 
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     const bank = data.payment.bank_details
     doc.text(`Banco: ${bank.bank}`, margin, yPos)
     yPos += 4
@@ -535,7 +522,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
       doc.text('Período de garantia', margin, yPos)
       yPos += 4
 
-      doc.setFont('helvetica', 'normal')
+      doc.setFont('times', 'normal')
       doc.text(data.warranty.period, margin, yPos)
       yPos += 8
     }
@@ -544,7 +531,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     doc.text('Condições da garantia', margin, yPos)
     yPos += 4
 
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     const warrantyText = typeof data.warranty.conditions === 'string'
       ? data.warranty.conditions
       : Array.isArray(data.warranty.conditions)
@@ -567,13 +554,13 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
     yPos += 12
 
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     doc.setFontSize(9)
     doc.setTextColor(...darkGray)
 
     data.contract_clauses.forEach((clause: any) => {
       if (yPos > pageHeight - 60) {
-        addFooter(2, 3)
+        addFooter()
         doc.addPage()
         yPos = 15
       }
@@ -582,7 +569,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
       doc.text(clause.title, margin, yPos)
       yPos += 5
 
-      doc.setFont('helvetica', 'normal')
+      doc.setFont('times', 'normal')
       clause.items.forEach((item: string) => {
         const itemLines = doc.splitTextToSize(item, pageWidth - 2 * margin - 6)
         doc.text(itemLines, margin, yPos)
@@ -603,7 +590,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
     yPos += 12
 
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('times', 'normal')
     doc.setFontSize(9)
     doc.setTextColor(...darkGray)
 
@@ -612,7 +599,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     yPos += infoLines.length * 4 + 8
   }
 
-  doc.setFont('helvetica', 'italic')
+  doc.setFont('times', 'italic')
   doc.setFontSize(9)
   doc.setTextColor(...mediumGray)
   doc.text(
@@ -645,7 +632,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
   doc.text('Termos e Condições do Contrato', margin + 3, yPos + 5)
   yPos += 12
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   doc.setFontSize(9)
   doc.setTextColor(...darkGray)
 
@@ -664,7 +651,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     const lines = doc.splitTextToSize(term, pageWidth - 2 * margin - 4)
     lines.forEach((line: string) => {
       if (yPos > pageHeight - 40) {
-        addFooter(2, 4)
+        addFooter()
         doc.addPage()
         yPos = 20
       }
@@ -674,7 +661,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     yPos += 2
   })
 
-  addFooter(2, 4)
+  addFooter()
 
   doc.addPage()
   yPos = pageHeight / 2 - 40
@@ -698,7 +685,7 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
   yPos += 5
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont('times', 'normal')
   doc.setFontSize(9)
   doc.text(companyInfo.owner || 'Tiago Bruno Giaquinto', leftSigX + sigWidth / 2, yPos, { align: 'center' })
   if (data.client.cnpj) {
@@ -709,12 +696,12 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
   yPos += 5
 
-  doc.setFont('helvetica', 'italic')
+  doc.setFont('times', 'italic')
   doc.setFontSize(8)
   doc.setTextColor(...mediumGray)
   doc.text('diretor técnico', leftSigX + sigWidth / 2, yPos, { align: 'center' })
 
-  addFooter(3, 4)
+  addFooter()
 
   doc.save(`Ordem_de_servico_${data.order_number}_${new Date().toISOString().split('T')[0]}.pdf`)
 }
