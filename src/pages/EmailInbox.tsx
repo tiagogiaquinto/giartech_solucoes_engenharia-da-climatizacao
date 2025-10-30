@@ -53,10 +53,16 @@ const EmailInbox = () => {
 
       const { data, error } = await query
 
-      if (error) throw error
+      if (error) {
+        console.error('Error loading messages:', error)
+        setMessages([])
+        return
+      }
+
       setMessages(data || [])
     } catch (error) {
       console.error('Error loading messages:', error)
+      setMessages([])
     } finally {
       setLoading(false)
     }

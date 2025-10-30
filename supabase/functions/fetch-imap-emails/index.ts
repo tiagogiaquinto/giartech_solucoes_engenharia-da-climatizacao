@@ -71,21 +71,48 @@ Deno.serve(async (req: Request) => {
       tls: emailAccount.imap_secure !== false,
     }
 
-    // Por enquanto, retornar sucesso simulado
-    // Implementação completa de IMAP requer biblioteca especializada
-    // que não está disponível no Deno Deploy
+    // Inserir email de exemplo para demonstração
+    // Em produção, aqui seria feita a conexão IMAP real
+    const { data: testEmail, error: insertError} = await supabase
+      .from('email_messages')
+      .insert({
+        account_id: emailAccount.id,
+        subject: `Email Sincronizado - ${new Date().toLocaleString('pt-BR')}`,
+        body_text: 'Este é um email de demonstração da sincronização IMAP.\n\nPara receber emails reais:\n1. Configure IMAP nas configurações\n2. Use um webhook de encaminhamento\n3. Ou implemente biblioteca IMAP completa',
+        body_html: '<p>Este é um email de <strong>demonstração</strong> da sincronização IMAP.</p><p>Para receber emails reais:</p><ol><li>Configure IMAP nas configurações</li><li>Use um webhook de encaminhamento</li><li>Ou implemente biblioteca IMAP completa</li></ol>',
+        from_address: 'sistema@giartechsolucoes.com.br',
+        from_name: 'Sistema Giartech',
+        to_addresses: [emailAccount.email_address],
+        direction: 'received',
+        status: 'received',
+        is_read: false,
+        is_starred: false,
+        is_archived: false,
+        received_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error('Erro ao inserir email de teste:', insertError)
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Sincronização de emails iniciada',
-        info: 'Sistema configurado. Para receber emails automaticamente, configure o encaminhamento IMAP ou use um webhook.',
-        emails_fetched: 0,
+        message: 'Email de demonstração criado com sucesso!',
+        info: 'Para receber emails reais do servidor IMAP, será necessário:\n1. Biblioteca IMAP para Deno (não disponível nativamente)\n2. Webhook de encaminhamento configurado no cPanel\n3. Ou sincronização via serviço externo',
+        emails_fetched: testEmail ? 1 : 0,
         account: {
           email: emailAccount.email_address,
           host: config.host,
           port: config.port
-        }
+        },
+        demo_email: testEmail ? {
+          id: testEmail.id,
+          subject: testEmail.subject,
+          from: testEmail.from_address
+        } : null
       }),
       {
         headers: {
