@@ -107,19 +107,26 @@ const EmailCompose = () => {
         },
       })
 
+      console.log('Email function response:', { result, error })
+
       if (error) {
-        throw error
+        const errorMessage = error.message || 'Erro desconhecido'
+        console.error('Edge function error:', error)
+        throw new Error(errorMessage)
       }
 
       if (!result?.success) {
-        throw new Error(result?.error || 'Erro ao enviar email')
+        const errorMessage = result?.error || 'Erro ao enviar email'
+        console.error('Email sending failed:', result)
+        throw new Error(errorMessage)
       }
 
       alert('Email enviado com sucesso!')
       navigate('/email/inbox')
     } catch (error: any) {
       console.error('Error sending email:', error)
-      alert(`Erro ao enviar email: ${error.message}`)
+      const errorMsg = error.message || 'Erro desconhecido'
+      alert(`Erro ao enviar email:\n\n${errorMsg}\n\nVerifique se a conta de email está configurada corretamente nas Configurações de Email.`)
     } finally {
       setLoading(false)
     }
