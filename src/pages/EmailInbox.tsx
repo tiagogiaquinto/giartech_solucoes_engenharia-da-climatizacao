@@ -24,6 +24,7 @@ const EmailInbox = () => {
   const navigate = useNavigate()
   const [messages, setMessages] = useState<EmailMessage[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [filter, setFilter] = useState<'all' | 'inbox' | 'sent' | 'starred' | 'archived'>('inbox')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMessage, setSelectedMessage] = useState<EmailMessage | null>(null)
@@ -58,6 +59,38 @@ const EmailInbox = () => {
       console.error('Error loading messages:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSyncEmails = async () => {
+    try {
+      setSyncing(true)
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/fetch-imap-emails`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao sincronizar emails')
+      }
+
+      alert(result.message || 'Sincronização realizada com sucesso!')
+      await loadMessages()
+    } catch (error: any) {
+      console.error('Erro ao sincronizar:', error)
+      alert(`Erro ao sincronizar emails: ${error.message}`)
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -251,6 +284,15 @@ const EmailInbox = () => {
                 title="Atualizar"
               >
                 <RefreshCw className="h-5 w-5" />
+              </button>
+              <button
+                onClick={handleSyncEmails}
+                disabled={syncing}
+                className="px-3 py-2 text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-lg flex items-center gap-2 font-medium transition-colors"
+                title="Sincronizar emails do servidor"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Sincronizando...' : 'Sincronizar'}
               </button>
               <button
                 onClick={() => navigate('/')}
