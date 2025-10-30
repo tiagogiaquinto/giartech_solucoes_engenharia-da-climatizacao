@@ -1171,8 +1171,8 @@ const ServiceOrderCreate = () => {
         .insert([{
           name: newMaterialData.name,
           unit: newMaterialData.unit,
-          purchase_price: newMaterialData.unit_cost,
-          sale_price: newMaterialData.unit_price,
+          unit_cost: newMaterialData.unit_cost,
+          unit_price: newMaterialData.unit_price,
           quantity: newMaterialData.quantity,
           active: true,
           min_quantity: 1
