@@ -166,23 +166,32 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       setLoading(true)
 
       // Buscar ordem de serviço com TODOS os dados relacionados
+      // Adicionar timestamp para evitar cache
+      const cacheBuster = `?_t=${Date.now()}`
+
       const [orderRes, itemsRes, materialsRes, teamRes] = await Promise.all([
         supabase.from('service_orders').select('*').eq('id', id).single(),
-        supabase.from('service_order_items').select('*').eq('service_order_id', id),
+        supabase.from('service_order_items').select('*').eq('service_order_id', id).order('created_at', { ascending: true }),
         supabase.from('service_order_materials').select('*').eq('service_order_id', id),
         supabase.from('service_order_team').select('*').eq('service_order_id', id)
       ])
+
+      console.log('🔄 RELOAD FORÇADO - Items carregados:', itemsRes.data?.length || 0)
 
       const order = orderRes.data
       if (!order) {
         throw new Error('Ordem não encontrada')
       }
 
-      console.log('📦 Carregando OS:', id)
-      console.log('✅ Ordem:', order)
-      console.log('✅ Itens:', itemsRes.data)
-      console.log('✅ Materiais:', materialsRes.data)
-      console.log('✅ Equipe:', teamRes.data)
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      console.log('📦 CARREGANDO OS:', id)
+      console.log('✅ TOTAL DE ITEMS NO BANCO:', itemsRes.data?.length || 0)
+      console.log('✅ Items:', itemsRes.data?.map((i: any) => ({
+        id: i.id.substring(0, 8),
+        descricao: i.descricao?.substring(0, 30),
+        created_at: i.created_at
+      })))
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
       // Carregar dados básicos da OS
       setFormData({
