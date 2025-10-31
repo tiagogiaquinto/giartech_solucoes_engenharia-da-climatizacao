@@ -7,10 +7,10 @@ import { useDashboardData } from '../../hooks/useDashboardData'
 import ThomazContextualAssistant from '../ThomazContextualAssistant'
 
 interface WebDashboardProps {
-  onPremiumFeature: (feature: string) => void
+  onPremiumFeature?: (feature: string) => void
 }
 
-const WebDashboard: React.FC<WebDashboardProps> = ({ onPremiumFeature }) => {
+const WebDashboard: React.FC<WebDashboardProps> = ({ onPremiumFeature = () => {} }) => {
   const { user, isPremium } = useUser()
   const { metrics, financial, recentTransactions, activeOrders, loading, error, refresh, profit, profitMargin } = useDashboardData()
   const [tasks, setTasks] = useState([
