@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Settings as SettingsIcon,
   User,
@@ -16,10 +16,12 @@ import {
   AlertCircle,
   Globe,
   Clock,
-  Zap
+  Zap,
+  Sparkles
 } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { getUserSettings, updateUserSettings, createDefaultUserSettings } from '../lib/supabase'
+import AdvancedThemeManager from '../components/AdvancedThemeManager'
 
 const Settings = () => {
   const { user } = useUser()
@@ -384,64 +386,181 @@ const AppearanceSettings: React.FC<any> = ({ settings, onSave, saving }) => {
     language: settings?.language || 'pt-BR',
     timezone: settings?.timezone || 'America/Sao_Paulo',
     date_format: settings?.date_format || 'DD/MM/YYYY',
-    currency_format: settings?.currency_format || 'BRL'
+    currency_format: settings?.currency_format || 'BRL',
+    compact_mode: settings?.compact_mode || false,
+    animations_enabled: settings?.animations_enabled ?? true,
+    reduced_motion: settings?.reduced_motion || false,
+    high_contrast: settings?.high_contrast || false,
+    font_scale: settings?.font_scale || 1.0,
+    sidebar_position: settings?.sidebar_position || 'left',
+    header_style: settings?.header_style || 'default',
+    sidebar_style: settings?.sidebar_style || 'default'
   })
+
+  const [showThemeManager, setShowThemeManager] = useState(false)
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Aparência</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">Aparência</h2>
+        <button
+          onClick={() => setShowThemeManager(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+        >
+          <Sparkles className="w-5 h-5" />
+          Gerenciador de Temas Avançado
+        </button>
+      </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Tema</label>
-          <select
-            value={formData.theme}
-            onChange={(e) => setFormData({ ...formData, theme: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="light">Claro</option>
-            <option value="dark">Escuro</option>
-            <option value="auto">Automático</option>
-          </select>
+      <div className="space-y-6">
+        {/* Basic Theme Settings */}
+        <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold mb-4">Configurações Básicas</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tema</label>
+              <select
+                value={formData.theme}
+                onChange={(e) => setFormData({ ...formData, theme: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="light">Claro</option>
+                <option value="dark">Escuro</option>
+                <option value="auto">Automático</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Idioma</label>
+              <select
+                value={formData.language}
+                onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="pt-BR">Português (Brasil)</option>
+                <option value="en-US">English (US)</option>
+                <option value="es-ES">Español</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fuso Horário</label>
+              <select
+                value={formData.timezone}
+                onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="America/Sao_Paulo">São Paulo (GMT-3)</option>
+                <option value="America/New_York">Nova York (GMT-5)</option>
+                <option value="Europe/London">Londres (GMT+0)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Formato de Data</label>
+              <select
+                value={formData.date_format}
+                onChange={(e) => setFormData({ ...formData, date_format: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Idioma</label>
-          <select
-            value={formData.language}
-            onChange={(e) => setFormData({ ...formData, language: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="pt-BR">Português (Brasil)</option>
-            <option value="en-US">English (US)</option>
-            <option value="es-ES">Español</option>
-          </select>
+        {/* Layout Settings */}
+        <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold mb-4">Layout</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Estilo do Header</label>
+              <select
+                value={formData.header_style}
+                onChange={(e) => setFormData({ ...formData, header_style: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="default">Padrão</option>
+                <option value="compact">Compacto</option>
+                <option value="transparent">Transparente</option>
+                <option value="minimal">Minimalista</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Estilo da Sidebar</label>
+              <select
+                value={formData.sidebar_style}
+                onChange={(e) => setFormData({ ...formData, sidebar_style: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="default">Padrão</option>
+                <option value="compact">Compacto</option>
+                <option value="mini">Mini</option>
+                <option value="overlay">Sobreposto</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Posição da Sidebar</label>
+              <select
+                value={formData.sidebar_position}
+                onChange={(e) => setFormData({ ...formData, sidebar_position: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="left">Esquerda</option>
+                <option value="right">Direita</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Escala da Fonte: {(formData.font_scale * 100).toFixed(0)}%
+              </label>
+              <input
+                type="range"
+                min="0.8"
+                max="1.5"
+                step="0.1"
+                value={formData.font_scale}
+                onChange={(e) => setFormData({ ...formData, font_scale: parseFloat(e.target.value) })}
+                className="w-full"
+              />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Fuso Horário</label>
-          <select
-            value={formData.timezone}
-            onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="America/Sao_Paulo">São Paulo (GMT-3)</option>
-            <option value="America/New_York">Nova York (GMT-5)</option>
-            <option value="Europe/London">Londres (GMT+0)</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Formato de Data</label>
-          <select
-            value={formData.date_format}
-            onChange={(e) => setFormData({ ...formData, date_format: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-          </select>
+        {/* Accessibility Settings */}
+        <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold mb-4">Acessibilidade</h3>
+          <div className="space-y-3">
+            <ToggleOption
+              label="Modo Compacto"
+              description="Reduzir espaçamento entre elementos"
+              checked={formData.compact_mode}
+              onChange={() => setFormData({ ...formData, compact_mode: !formData.compact_mode })}
+            />
+            <ToggleOption
+              label="Animações"
+              description="Ativar animações e transições"
+              checked={formData.animations_enabled}
+              onChange={() => setFormData({ ...formData, animations_enabled: !formData.animations_enabled })}
+            />
+            <ToggleOption
+              label="Movimento Reduzido"
+              description="Reduzir movimento para usuários sensíveis"
+              checked={formData.reduced_motion}
+              onChange={() => setFormData({ ...formData, reduced_motion: !formData.reduced_motion })}
+            />
+            <ToggleOption
+              label="Alto Contraste"
+              description="Aumentar contraste para melhor visibilidade"
+              checked={formData.high_contrast}
+              onChange={() => setFormData({ ...formData, high_contrast: !formData.high_contrast })}
+            />
+          </div>
         </div>
 
         <button
@@ -453,6 +572,13 @@ const AppearanceSettings: React.FC<any> = ({ settings, onSave, saving }) => {
           {saving ? 'Salvando...' : 'Salvar Preferências'}
         </button>
       </div>
+
+      {/* Advanced Theme Manager Modal */}
+      <AnimatePresence>
+        {showThemeManager && (
+          <AdvancedThemeManager onClose={() => setShowThemeManager(false)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
