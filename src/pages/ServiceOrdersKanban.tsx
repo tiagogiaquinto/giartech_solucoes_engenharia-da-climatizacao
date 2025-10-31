@@ -52,6 +52,14 @@ const ServiceOrdersKanban = () => {
 
   const columns = [
     {
+      id: 'cotacao',
+      title: 'Cotações',
+      icon: ClipboardList,
+      color: 'bg-purple-500',
+      borderColor: 'border-purple-400',
+      bgColor: 'bg-purple-50'
+    },
+    {
       id: 'aberta',
       title: 'Abertas',
       icon: AlertCircle,

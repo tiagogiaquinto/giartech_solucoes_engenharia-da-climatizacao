@@ -350,6 +350,7 @@ const ServiceOrders = () => {
                     onChange={(e) => handleStatusChange(order.id, e.target.value)}
                     className={`px-3 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusColor(order.status)}`}
                   >
+                    <option value="cotacao">Cotação</option>
                     <option value="pending">Pendente</option>
                     <option value="in_progress">Em Andamento</option>
                     <option value="on_hold">Pausado</option>
