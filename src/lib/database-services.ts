@@ -531,3 +531,133 @@ export const getServiceOrderMaterials = async (serviceOrderId: string): Promise<
   if (error) throw error
   return data || []
 }
+
+export interface ServiceOrder {
+  id: string
+  order_number: string
+  client_name: string
+  client_phone?: string
+  service_type: string
+  description?: string
+  status: string
+  priority?: string
+  assigned_to?: string
+  due_date?: string
+  service_date?: string
+  created_at: string
+  updated_at: string
+}
+
+export const getServiceOrders = async (): Promise<ServiceOrder[]> => {
+  const { data, error } = await supabase
+    .from('service_orders')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+export const createServiceOrder = async (order: Partial<ServiceOrder>): Promise<ServiceOrder> => {
+  const { data, error } = await supabase
+    .from('service_orders')
+    .insert([order])
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export const updateServiceOrder = async (id: string, updates: Partial<ServiceOrder>): Promise<ServiceOrder> => {
+  const { data, error } = await supabase
+    .from('service_orders')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export const deleteServiceOrder = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('service_orders')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
+}
+
+export const getServiceOrderById = async (id: string): Promise<ServiceOrder> => {
+  const { data, error } = await supabase
+    .from('service_orders')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return data
+}
+
+export interface InventoryItem {
+  id?: string
+  name: string
+  sku?: string
+  description?: string
+  category?: string
+  quantity: number
+  min_quantity?: number
+  unit_price?: number
+  unit?: string
+  supplier?: string
+  location?: string
+  active?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export const getInventoryItems = async (): Promise<InventoryItem[]> => {
+  const { data, error } = await supabase.from('inventory_items').select('*').order('name', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+export const createInventoryItem = async (item: Partial<InventoryItem>): Promise<InventoryItem> => {
+  const { data, error } = await supabase.from('inventory_items').insert([item]).select().single()
+  if (error) throw error
+  return data
+}
+
+export const updateInventoryItem = async (id: string, updates: Partial<InventoryItem>): Promise<InventoryItem> => {
+  const { data, error } = await supabase.from('inventory_items').update(updates).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export const deleteInventoryItem = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('inventory_items').update({ active: false }).eq('id', id)
+  if (error) throw error
+}
+
+export const getServiceCatalog = async () => { const { data } = await supabase.from('service_catalog').select('*').eq('active', true); return data || [] }
+export const createServiceCatalogItem = async (item: any) => { const { data } = await supabase.from('service_catalog').insert([item]).select().single(); return data }
+export const updateServiceCatalogItem = async (id: string, updates: any) => { const { data } = await supabase.from('service_catalog').update(updates).eq('id', id).select().single(); return data }
+export const deleteServiceCatalogItem = async (id: string) => { await supabase.from('service_catalog').update({ active: false }).eq('id', id) }
+export const getClients = async () => { const { data } = await supabase.from('customers').select('*'); return data || [] }
+export const createDbClient = async (client: any) => { const { data } = await supabase.from('customers').insert([client]).select().single(); return data }
+export const updateClient = async (id: string, updates: any) => { const { data } = await supabase.from('customers').update(updates).eq('id', id).select().single(); return data }
+export const deleteClient = async (id: string) => { await supabase.from('customers').delete().eq('id', id) }
+export const getContracts = async () => { const { data } = await supabase.from('contracts').select('*'); return data || [] }
+export const getContractsByClient = async (clientId: string) => { const { data } = await supabase.from('contracts').select('*').eq('customer_id', clientId); return data || [] }
+export const createContract = async (contract: any) => { const { data } = await supabase.from('contracts').insert([contract]).select().single(); return data }
+export const updateContract = async (id: string, updates: any) => { const { data } = await supabase.from('contracts').update(updates).eq('id', id).select().single(); return data }
+export const deleteContract = async (id: string) => { await supabase.from('contracts').delete().eq('id', id) }
+export const getAgendaEvents = async () => { const { data } = await supabase.from('agenda_events').select('*'); return data || [] }
+export const createAgendaEvent = async (event: any) => { const { data } = await supabase.from('agenda_events').insert([event]).select().single(); return data }
+export const updateAgendaEvent = async (id: string, updates: any) => { const { data } = await supabase.from('agenda_events').update(updates).eq('id', id).select().single(); return data }
+export const deleteAgendaEvent = async (id: string) => { await supabase.from('agenda_events').delete().eq('id', id) }
+export const getFinanceEntries = async () => { const { data } = await supabase.from('finance_entries').select('*'); return data || [] }
+export const createFinanceEntry = async (entry: any) => { const { data } = await supabase.from('finance_entries').insert([entry]).select().single(); return data }
+export const updateFinanceEntry = async (id: string, updates: any) => { const { data } = await supabase.from('finance_entries').update(updates).eq('id', id).select().single(); return data }
+export const deleteFinanceEntry = async (id: string) => { await supabase.from('finance_entries').delete().eq('id', id) }
+export const getSuppliers = async () => { const { data } = await supabase.from('suppliers').select('*'); return data || [] }
+export const createSupplier = async (supplier: any) => { const { data } = await supabase.from('suppliers').insert([supplier]).select().single(); return data }
+export const updateSupplier = async (id: string, updates: any) => { const { data } = await supabase.from('suppliers').update(updates).eq('id', id).select().single(); return data }
+export const deleteSupplier = async (id: string) => { await supabase.from('suppliers').delete().eq('id', id) }

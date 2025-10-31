@@ -289,6 +289,7 @@ const ServiceOrders = () => {
                 <option value="cotacao">Cotação</option>
                 <option value="pending">Pendente</option>
                 <option value="in_progress">Em Andamento</option>
+                <option value="on_hold">Pausado</option>
                 <option value="completed">Concluída</option>
                 <option value="cancelled">Cancelada</option>
               </select>
