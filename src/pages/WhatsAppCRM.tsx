@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
-import { MessageCircle, Phone, Mail, Search, Plus, X, Save, Users, Send, Clock, Check, CheckCheck, Ban, Tag, Settings, Image, Paperclip, Smile, MoreVertical, Trash2, Edit as EditIcon } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { MessageCircle, Phone, Mail, Search, Plus, X, Save, Users, Send, Clock, Check, CheckCheck, Ban, Tag, Settings, Image, Paperclip, Smile, MoreVertical, Trash2, Edit as EditIcon, Download, UserPlus, Building2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -17,6 +17,7 @@ interface WhatsAppAccount {
 interface WhatsAppContact {
   id: string
   account_id: string
+  customer_id?: string | null
   name: string
   phone: string
   email: string | null
@@ -27,6 +28,16 @@ interface WhatsAppContact {
   last_message_preview: string | null
   unread_count: number
   created_at: string
+}
+
+interface Customer {
+  id: string
+  nome_razao: string
+  email: string | null
+  phone: string
+  tipo_pessoa: string
+  has_whatsapp: boolean
+  whatsapp_contact_id: string | null
 }
 
 interface Message {
@@ -54,7 +65,14 @@ const WhatsAppCRM = () => {
   const [showEditAccountModal, setShowEditAccountModal] = useState(false)
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
+  const [showImportCustomersModal, setShowImportCustomersModal] = useState(false)
   const [editingAccount, setEditingAccount] = useState<WhatsAppAccount | null>(null)
+
+  // Customers
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loadingCustomers, setLoadingCustomers] = useState(false)
+  const [searchCustomer, setSearchCustomer] = useState('')
+  const [importing, setImporting] = useState(false)
 
   // WhatsApp Connection
   const [qrCode, setQrCode] = useState<string | null>(null)
@@ -450,9 +468,95 @@ const WhatsAppCRM = () => {
     }
   }, [])
 
+  const loadCustomers = async () => {
+    try {
+      setLoadingCustomers(true)
+      const { data, error } = await supabase
+        .from('v_customers_for_whatsapp')
+        .select('*')
+        .order('name')
+
+      if (error) throw error
+      setCustomers(data || [])
+    } catch (error) {
+      console.error('Error loading customers:', error)
+    } finally {
+      setLoadingCustomers(false)
+    }
+  }
+
+  const handleImportCustomer = async (customerId: string) => {
+    if (!accounts[0]) {
+      alert('Nenhuma conta WhatsApp encontrada!')
+      return
+    }
+
+    try {
+      setImporting(true)
+      const { data, error } = await supabase.rpc('import_customer_to_whatsapp', {
+        p_customer_id: customerId,
+        p_account_id: accounts[0].id
+      })
+
+      if (error) throw error
+
+      if (data?.success) {
+        alert(data.message || 'Cliente importado com sucesso!')
+        await loadData()
+        await loadCustomers()
+      } else {
+        alert(data?.error || 'Erro ao importar cliente')
+      }
+    } catch (error: any) {
+      console.error('Error importing customer:', error)
+      alert('Erro ao importar cliente: ' + error.message)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleImportAllCustomers = async () => {
+    if (!accounts[0]) {
+      alert('Nenhuma conta WhatsApp encontrada!')
+      return
+    }
+
+    if (!confirm('Deseja importar TODOS os clientes com telefone para o WhatsApp? Esta operação pode demorar alguns segundos.')) {
+      return
+    }
+
+    try {
+      setImporting(true)
+      const { data, error } = await supabase.rpc('import_all_customers_to_whatsapp', {
+        p_account_id: accounts[0].id
+      })
+
+      if (error) throw error
+
+      if (data?.success) {
+        alert(data.message || 'Clientes importados com sucesso!')
+        await loadData()
+        await loadCustomers()
+        setShowImportCustomersModal(false)
+      } else {
+        alert('Erro ao importar clientes')
+      }
+    } catch (error: any) {
+      console.error('Error importing all customers:', error)
+      alert('Erro ao importar clientes: ' + error.message)
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const filteredContacts = contacts.filter(contact =>
     contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     contact.phone.includes(searchTerm)
+  )
+
+  const filteredCustomers = customers.filter(customer =>
+    customer.name.toLowerCase().includes(searchCustomer.toLowerCase()) ||
+    customer.phone.includes(searchCustomer)
   )
 
   const formatTime = (dateString: string) => {
@@ -543,13 +647,26 @@ const WhatsAppCRM = () => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
-            <button
-              onClick={() => setShowAddContactModal(true)}
-              className="w-full mt-3 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Novo Contato
-            </button>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => setShowAddContactModal(true)}
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Novo
+              </button>
+              <button
+                onClick={() => {
+                  setShowImportCustomersModal(true)
+                  loadCustomers()
+                }}
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                title="Importar clientes do cadastro"
+              >
+                <UserPlus className="h-4 w-4" />
+                Importar
+              </button>
+            </div>
           </div>
 
           {/* Lista de Contatos */}
@@ -957,6 +1074,168 @@ const WhatsAppCRM = () => {
               >
                 Cancelar
               </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal Importar Clientes */}
+      {showImportCustomersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl"
+          >
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-indigo-600">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <Building2 className="h-7 w-7" />
+                    Importar Clientes
+                  </h2>
+                  <p className="text-blue-100 mt-1">
+                    Selecione clientes do cadastro para iniciar conversas no WhatsApp
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowImportCustomersModal(false)}
+                  className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+                  disabled={importing}
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Search and Import All */}
+              <div className="flex gap-3 mb-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchCustomer}
+                    onChange={(e) => setSearchCustomer(e.target.value)}
+                    placeholder="Buscar clientes por nome ou telefone..."
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  onClick={handleImportAllCustomers}
+                  disabled={importing || loadingCustomers}
+                  className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all flex items-center gap-2 font-medium disabled:opacity-50"
+                >
+                  <Download className="h-5 w-5" />
+                  Importar Todos
+                </button>
+              </div>
+
+              {/* Customer List */}
+              <div className="border border-gray-200 rounded-lg overflow-hidden max-h-[calc(90vh-300px)] overflow-y-auto">
+                {loadingCustomers ? (
+                  <div className="flex items-center justify-center p-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-500"></div>
+                    <span className="ml-3 text-gray-600">Carregando clientes...</span>
+                  </div>
+                ) : filteredCustomers.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-12 text-gray-400">
+                    <Users className="h-16 w-16 mb-4" />
+                    <p className="text-lg font-medium">Nenhum cliente encontrado</p>
+                    <p className="text-sm">Todos os clientes já foram importados ou não possuem telefone</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    {filteredCustomers.map((customer) => (
+                      <div
+                        key={customer.id}
+                        className={`p-4 hover:bg-gray-50 transition-colors ${
+                          customer.has_whatsapp ? 'opacity-50' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 flex-1">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                              {customer.name[0]?.toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold text-gray-900 truncate">{customer.name}</h3>
+                                {customer.has_whatsapp && (
+                                  <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded-full flex items-center gap-1">
+                                    <Check className="h-3 w-3" />
+                                    Importado
+                                  </span>
+                                )}
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                  customer.tipo_pessoa === 'PJ'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {customer.tipo_pessoa}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-gray-600">
+                                <div className="flex items-center gap-1">
+                                  <Phone className="h-4 w-4" />
+                                  <span>{customer.phone}</span>
+                                </div>
+                                {customer.email && (
+                                  <div className="flex items-center gap-1 truncate">
+                                    <Mail className="h-4 w-4" />
+                                    <span className="truncate">{customer.email}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleImportCustomer(customer.id)}
+                            disabled={importing || customer.has_whatsapp}
+                            className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                              customer.has_whatsapp
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-blue-500 hover:bg-blue-600 text-white hover:shadow-md'
+                            }`}
+                          >
+                            {importing ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                Importando...
+                              </>
+                            ) : customer.has_whatsapp ? (
+                              <>
+                                <Check className="h-4 w-4" />
+                                Importado
+                              </>
+                            ) : (
+                              <>
+                                <UserPlus className="h-4 w-4" />
+                                Importar
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  <strong>{filteredCustomers.filter(c => !c.has_whatsapp).length}</strong> clientes disponíveis para importar
+                </div>
+                <button
+                  onClick={() => setShowImportCustomersModal(false)}
+                  className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                  disabled={importing}
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
