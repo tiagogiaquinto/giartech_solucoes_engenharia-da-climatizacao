@@ -182,6 +182,10 @@ const ServiceOrders = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'cotacao':
+      case 'orcamento':
+      case 'quote':
+      case 'budget': return 'bg-purple-100 text-purple-800'
       case 'pending':
       case 'pendente': return 'bg-yellow-100 text-yellow-800'
       case 'in_progress':
@@ -282,6 +286,7 @@ const ServiceOrders = () => {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">Todos os Status</option>
+                <option value="cotacao">Cotação</option>
                 <option value="pending">Pendente</option>
                 <option value="in_progress">Em Andamento</option>
                 <option value="completed">Concluída</option>
