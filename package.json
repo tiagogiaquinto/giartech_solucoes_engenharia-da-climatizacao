@@ -5,6 +5,7 @@
   "author": "Giartech Soluções",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",

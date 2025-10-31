@@ -70,12 +70,31 @@ export default function WhatsAppCRM() {
     try {
       const { data, error } = await supabase
         .from('whatsapp_conversations')
-        .select('*')
+        .select(`
+          *,
+          contact:customers(
+            id,
+            name,
+            phone
+          )
+        `)
         .order('last_message_at', { ascending: false })
 
       if (error) throw error
 
-      setConversations(data || [])
+      // Mapear dados para o formato esperado
+      const mappedData = (data || []).map(conv => ({
+        id: conv.id,
+        contact_name: conv.contact?.name || 'Sem nome',
+        phone: conv.contact?.phone || 'Sem telefone',
+        last_message: conv.last_message_preview || '',
+        last_message_date: conv.last_message_at || new Date(),
+        unread_count: conv.unread_count || 0,
+        status: 'open' as const,
+        assigned_to: undefined
+      }))
+
+      setConversations(mappedData)
     } catch (error) {
       console.error('Erro ao carregar conversas:', error)
     } finally {
@@ -140,8 +159,8 @@ export default function WhatsAppCRM() {
   }
 
   const filteredConversations = conversations.filter(conv =>
-    conv.contact_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.phone.includes(searchQuery)
+    (conv.contact_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (conv.phone || '').includes(searchQuery)
   )
 
   const getMessageStatusIcon = (status: string) => {
