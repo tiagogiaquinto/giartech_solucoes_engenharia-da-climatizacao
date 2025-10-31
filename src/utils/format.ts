@@ -1,5 +1,0 @@
-export const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
-export const capitalizeProperName = (str: string) => capitalize(str)
-export const capitalizeCompanyName = (str: string) => str.toUpperCase()
-export const capitalizeAddress = (str: string) => capitalize(str)
-export const capitalizeFirstLetter = (str: string) => capitalize(str)
