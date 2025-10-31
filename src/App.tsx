@@ -543,13 +543,14 @@ function App() {
               <WebLayout>
                 <CreditScoring />
               </WebLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/customer-rfm" element={
             <ProtectedRoute>
               <WebLayout>
                 <CustomerRFM />
               </WebLayout>
-            </ProtectedRoute>
-          } />
             </ProtectedRoute>
           } />
 
