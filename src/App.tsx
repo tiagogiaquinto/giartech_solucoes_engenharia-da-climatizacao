@@ -20,7 +20,6 @@ import InventoryDetail from './pages/InventoryDetail'
 import InventoryCreate from './pages/InventoryCreate'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
-import UserManagement from './pages/UserManagement'
 import ServiceCatalog from './pages/ServiceCatalog'
 import ServiceCatalogDetail from './pages/ServiceCatalogDetail'
 import ServiceCatalogCreate from './pages/ServiceCatalogCreate'
@@ -56,9 +55,8 @@ import ThomazMetrics from './pages/ThomazMetrics'
 import FinancialManagement from './pages/FinancialManagement'
 import FinancialAnalysis from './pages/FinancialAnalysis'
 import BankAccounts from './pages/BankAccounts'
-import EmployeeManagement from './pages/EmployeeManagement'
+import PeopleManagement from './pages/PeopleManagement'
 import UserInvitations from './pages/UserInvitations'
-import AccessManagement from './pages/AccessManagement'
 import FinancialCategories from './pages/FinancialCategories'
 import AuditLogs from './pages/AuditLogs'
 import CRMLeads from './pages/CRMLeads'
@@ -342,10 +340,18 @@ function App() {
             </ProtectedRoute>
           } />
           
+          <Route path="/people" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <PeopleManagement />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/users" element={
             <ProtectedRoute>
               <WebLayout>
-                <UserManagement />
+                <PeopleManagement />
               </WebLayout>
             </ProtectedRoute>
           } />
@@ -601,7 +607,7 @@ function App() {
           <Route path="/access-management" element={
             <ProtectedRoute>
               <WebLayout>
-                <AccessManagement />
+                <PeopleManagement />
               </WebLayout>
             </ProtectedRoute>
           } />
@@ -609,7 +615,15 @@ function App() {
           <Route path="/funcionarios" element={
             <ProtectedRoute>
               <WebLayout>
-                <EmployeeManagement />
+                <PeopleManagement />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/employees" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <PeopleManagement />
               </WebLayout>
             </ProtectedRoute>
           } />
