@@ -653,7 +653,14 @@ export const getContractsByClient = async (clientId: string) => { const { data }
 export const createContract = async (contract: any) => { const { data } = await supabase.from('contracts').insert([contract]).select().single(); return data }
 export const updateContract = async (id: string, updates: any) => { const { data } = await supabase.from('contracts').update(updates).eq('id', id).select().single(); return data }
 export const deleteContract = async (id: string) => { await supabase.from('contracts').delete().eq('id', id) }
-export const getAgendaEvents = async () => { const { data } = await supabase.from('agenda_events').select('*'); return data || [] }
+export const getAgendaEvents = async () => {
+  const { data, error } = await supabase.from('agenda_events').select('*').order('start_date', { ascending: true })
+  if (error) {
+    console.error('Error loading agenda events:', error)
+    throw error
+  }
+  return data || []
+}
 export const createAgendaEvent = async (event: any) => { const { data } = await supabase.from('agenda_events').insert([event]).select().single(); return data }
 export const updateAgendaEvent = async (id: string, updates: any) => { const { data } = await supabase.from('agenda_events').update(updates).eq('id', id).select().single(); return data }
 export const deleteAgendaEvent = async (id: string) => { await supabase.from('agenda_events').delete().eq('id', id) }
