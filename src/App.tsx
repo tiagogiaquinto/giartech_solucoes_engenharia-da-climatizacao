@@ -10,6 +10,7 @@ import { MobileBottomNav } from './components/MobileBottomNav'
 import { registerServiceWorker, isMobile } from './utils/pwa'
 import WebLayout from './components/layouts/WebLayout'
 import GlobalSearchModal from './components/GlobalSearchModal'
+import OfflineIndicator from './components/OfflineIndicator'
 import Dashboard from './pages/Dashboard'
 import ServiceOrders from './pages/ServiceOrders'
 import ServiceOrderCreate from './pages/ServiceOrderCreate'
@@ -773,6 +774,8 @@ function App() {
       />
 
       {/* Mobile Bottom Navigation */}
+      {/* Offline Indicator */}
+      <OfflineIndicator />
       {isMobile() && <MobileBottomNav />}
     </UserProvider>
   )
