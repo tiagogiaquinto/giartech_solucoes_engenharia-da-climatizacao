@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { MessageCircle, Phone, Mail, Search, Plus, X, Save, Users, Send, Clock, Check, CheckCheck, Ban, Tag, Settings, Image, Paperclip, Smile, MoreVertical, Trash2, Edit as EditIcon, Download, UserPlus, Building2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { formatDistanceToNow } from 'date-fns'
