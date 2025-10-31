@@ -57,8 +57,11 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Simular usuário admin logado automaticamente
+    // Usar UUID válido para compatibilidade com banco de dados
+    const mockAdminId = '00000000-0000-0000-0000-000000000001'
+
     const mockAdminProfile: UserProfile = {
-      id: 'mock-admin-id',
+      id: mockAdminId,
       email: 'admin@sistema.com',
       name: 'Administrador',
       role: 'admin',
@@ -72,7 +75,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
 
     const mockAuthUser = {
-      id: 'mock-admin-id',
+      id: mockAdminId,
       email: 'admin@sistema.com',
       aud: 'authenticated',
       role: 'authenticated',

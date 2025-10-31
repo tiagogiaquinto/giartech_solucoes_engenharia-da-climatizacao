@@ -230,7 +230,7 @@ function App() {
 
   return (
     <UserProvider>
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" initial={false}>
         <Routes location={location} key={location.pathname}>
           <Route path="/login" element={<Login />} />
           <Route path="/pricing" element={<PricingPlans />} />
