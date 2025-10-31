@@ -670,6 +670,135 @@ export const getAgendaEvents = async () => {
 export const createAgendaEvent = async (event: any) => { const { data } = await supabase.from('agenda_events').insert([event]).select().single(); return data }
 export const updateAgendaEvent = async (id: string, updates: any) => { const { data } = await supabase.from('agenda_events').update(updates).eq('id', id).select().single(); return data }
 export const deleteAgendaEvent = async (id: string) => { await supabase.from('agenda_events').delete().eq('id', id) }
+// =====================================================
+// USER SETTINGS
+// =====================================================
+export const getUserSettings = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error loading user settings:', error)
+    throw error
+  }
+
+  // Se não existir, criar configurações padrão
+  if (!data) {
+    return await createDefaultUserSettings(userId)
+  }
+
+  return data
+}
+
+export const createDefaultUserSettings = async (userId: string) => {
+  const defaultSettings = {
+    user_id: userId,
+    notifications_enabled: true,
+    email_notifications: true,
+    push_notifications: true,
+    sms_notifications: false,
+    notify_new_order: true,
+    notify_order_status: true,
+    notify_payment: true,
+    notify_deadline: true,
+    notify_team_mention: true,
+    theme: 'light',
+    language: 'pt-BR',
+    timezone: 'America/Sao_Paulo',
+    date_format: 'DD/MM/YYYY',
+    currency_format: 'BRL',
+    profile_visibility: 'team',
+    show_online_status: true,
+    allow_contact: true,
+    auto_backup: true,
+    backup_frequency: 'daily',
+    backup_time: '00:00',
+    keep_backups_days: 30,
+    realtime_sync: true,
+    offline_mode: true,
+    sync_on_wifi_only: false,
+    default_view: 'kanban',
+    items_per_page: 20,
+    show_completed_tasks: false,
+    auto_refresh: true,
+    refresh_interval: 30,
+    two_factor_enabled: false,
+    session_timeout: 60,
+    require_password_change: false,
+    integrations: {},
+    advanced_settings: {}
+  }
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .insert([defaultSettings])
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating user settings:', error)
+    throw error
+  }
+
+  return data
+}
+
+export const updateUserSettings = async (userId: string, settings: Partial<any>) => {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .update({
+      ...settings,
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', userId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating user settings:', error)
+    throw error
+  }
+
+  console.log('✅ Settings saved successfully')
+  return data
+}
+
+export const getSystemPreferences = async () => {
+  const { data, error } = await supabase
+    .from('system_preferences')
+    .select('*')
+    .eq('is_public', true)
+
+  if (error) {
+    console.error('Error loading system preferences:', error)
+    return []
+  }
+
+  return data || []
+}
+
+export const updateSystemPreference = async (key: string, value: any) => {
+  const { data, error } = await supabase
+    .from('system_preferences')
+    .upsert({
+      key,
+      value: JSON.stringify(value),
+      updated_at: new Date().toISOString()
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating system preference:', error)
+    throw error
+  }
+
+  return data
+}
+
 export const getFinanceEntries = async () => { const { data } = await supabase.from('finance_entries').select('*'); return data || [] }
 export const createFinanceEntry = async (entry: any) => { const { data } = await supabase.from('finance_entries').insert([entry]).select().single(); return data }
 export const updateFinanceEntry = async (id: string, updates: any) => { const { data } = await supabase.from('finance_entries').update(updates).eq('id', id).select().single(); return data }

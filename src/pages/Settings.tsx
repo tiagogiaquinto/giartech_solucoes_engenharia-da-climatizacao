@@ -1,550 +1,807 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  Settings as SettingsIcon, 
-  User, 
-  Bell, 
-  Shield, 
-  Smartphone,
+import {
+  Settings as SettingsIcon,
+  User,
+  Bell,
+  Shield,
+  Palette,
+  Database,
+  Cloud,
+  Monitor,
+  Lock,
+  Eye,
   Save,
   Check,
-  Database,
-  Cloud
+  AlertCircle,
+  Globe,
+  Clock,
+  Zap
 } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
+import { getUserSettings, updateUserSettings, createDefaultUserSettings } from '../lib/supabase'
 
 const Settings = () => {
-  const { user, isAdmin } = useUser()
+  const { user } = useUser()
   const [activeTab, setActiveTab] = useState('profile')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  
-  const [profileData, setProfileData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: '(11) 99999-9999',
-    company: 'Minha Empresa'
-  })
-  
-  const [notificationSettings, setNotificationSettings] = useState({
-    email: true,
-    push: true,
-    sms: false
-  })
-  
-  const [backupSettings, setBackupSettings] = useState({
-    autoBackup: true,
-    backupFrequency: 'daily',
-    backupTime: '00:00',
-    keepBackups: '30'
-  })
-  
-  const [syncSettings, setSyncSettings] = useState({
-    realTimeSync: true,
-    offlineMode: true,
-    syncOnWifiOnly: false
-  })
+  const [error, setError] = useState<string | null>(null)
+  const [settings, setSettings] = useState<any>(null)
 
-  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setProfileData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+  // Carregar configurações do banco
+  useEffect(() => {
+    loadSettings()
+  }, [user])
+
+  const loadSettings = async () => {
+    if (!user?.id) return
+
+    try {
+      setLoading(true)
+      console.log('🔄 Loading settings for user:', user.id)
+
+      const data = await getUserSettings(user.id)
+      console.log('✅ Settings loaded:', data)
+
+      setSettings(data)
+    } catch (err: any) {
+      console.error('❌ Error loading settings:', err)
+      setError('Erro ao carregar configurações')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleNotificationChange = (key: string) => {
-    setNotificationSettings(prev => ({
-      ...prev,
-      [key]: !prev[key as keyof typeof prev]
-    }))
+  const handleSave = async (section: string, data: any) => {
+    if (!user?.id || !settings?.id) {
+      setError('Usuário não autenticado')
+      return
+    }
+
+    try {
+      setSaving(true)
+      setError(null)
+      console.log(`💾 Saving ${section} settings:`, data)
+
+      await updateUserSettings(user.id, data)
+
+      // Atualizar estado local
+      setSettings((prev: any) => ({ ...prev, ...data }))
+
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+      console.log('✅ Settings saved successfully')
+    } catch (err: any) {
+      console.error('❌ Error saving settings:', err)
+      setError('Erro ao salvar configurações')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleBackupChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setBackupSettings(prev => ({
-      ...prev,
-      [name]: value
-    }))
+  const tabs = [
+    { id: 'profile', name: 'Perfil', icon: User },
+    { id: 'notifications', name: 'Notificações', icon: Bell },
+    { id: 'appearance', name: 'Aparência', icon: Palette },
+    { id: 'privacy', name: 'Privacidade', icon: Eye },
+    { id: 'backup', name: 'Backup', icon: Database },
+    { id: 'sync', name: 'Sincronização', icon: Cloud },
+    { id: 'productivity', name: 'Produtividade', icon: Zap },
+    { id: 'security', name: 'Segurança', icon: Shield }
+  ]
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Carregando configurações...</p>
+        </div>
+      </div>
+    )
   }
 
-  const handleSyncChange = (key: string) => {
-    setSyncSettings(prev => ({
-      ...prev,
-      [key]: !prev[key as keyof typeof prev]
-    }))
-  }
-
-  const handleSaveProfile = () => {
-    console.log('Saving profile:', profileData)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  const handleSaveNotifications = () => {
-    console.log('Saving notification settings:', notificationSettings)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  const handleSaveBackup = () => {
-    console.log('Saving backup settings:', backupSettings)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  const handleSaveSync = () => {
-    console.log('Saving sync settings:', syncSettings)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  if (!settings) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-600">Erro ao carregar configurações</p>
+          <button
+            onClick={loadSettings}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
-      </div>
-
-      {/* Settings Tabs */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`flex-1 flex items-center justify-center space-x-2 py-4 px-6 transition-colors ${
-              activeTab === 'profile'
-                ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <User className="h-5 w-5" />
-            <span className="font-medium">Perfil</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('notifications')}
-            className={`flex-1 flex items-center justify-center space-x-2 py-4 px-6 transition-colors ${
-              activeTab === 'notifications'
-                ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Bell className="h-5 w-5" />
-            <span className="font-medium">Notificações</span>
-          </button>
-          
-          {isAdmin && (
-            <>
-              <button
-                onClick={() => setActiveTab('backup')}
-                className={`flex-1 flex items-center justify-center space-x-2 py-4 px-6 transition-colors ${
-                  activeTab === 'backup'
-                    ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Database className="h-5 w-5" />
-                <span className="font-medium">Backup</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('sync')}
-                className={`flex-1 flex items-center justify-center space-x-2 py-4 px-6 transition-colors ${
-                  activeTab === 'sync'
-                    ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Cloud className="h-5 w-5" />
-                <span className="font-medium">Sincronização</span>
-              </button>
-            </>
-          )}
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <SettingsIcon className="w-8 h-8" />
+            Configurações
+          </h1>
+          <p className="text-gray-600 mt-2">Personalize sua experiência no sistema</p>
         </div>
 
-        <div className="p-6">
-          {/* Profile Tab */}
-          {activeTab === 'profile' && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-6"
-            >
-              <h2 className="text-lg font-semibold text-gray-900">Informações do Perfil</h2>
-              
-              <div className="flex items-center space-x-4 mb-6">
-                {user?.avatar ? (
-                  <img 
-                    src={user.avatar} 
-                    alt={user.name} 
-                    className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl font-bold">
-                    {user?.name.charAt(0)}
-                  </div>
-                )}
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">{user?.name}</h3>
-                  <p className="text-gray-600">{user?.email}</p>
-                  <div className="mt-2">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                      {user?.role === 'admin' ? 'Administrador' : 
-                       user?.role === 'technician' ? 'Técnico' : 'Funcionário Externo'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nome Completo
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={profileData.name}
-                    onChange={handleProfileChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+        {/* Status Messages */}
+        {saved && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-800"
+          >
+            <Check className="w-5 h-5" />
+            <span>Configurações salvas com sucesso!</span>
+          </motion.div>
+        )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={profileData.email}
-                    onChange={handleProfileChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-800"
+          >
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+          </motion.div>
+        )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Telefone
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={profileData.phone}
-                    onChange={handleProfileChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Empresa
-                  </label>
-                  <input
-                    type="text"
-                    name="company"
-                    value={profileData.company}
-                    onChange={handleProfileChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={handleSaveProfile}
-                className={`flex items-center px-6 py-2 rounded-lg transition-all duration-200 ${
-                  saved
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:shadow-lg'
-                }`}
-              >
-                {saved ? (
-                  <>
-                    <Check className="h-5 w-5 mr-2" />
-                    Salvo!
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-5 w-5 mr-2" />
-                    Salvar Alterações
-                  </>
-                )}
-              </button>
-            </motion.div>
-          )}
-
-          {/* Notifications Tab */}
-          {activeTab === 'notifications' && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-6"
-            >
-              <h2 className="text-lg font-semibold text-gray-900">Preferências de Notificação</h2>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Notificações por Email</h3>
-                    <p className="text-sm text-gray-600">Receber atualizações importantes por email</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={notificationSettings.email}
-                      onChange={() => handleNotificationChange('email')}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Notificações Push</h3>
-                    <p className="text-sm text-gray-600">Notificações em tempo real no navegador</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={notificationSettings.push}
-                      onChange={() => handleNotificationChange('push')}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-gray-900">SMS</h3>
-                    <p className="text-sm text-gray-600">Alertas críticos por mensagem de texto</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={notificationSettings.sms}
-                      onChange={() => handleNotificationChange('sms')}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-              </div>
-
-              <button
-                onClick={handleSaveNotifications}
-                className={`flex items-center px-6 py-2 rounded-lg transition-all duration-200 ${
-                  saved
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:shadow-lg'
-                }`}
-              >
-                {saved ? (
-                  <>
-                    <Check className="h-5 w-5 mr-2" />
-                    Salvo!
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-5 w-5 mr-2" />
-                    Salvar Alterações
-                  </>
-                )}
-              </button>
-            </motion.div>
-          )}
-
-          {/* Backup Tab */}
-          {activeTab === 'backup' && isAdmin && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-6"
-            >
-              <h2 className="text-lg font-semibold text-gray-900">Configurações de Backup</h2>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Backup Automático</h3>
-                    <p className="text-sm text-gray-600">Realizar backup automático dos dados</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={backupSettings.autoBackup}
-                      onChange={() => setBackupSettings(prev => ({ ...prev, autoBackup: !prev.autoBackup }))}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-
-                {backupSettings.autoBackup && (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Frequência
-                        </label>
-                        <select
-                          name="backupFrequency"
-                          value={backupSettings.backupFrequency}
-                          onChange={handleBackupChange}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="daily">Diário</option>
-                          <option value="weekly">Semanal</option>
-                          <option value="monthly">Mensal</option>
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Horário
-                        </label>
-                        <input
-                          type="time"
-                          name="backupTime"
-                          value={backupSettings.backupTime}
-                          onChange={handleBackupChange}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Manter Backups (dias)
-                      </label>
-                      <input
-                        type="number"
-                        name="keepBackups"
-                        value={backupSettings.keepBackups}
-                        onChange={handleBackupChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        min="1"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="flex space-x-3">
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm p-4 sticky top-6">
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                return (
                   <button
-                    onClick={handleSaveBackup}
-                    className={`flex items-center px-6 py-2 rounded-lg transition-all duration-200 ${
-                      saved
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:shadow-lg'
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-all ${
+                      activeTab === tab.id
+                        ? 'bg-blue-50 text-blue-600 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    {saved ? (
-                      <>
-                        <Check className="h-5 w-5 mr-2" />
-                        Salvo!
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-5 w-5 mr-2" />
-                        Salvar Configurações
-                      </>
-                    )}
+                    <Icon className="w-5 h-5" />
+                    <span>{tab.name}</span>
                   </button>
-                  
-                  <button
-                    className="px-6 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                  >
-                    <Database className="h-5 w-5 mr-2 inline" />
-                    Backup Manual
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
+                )
+              })}
+            </div>
+          </div>
 
-          {/* Sync Tab */}
-          {activeTab === 'sync' && isAdmin && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-6"
-            >
-              <h2 className="text-lg font-semibold text-gray-900">Configurações de Sincronização</h2>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Sincronização em Tempo Real</h3>
-                    <p className="text-sm text-gray-600">Manter dados sincronizados em tempo real entre dispositivos</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={syncSettings.realTimeSync}
-                      onChange={() => handleSyncChange('realTimeSync')}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Modo Offline</h3>
-                    <p className="text-sm text-gray-600">Permitir trabalhar offline e sincronizar depois</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={syncSettings.offlineMode}
-                      onChange={() => handleSyncChange('offlineMode')}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Sincronizar Apenas no Wi-Fi</h3>
-                    <p className="text-sm text-gray-600">Economizar dados móveis sincronizando apenas no Wi-Fi</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={syncSettings.syncOnWifiOnly}
-                      onChange={() => handleSyncChange('syncOnWifiOnly')}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-              </div>
-
-              <button
-                onClick={handleSaveSync}
-                className={`flex items-center px-6 py-2 rounded-lg transition-all duration-200 ${
-                  saved
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:shadow-lg'
-                }`}
-              >
-                {saved ? (
-                  <>
-                    <Check className="h-5 w-5 mr-2" />
-                    Salvo!
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-5 w-5 mr-2" />
-                    Salvar Configurações
-                  </>
-                )}
-              </button>
-            </motion.div>
-          )}
+          {/* Content */}
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              {activeTab === 'profile' && (
+                <ProfileSettings settings={settings} onSave={handleSave} saving={saving} />
+              )}
+              {activeTab === 'notifications' && (
+                <NotificationSettings settings={settings} onSave={handleSave} saving={saving} />
+              )}
+              {activeTab === 'appearance' && (
+                <AppearanceSettings settings={settings} onSave={handleSave} saving={saving} />
+              )}
+              {activeTab === 'privacy' && (
+                <PrivacySettings settings={settings} onSave={handleSave} saving={saving} />
+              )}
+              {activeTab === 'backup' && (
+                <BackupSettings settings={settings} onSave={handleSave} saving={saving} />
+              )}
+              {activeTab === 'sync' && (
+                <SyncSettings settings={settings} onSave={handleSave} saving={saving} />
+              )}
+              {activeTab === 'productivity' && (
+                <ProductivitySettings settings={settings} onSave={handleSave} saving={saving} />
+              )}
+              {activeTab === 'security' && (
+                <SecuritySettings settings={settings} onSave={handleSave} saving={saving} />
+              )}
+            </div>
+          </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+// Profile Settings Component
+const ProfileSettings: React.FC<any> = ({ settings, onSave, saving }) => {
+  const [formData, setFormData] = useState({
+    display_name: settings?.display_name || '',
+    phone: settings?.phone || '',
+    bio: settings?.bio || '',
+    avatar_url: settings?.avatar_url || ''
+  })
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6">Perfil</h2>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Nome de Exibição</label>
+          <input
+            type="text"
+            value={formData.display_name}
+            onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Seu nome"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
+          <input
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="(11) 99999-9999"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+          <textarea
+            value={formData.bio}
+            onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+            rows={3}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Conte um pouco sobre você..."
+          />
+        </div>
+
+        <button
+          onClick={() => onSave('profile', formData)}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? 'Salvando...' : 'Salvar Alterações'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Notification Settings Component
+const NotificationSettings: React.FC<any> = ({ settings, onSave, saving }) => {
+  const [formData, setFormData] = useState({
+    notifications_enabled: settings?.notifications_enabled ?? true,
+    email_notifications: settings?.email_notifications ?? true,
+    push_notifications: settings?.push_notifications ?? true,
+    sms_notifications: settings?.sms_notifications ?? false,
+    notify_new_order: settings?.notify_new_order ?? true,
+    notify_order_status: settings?.notify_order_status ?? true,
+    notify_payment: settings?.notify_payment ?? true,
+    notify_deadline: settings?.notify_deadline ?? true,
+    notify_team_mention: settings?.notify_team_mention ?? true
+  })
+
+  const toggleSetting = (key: string) => {
+    setFormData({ ...formData, [key]: !formData[key as keyof typeof formData] })
+  }
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6">Notificações</h2>
+
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Canais de Notificação</h3>
+          <div className="space-y-3">
+            <ToggleOption
+              label="Notificações Gerais"
+              description="Ativar/desativar todas as notificações"
+              checked={formData.notifications_enabled}
+              onChange={() => toggleSetting('notifications_enabled')}
+            />
+            <ToggleOption
+              label="Email"
+              description="Receber notificações por email"
+              checked={formData.email_notifications}
+              onChange={() => toggleSetting('email_notifications')}
+            />
+            <ToggleOption
+              label="Push"
+              description="Notificações push no navegador"
+              checked={formData.push_notifications}
+              onChange={() => toggleSetting('push_notifications')}
+            />
+            <ToggleOption
+              label="SMS"
+              description="Receber notificações por SMS"
+              checked={formData.sms_notifications}
+              onChange={() => toggleSetting('sms_notifications')}
+            />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Tipos de Notificação</h3>
+          <div className="space-y-3">
+            <ToggleOption
+              label="Novos Pedidos"
+              description="Notificar quando receber novo pedido"
+              checked={formData.notify_new_order}
+              onChange={() => toggleSetting('notify_new_order')}
+            />
+            <ToggleOption
+              label="Status de Pedidos"
+              description="Mudanças no status dos pedidos"
+              checked={formData.notify_order_status}
+              onChange={() => toggleSetting('notify_order_status')}
+            />
+            <ToggleOption
+              label="Pagamentos"
+              description="Notificar sobre pagamentos recebidos"
+              checked={formData.notify_payment}
+              onChange={() => toggleSetting('notify_payment')}
+            />
+            <ToggleOption
+              label="Prazos"
+              description="Alertas de prazos se aproximando"
+              checked={formData.notify_deadline}
+              onChange={() => toggleSetting('notify_deadline')}
+            />
+            <ToggleOption
+              label="Menções da Equipe"
+              description="Quando alguém mencionar você"
+              checked={formData.notify_team_mention}
+              onChange={() => toggleSetting('notify_team_mention')}
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={() => onSave('notifications', formData)}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? 'Salvando...' : 'Salvar Preferências'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Appearance Settings
+const AppearanceSettings: React.FC<any> = ({ settings, onSave, saving }) => {
+  const [formData, setFormData] = useState({
+    theme: settings?.theme || 'light',
+    language: settings?.language || 'pt-BR',
+    timezone: settings?.timezone || 'America/Sao_Paulo',
+    date_format: settings?.date_format || 'DD/MM/YYYY',
+    currency_format: settings?.currency_format || 'BRL'
+  })
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6">Aparência</h2>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Tema</label>
+          <select
+            value={formData.theme}
+            onChange={(e) => setFormData({ ...formData, theme: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="light">Claro</option>
+            <option value="dark">Escuro</option>
+            <option value="auto">Automático</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Idioma</label>
+          <select
+            value={formData.language}
+            onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="pt-BR">Português (Brasil)</option>
+            <option value="en-US">English (US)</option>
+            <option value="es-ES">Español</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Fuso Horário</label>
+          <select
+            value={formData.timezone}
+            onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="America/Sao_Paulo">São Paulo (GMT-3)</option>
+            <option value="America/New_York">Nova York (GMT-5)</option>
+            <option value="Europe/London">Londres (GMT+0)</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Formato de Data</label>
+          <select
+            value={formData.date_format}
+            onChange={(e) => setFormData({ ...formData, date_format: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+          </select>
+        </div>
+
+        <button
+          onClick={() => onSave('appearance', formData)}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? 'Salvando...' : 'Salvar Preferências'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Privacy Settings
+const PrivacySettings: React.FC<any> = ({ settings, onSave, saving }) => {
+  const [formData, setFormData] = useState({
+    profile_visibility: settings?.profile_visibility || 'team',
+    show_online_status: settings?.show_online_status ?? true,
+    allow_contact: settings?.allow_contact ?? true
+  })
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6">Privacidade</h2>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Visibilidade do Perfil</label>
+          <select
+            value={formData.profile_visibility}
+            onChange={(e) => setFormData({ ...formData, profile_visibility: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="private">Privado</option>
+            <option value="team">Equipe</option>
+            <option value="company">Empresa</option>
+            <option value="public">Público</option>
+          </select>
+        </div>
+
+        <div className="space-y-3">
+          <ToggleOption
+            label="Mostrar Status Online"
+            description="Outros podem ver quando você está online"
+            checked={formData.show_online_status}
+            onChange={() => setFormData({ ...formData, show_online_status: !formData.show_online_status })}
+          />
+          <ToggleOption
+            label="Permitir Contato"
+            description="Outros podem entrar em contato direto"
+            checked={formData.allow_contact}
+            onChange={() => setFormData({ ...formData, allow_contact: !formData.allow_contact })}
+          />
+        </div>
+
+        <button
+          onClick={() => onSave('privacy', formData)}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? 'Salvando...' : 'Salvar Configurações'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Backup Settings
+const BackupSettings: React.FC<any> = ({ settings, onSave, saving }) => {
+  const [formData, setFormData] = useState({
+    auto_backup: settings?.auto_backup ?? true,
+    backup_frequency: settings?.backup_frequency || 'daily',
+    backup_time: settings?.backup_time || '00:00',
+    keep_backups_days: settings?.keep_backups_days || 30
+  })
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6">Backup</h2>
+
+      <div className="space-y-4">
+        <ToggleOption
+          label="Backup Automático"
+          description="Fazer backup automático dos seus dados"
+          checked={formData.auto_backup}
+          onChange={() => setFormData({ ...formData, auto_backup: !formData.auto_backup })}
+        />
+
+        {formData.auto_backup && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Frequência</label>
+              <select
+                value={formData.backup_frequency}
+                onChange={(e) => setFormData({ ...formData, backup_frequency: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="realtime">Tempo Real</option>
+                <option value="hourly">A cada hora</option>
+                <option value="daily">Diariamente</option>
+                <option value="weekly">Semanalmente</option>
+                <option value="monthly">Mensalmente</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Horário do Backup</label>
+              <input
+                type="time"
+                value={formData.backup_time}
+                onChange={(e) => setFormData({ ...formData, backup_time: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Manter Backups por (dias)
+              </label>
+              <input
+                type="number"
+                value={formData.keep_backups_days}
+                onChange={(e) => setFormData({ ...formData, keep_backups_days: parseInt(e.target.value) })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                min="1"
+                max="365"
+              />
+            </div>
+          </>
+        )}
+
+        <button
+          onClick={() => onSave('backup', formData)}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? 'Salvando...' : 'Salvar Configurações'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Sync Settings
+const SyncSettings: React.FC<any> = ({ settings, onSave, saving }) => {
+  const [formData, setFormData] = useState({
+    realtime_sync: settings?.realtime_sync ?? true,
+    offline_mode: settings?.offline_mode ?? true,
+    sync_on_wifi_only: settings?.sync_on_wifi_only ?? false
+  })
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6">Sincronização</h2>
+
+      <div className="space-y-3">
+        <ToggleOption
+          label="Sincronização em Tempo Real"
+          description="Sincronizar dados imediatamente"
+          checked={formData.realtime_sync}
+          onChange={() => setFormData({ ...formData, realtime_sync: !formData.realtime_sync })}
+        />
+        <ToggleOption
+          label="Modo Offline"
+          description="Trabalhar sem conexão e sincronizar depois"
+          checked={formData.offline_mode}
+          onChange={() => setFormData({ ...formData, offline_mode: !formData.offline_mode })}
+        />
+        <ToggleOption
+          label="Sincronizar Apenas no Wi-Fi"
+          description="Economizar dados móveis"
+          checked={formData.sync_on_wifi_only}
+          onChange={() => setFormData({ ...formData, sync_on_wifi_only: !formData.sync_on_wifi_only })}
+        />
+
+        <button
+          onClick={() => onSave('sync', formData)}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 mt-6"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? 'Salvando...' : 'Salvar Configurações'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Productivity Settings
+const ProductivitySettings: React.FC<any> = ({ settings, onSave, saving }) => {
+  const [formData, setFormData] = useState({
+    default_view: settings?.default_view || 'kanban',
+    items_per_page: settings?.items_per_page || 20,
+    show_completed_tasks: settings?.show_completed_tasks ?? false,
+    auto_refresh: settings?.auto_refresh ?? true,
+    refresh_interval: settings?.refresh_interval || 30
+  })
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6">Produtividade</h2>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Visualização Padrão</label>
+          <select
+            value={formData.default_view}
+            onChange={(e) => setFormData({ ...formData, default_view: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="list">Lista</option>
+            <option value="kanban">Kanban</option>
+            <option value="calendar">Calendário</option>
+            <option value="timeline">Timeline</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Itens por Página</label>
+          <select
+            value={formData.items_per_page}
+            onChange={(e) => setFormData({ ...formData, items_per_page: parseInt(e.target.value) })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+
+        <ToggleOption
+          label="Mostrar Tarefas Concluídas"
+          description="Exibir tarefas finalizadas na listagem"
+          checked={formData.show_completed_tasks}
+          onChange={() => setFormData({ ...formData, show_completed_tasks: !formData.show_completed_tasks })}
+        />
+
+        <ToggleOption
+          label="Atualização Automática"
+          description="Recarregar dados automaticamente"
+          checked={formData.auto_refresh}
+          onChange={() => setFormData({ ...formData, auto_refresh: !formData.auto_refresh })}
+        />
+
+        {formData.auto_refresh && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Intervalo de Atualização (segundos)
+            </label>
+            <input
+              type="number"
+              value={formData.refresh_interval}
+              onChange={(e) => setFormData({ ...formData, refresh_interval: parseInt(e.target.value) })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              min="10"
+              max="300"
+            />
+          </div>
+        )}
+
+        <button
+          onClick={() => onSave('productivity', formData)}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? 'Salvando...' : 'Salvar Preferências'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Security Settings
+const SecuritySettings: React.FC<any> = ({ settings, onSave, saving }) => {
+  const [formData, setFormData] = useState({
+    two_factor_enabled: settings?.two_factor_enabled ?? false,
+    session_timeout: settings?.session_timeout || 60,
+    require_password_change: settings?.require_password_change ?? false
+  })
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6">Segurança</h2>
+
+      <div className="space-y-4">
+        <ToggleOption
+          label="Autenticação de Dois Fatores"
+          description="Adicionar camada extra de segurança"
+          checked={formData.two_factor_enabled}
+          onChange={() => setFormData({ ...formData, two_factor_enabled: !formData.two_factor_enabled })}
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Timeout de Sessão (minutos)
+          </label>
+          <input
+            type="number"
+            value={formData.session_timeout}
+            onChange={(e) => setFormData({ ...formData, session_timeout: parseInt(e.target.value) })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            min="5"
+            max="480"
+          />
+          <p className="text-sm text-gray-500 mt-1">
+            Tempo de inatividade antes de desconectar automaticamente
+          </p>
+        </div>
+
+        <ToggleOption
+          label="Exigir Troca de Senha"
+          description="Solicitar alteração de senha periodicamente"
+          checked={formData.require_password_change}
+          onChange={() => setFormData({ ...formData, require_password_change: !formData.require_password_change })}
+        />
+
+        <button
+          onClick={() => onSave('security', formData)}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? 'Salvando...' : 'Salvar Configurações'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Toggle Option Component
+const ToggleOption: React.FC<{
+  label: string
+  description: string
+  checked: boolean
+  onChange: () => void
+}> = ({ label, description, checked, onChange }) => {
+  return (
+    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+      <div>
+        <p className="font-medium text-gray-900">{label}</p>
+        <p className="text-sm text-gray-500">{description}</p>
+      </div>
+      <button
+        onClick={onChange}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+          checked ? 'bg-blue-600' : 'bg-gray-300'
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+            checked ? 'translate-x-6' : 'translate-x-1'
+          }`}
+        />
+      </button>
     </div>
   )
 }
