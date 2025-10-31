@@ -1,36 +1,36 @@
 /**
- * Global Search Hook
- * Gerencia o estado da busca global do sistema
+ * Hook para gerenciar busca global
+ * Atalho Cmd+K / Ctrl+K
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 
-interface UseGlobalSearchReturn {
-  isSearchOpen: boolean
-  openSearch: () => void
-  closeSearch: () => void
-  toggleSearch: () => void
-}
-
-export function useGlobalSearch(): UseGlobalSearchReturn {
+export function useGlobalSearch() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
 
-  const openSearch = useCallback(() => {
-    setIsSearchOpen(true)
-  }, [])
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K (Mac) ou Ctrl+K (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault() // IMPORTANTE: Previne busca do navegador
+        e.stopPropagation() // Para a propagação do evento
+        setIsSearchOpen(prev => !prev)
+      }
 
-  const closeSearch = useCallback(() => {
-    setIsSearchOpen(false)
-  }, [])
+      // Esc para fechar
+      if (e.key === 'Escape') {
+        setIsSearchOpen(false)
+      }
+    }
 
-  const toggleSearch = useCallback(() => {
-    setIsSearchOpen(prev => !prev)
+    // Usar capture phase (true) para pegar o evento antes
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
   }, [])
 
   return {
     isSearchOpen,
-    openSearch,
-    closeSearch,
-    toggleSearch
+    openSearch: () => setIsSearchOpen(true),
+    closeSearch: () => setIsSearchOpen(false)
   }
 }
