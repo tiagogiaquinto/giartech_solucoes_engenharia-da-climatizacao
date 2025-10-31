@@ -654,11 +654,17 @@ export const createContract = async (contract: any) => { const { data } = await 
 export const updateContract = async (id: string, updates: any) => { const { data } = await supabase.from('contracts').update(updates).eq('id', id).select().single(); return data }
 export const deleteContract = async (id: string) => { await supabase.from('contracts').delete().eq('id', id) }
 export const getAgendaEvents = async () => {
-  const { data, error } = await supabase.from('agenda_events').select('*').order('start_date', { ascending: true })
+  const { data, error } = await supabase
+    .from('agenda_events')
+    .select('*')
+    .order('start_date', { ascending: true })
+
   if (error) {
     console.error('Error loading agenda events:', error)
     throw error
   }
+
+  console.log(`✅ Loaded ${data?.length || 0} events from database`)
   return data || []
 }
 export const createAgendaEvent = async (event: any) => { const { data } = await supabase.from('agenda_events').insert([event]).select().single(); return data }

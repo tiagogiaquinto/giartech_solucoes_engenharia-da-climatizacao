@@ -30,13 +30,24 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
   const loadEvents = async () => {
     try {
       setLoading(true)
+      console.log('🔄 Loading agenda events...')
+
       const agendaEvents = await getAgendaEvents()
-      const calendarEvents = agendaEvents.map(mapAgendaEventToCalendarEvent)
+      console.log(`📥 Received ${agendaEvents.length} events from database`)
+
+      const calendarEvents = agendaEvents
+        .map(mapAgendaEventToCalendarEvent)
+        .filter(event => event !== null)
+      console.log(`📅 Mapped ${calendarEvents.length} calendar events`)
+
       // Expandir eventos multi-dia para aparecerem em todos os dias
       const expandedEvents = expandMultiDayEvents(calendarEvents)
+      console.log(`📊 Expanded to ${expandedEvents.length} events (multi-day)`)
+
       setEvents(expandedEvents)
+      console.log('✅ Events loaded successfully')
     } catch (error) {
-      console.error('Error loading events:', error)
+      console.error('❌ Error loading events:', error)
       setEvents([])
     } finally {
       setLoading(false)

@@ -13,17 +13,26 @@ export interface CalendarEvent {
 }
 
 export const mapAgendaEventToCalendarEvent = (event: any): CalendarEvent => {
+  // Priorizar start_date, mas aceitar start_time como fallback
+  const startDate = event.start_date || event.start_time
+  const endDate = event.end_date || event.start_date || event.start_time
+
+  if (!startDate) {
+    console.error('Event without start date:', event)
+    return null as any
+  }
+
   return {
     id: event.id,
     title: event.title || 'Sem título',
-    start: new Date(event.start_date || event.start_time),
-    end: new Date(event.end_date || event.start_time),
+    start: new Date(startDate),
+    end: new Date(endDate),
     type: event.event_type || 'pessoal',
     priority: event.priority || 'medium',
     status: event.status || 'scheduled',
     assignedTo: event.employee_id,
-    location: event.location,
-    description: event.description || event.notes
+    location: event.location || '',
+    description: event.description || event.notes || ''
   }
 }
 
