@@ -74,8 +74,10 @@ export default function WhatsAppCRM() {
           *,
           contact:customers(
             id,
-            name,
-            phone
+            nome_razao,
+            nome_fantasia,
+            celular,
+            telefone
           )
         `)
         .order('last_message_at', { ascending: false })
@@ -83,16 +85,21 @@ export default function WhatsAppCRM() {
       if (error) throw error
 
       // Mapear dados para o formato esperado
-      const mappedData = (data || []).map(conv => ({
-        id: conv.id,
-        contact_name: conv.contact?.name || 'Sem nome',
-        phone: conv.contact?.phone || 'Sem telefone',
-        last_message: conv.last_message_preview || '',
-        last_message_date: conv.last_message_at || new Date(),
-        unread_count: conv.unread_count || 0,
-        status: 'open' as const,
-        assigned_to: undefined
-      }))
+      const mappedData = (data || []).map((conv: any) => {
+        const contactName = conv.contact?.nome_razao || conv.contact?.nome_fantasia || 'Contato sem cadastro'
+        const contactPhone = conv.contact?.celular || conv.contact?.telefone || 'Número não disponível'
+
+        return {
+          id: conv.id,
+          contact_name: contactName,
+          phone: contactPhone,
+          last_message: conv.last_message_preview || 'Sem mensagens',
+          last_message_date: conv.last_message_at || new Date(),
+          unread_count: conv.unread_count || 0,
+          status: 'open' as const,
+          assigned_to: undefined
+        }
+      })
 
       setConversations(mappedData)
     } catch (error) {
