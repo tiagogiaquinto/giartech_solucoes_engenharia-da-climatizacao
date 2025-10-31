@@ -361,7 +361,7 @@ const ServiceOrders = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-1">Cliente</h4>
                   <div className="flex items-center space-x-2">
@@ -387,6 +387,22 @@ const ServiceOrders = () => {
                       }
                     </p>
                   </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-1">Valor Total</h4>
+                  <div className="flex items-center space-x-2">
+                    <p className="text-lg font-bold text-green-600">
+                      {order.total_value || order.final_total
+                        ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(order.final_total || order.total_value || 0))
+                        : 'R$ 0,00'
+                      }
+                    </p>
+                  </div>
+                  {order.custo_total && (
+                    <p className="text-xs text-gray-500">
+                      Lucro: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(order.lucro_total || 0))}
+                    </p>
+                  )}
                 </div>
               </div>
 

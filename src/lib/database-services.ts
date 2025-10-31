@@ -544,6 +544,10 @@ export interface ServiceOrder {
   assigned_to?: string
   due_date?: string
   service_date?: string
+  total_value?: number
+  final_total?: number
+  custo_total?: number
+  lucro_total?: number
   created_at: string
   updated_at: string
 }
