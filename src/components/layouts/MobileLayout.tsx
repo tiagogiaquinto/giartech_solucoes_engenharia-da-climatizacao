@@ -7,6 +7,7 @@ import {
   ClipboardList,
   BookOpen,
   MapPin,
+  ShoppingCart,
   User,
   LogOut,
   Settings
@@ -23,7 +24,7 @@ const MobileLayout = () => {
     { id: 'home', label: 'Início', icon: Home, path: '/mobile' },
     { id: 'agenda', label: 'Agenda', icon: Calendar, path: '/mobile/agenda' },
     { id: 'orders', label: 'OS', icon: ClipboardList, path: '/mobile/orders' },
-    { id: 'library', label: 'Biblioteca', icon: BookOpen, path: '/mobile/library' },
+    { id: 'purchases', label: 'Compras', icon: ShoppingCart, path: '/mobile/purchases' },
     { id: 'routes', label: 'Rotas', icon: MapPin, path: '/mobile/routes' }
   ]
 

@@ -93,6 +93,8 @@ import MobileOrders from './pages/mobile/MobileOrders'
 import MobileAgenda from './pages/mobile/MobileAgenda'
 import MobileLibrary from './pages/mobile/MobileLibrary'
 import MobileRoutes from './pages/mobile/MobileRoutes'
+import MobilePurchases from './pages/mobile/MobilePurchases'
+import OSDistribution from './pages/OSDistribution'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -316,10 +318,20 @@ function App() {
             <Route index element={<MobileHome />} />
             <Route path="agenda" element={<MobileAgenda />} />
             <Route path="orders" element={<MobileOrders />} />
+            <Route path="purchases" element={<MobilePurchases />} />
             <Route path="library" element={<MobileLibrary />} />
             <Route path="routes" element={<MobileRoutes />} />
             <Route path="profile" element={<Profile />} />
           </Route>
+
+          {/* OS Distribution Page */}
+          <Route path="/os-distribution" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <OSDistribution />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
 
           <Route path="/service-orders/:id/edit" element={
             <ProtectedRoute>
