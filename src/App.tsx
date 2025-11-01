@@ -87,6 +87,12 @@ import ExecutivoConsolidado from './pages/ExecutivoConsolidado'
 import RelatoriosConsolidado from './pages/RelatoriosConsolidado'
 import CustomerRFM from './pages/CustomerRFM'
 import TechnicianPerformance from './pages/TechnicianPerformance'
+import MobileLayout from './components/layouts/MobileLayout'
+import MobileHome from './pages/mobile/MobileHome'
+import MobileOrders from './pages/mobile/MobileOrders'
+import MobileAgenda from './pages/mobile/MobileAgenda'
+import MobileLibrary from './pages/mobile/MobileLibrary'
+import MobileRoutes from './pages/mobile/MobileRoutes'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -300,6 +306,20 @@ function App() {
               <TechnicianMobileView />
             </ProtectedRoute>
           } />
+
+          {/* Mobile App Routes */}
+          <Route path="/mobile" element={
+            <ProtectedRoute>
+              <MobileLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<MobileHome />} />
+            <Route path="agenda" element={<MobileAgenda />} />
+            <Route path="orders" element={<MobileOrders />} />
+            <Route path="library" element={<MobileLibrary />} />
+            <Route path="routes" element={<MobileRoutes />} />
+            <Route path="profile" element={<Profile />} />
+          </Route>
 
           <Route path="/service-orders/:id/edit" element={
             <ProtectedRoute>
