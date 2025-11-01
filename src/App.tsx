@@ -16,6 +16,7 @@ import ServiceOrders from './pages/ServiceOrders'
 import ServiceOrderCreate from './pages/ServiceOrderCreate'
 import ServiceOrderView from './pages/ServiceOrderView'
 import ServiceOrderDetails from './pages/ServiceOrderDetails'
+import TechnicianMobileView from './pages/TechnicianMobileView'
 import Inventory from './pages/Inventory'
 import InventoryDetail from './pages/InventoryDetail'
 import InventoryCreate from './pages/InventoryCreate'
@@ -290,6 +291,12 @@ function App() {
               <WebLayout>
                 <ServiceOrderDetails />
               </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/service-orders/:id/mobile" element={
+            <ProtectedRoute>
+              <TechnicianMobileView />
             </ProtectedRoute>
           } />
 

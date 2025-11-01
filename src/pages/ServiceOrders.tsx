@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ClipboardList, Plus, Search, ListFilter as Filter, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle, X, User, Calendar, CreditCard as Edit, Eye, Copy, PlayCircle, Trash2 } from 'lucide-react'
+import { ClipboardList, Plus, Search, ListFilter as Filter, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle, X, User, Calendar, CreditCard as Edit, Eye, Copy, PlayCircle, Trash2, Smartphone } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { getServiceOrders, createServiceOrder, updateServiceOrder, deleteServiceOrder, type ServiceOrder } from '../lib/supabase'
 import ServiceOrderModal from '../components/ServiceOrderModal'
@@ -409,6 +409,16 @@ const ServiceOrders = () => {
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600 line-clamp-1">{order.description}</p>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigate(`/service-orders/${order.id}/mobile`)
+                    }}
+                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    title="Abrir no App Mobile (Técnico)"
+                  >
+                    <Smartphone className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
