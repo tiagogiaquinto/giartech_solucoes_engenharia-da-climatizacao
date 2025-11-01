@@ -112,73 +112,70 @@ const AdvancedThemeManager: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   }
 
   const applyTheme = (theme: Theme) => {
-    // Aplicar tema através de CSS variables
-    const root = document.documentElement
+    console.log('🎨 [APPLY THEME] Iniciando...', theme.name)
+    console.log('📦 [DADOS]:', theme)
 
-    root.style.setProperty('--color-primary', theme.primary_color)
-    root.style.setProperty('--color-secondary', theme.secondary_color)
-    root.style.setProperty('--color-accent', theme.accent_color)
-    root.style.setProperty('--color-success', theme.success_color)
-    root.style.setProperty('--color-warning', theme.warning_color)
-    root.style.setProperty('--color-error', theme.error_color)
-    root.style.setProperty('--color-info', theme.info_color)
+    // Aplicar cor de fundo diretamente
+    document.body.style.backgroundColor = theme.background_color
+    document.body.style.color = theme.text_primary_color
+    console.log('✅ [BODY] Background:', theme.background_color)
 
-    root.style.setProperty('--color-background', theme.background_color)
-    root.style.setProperty('--color-surface', theme.surface_color)
-    root.style.setProperty('--color-surface-secondary', theme.surface_secondary_color)
-
-    root.style.setProperty('--color-text-primary', theme.text_primary_color)
-    root.style.setProperty('--color-text-secondary', theme.text_secondary_color)
-    root.style.setProperty('--color-text-muted', theme.text_muted_color)
-
-    root.style.setProperty('--color-sidebar-bg', theme.sidebar_bg_color)
-    root.style.setProperty('--color-sidebar-text', theme.sidebar_text_color)
-    root.style.setProperty('--color-sidebar-active', theme.sidebar_active_color)
-
-    root.style.setProperty('--color-header-bg', theme.header_bg_color)
-    root.style.setProperty('--color-header-text', theme.header_text_color)
-    root.style.setProperty('--color-border', theme.border_color)
-
-    root.style.setProperty('--font-family-base', theme.font_family)
-    root.style.setProperty('--font-size-base', theme.font_size_base)
-
-    root.style.setProperty('--border-radius-sm', theme.border_radius_sm)
-    root.style.setProperty('--border-radius-md', theme.border_radius_md)
-    root.style.setProperty('--border-radius-lg', theme.border_radius_lg)
-
-    // Toggle dark mode class
+    // Dark mode
     if (theme.is_dark_mode) {
       document.documentElement.classList.add('dark')
+      document.body.classList.add('dark')
+      console.log('🌙 [DARK MODE] Ativado')
     } else {
       document.documentElement.classList.remove('dark')
+      document.body.classList.remove('dark')
+      console.log('☀️ [LIGHT MODE] Ativado')
     }
+
+    console.log('✅ [CONCLUÍDO] Tema aplicado!')
   }
 
   const handlePreview = (theme: Theme) => {
+    console.log('👁️ [PREVIEW] Botão clicado!', theme.name)
     setPreviewTheme(theme)
     applyTheme(theme)
   }
 
   const handleApply = async (theme: Theme) => {
-    if (!user?.id) return
+    console.log('💾 [APPLY] Botão clicado!', theme.name)
+
+    if (!user?.id) {
+      console.error('❌ [ERRO] Usuário não autenticado!')
+      alert('ERRO: Você precisa estar autenticado!')
+      return
+    }
 
     try {
       setSaving(true)
+      console.log('🎨 [APPLY] Aplicando tema visualmente...')
       applyTheme(theme)
 
-      // Salvar preferência no banco
-      await supabase
+      console.log('💾 [BANCO] Salvando no banco de dados...')
+      const { data, error } = await supabase
         .from('user_settings')
         .update({
           theme: theme.is_dark_mode ? 'dark' : 'light',
-          custom_theme_id: theme.id || null
+          custom_theme_id: theme.id || null,
+          updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
+        .select()
 
+      if (error) {
+        console.error('❌ [BANCO] Erro:', error)
+        throw error
+      }
+
+      console.log('✅ [BANCO] Salvo com sucesso!', data)
       setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
+      setTimeout(() => setSaved(false), 3000)
     } catch (error) {
-      console.error('Error applying theme:', error)
+      console.error('❌ [ERRO GERAL]:', error)
+      alert('ERRO ao aplicar tema! Veja o console para detalhes.')
     } finally {
       setSaving(false)
     }

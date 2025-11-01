@@ -57,27 +57,41 @@ const Settings = () => {
   }
 
   const handleSave = async (section: string, data: any) => {
-    if (!user?.id || !settings?.id) {
+    console.log(`🔄 [SETTINGS] Iniciando salvamento da seção: ${section}`)
+    console.log('📦 [DADOS]:', data)
+
+    if (!user?.id) {
+      console.error('❌ [ERRO] Usuário não autenticado')
       setError('Usuário não autenticado')
+      alert('ERRO: Você precisa estar autenticado!')
+      return
+    }
+
+    if (!settings?.id) {
+      console.error('❌ [ERRO] Settings não carregadas')
+      setError('Configurações não carregadas')
+      alert('ERRO: Configurações não carregadas!')
       return
     }
 
     try {
       setSaving(true)
       setError(null)
-      console.log(`💾 Saving ${section} settings:`, data)
+      console.log(`💾 [SALVANDO] Seção ${section} para usuário:`, user.id)
 
-      await updateUserSettings(user.id, data)
+      const result = await updateUserSettings(user.id, data)
+      console.log('✅ [RESULTADO]:', result)
 
       // Atualizar estado local
       setSettings((prev: any) => ({ ...prev, ...data }))
 
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
-      console.log('✅ Settings saved successfully')
+      console.log('🎉 [SUCESSO] Configurações salvas!')
     } catch (err: any) {
-      console.error('❌ Error saving settings:', err)
-      setError('Erro ao salvar configurações')
+      console.error('❌ [ERRO] Ao salvar configurações:', err)
+      setError(`Erro ao salvar: ${err.message}`)
+      alert(`ERRO ao salvar configurações: ${err.message}`)
     } finally {
       setSaving(false)
     }
