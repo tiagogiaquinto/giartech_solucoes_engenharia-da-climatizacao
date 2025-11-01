@@ -152,9 +152,10 @@ const ClientManagement = () => {
 
   // Filter clients
   const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.phone?.toLowerCase().includes(searchTerm.toLowerCase())
+                         client.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         false
     const matchesType = selectedType === 'all' || client.client_type === selectedType
     return matchesSearch && matchesType
   })
