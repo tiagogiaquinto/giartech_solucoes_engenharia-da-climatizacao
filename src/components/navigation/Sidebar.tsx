@@ -72,7 +72,6 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'people', path: '/people', icon: Users, label: 'Gestão de Pessoas', description: 'Funcionários, usuários e acessos unificados' },
   { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações' },
   { id: 'document-templates', path: '/document-templates', icon: FileText, label: 'Templates de Documentos', description: 'Gerenciar templates de OS, contratos e propostas' },
-  { id: 'customization', path: '/visual-customization', icon: Palette, label: 'Personalização', description: 'Customizar interface' },
   { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais' }
 ]
 
