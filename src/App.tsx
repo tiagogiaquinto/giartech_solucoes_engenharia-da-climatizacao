@@ -86,6 +86,7 @@ import FinanceiroConsolidado from './pages/FinanceiroConsolidado'
 import ExecutivoConsolidado from './pages/ExecutivoConsolidado'
 import RelatoriosConsolidado from './pages/RelatoriosConsolidado'
 import CustomerRFM from './pages/CustomerRFM'
+import TechnicianPerformance from './pages/TechnicianPerformance'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -572,6 +573,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <CustomerRFM />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/technician-performance" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <TechnicianPerformance />
               </WebLayout>
             </ProtectedRoute>
           } />
