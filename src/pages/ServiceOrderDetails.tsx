@@ -16,7 +16,6 @@ import {
   Eye
 } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
-import { TabContainer } from '../components/TabContainer'
 
 const ServiceOrderDetails = () => {
   const { id } = useParams()
