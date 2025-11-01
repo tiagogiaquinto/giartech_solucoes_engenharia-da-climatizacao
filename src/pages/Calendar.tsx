@@ -289,11 +289,11 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
 
   const renderMonthlyView = () => {
     const days = getDaysInMonth(currentDate)
-    
+
     return (
       <div className="grid grid-cols-7 gap-1">
-        {weekDays.map(day => (
-          <div key={day} className="p-2 text-center font-semibold text-gray-600 bg-gray-50 text-xs">
+        {weekDays.map((day, index) => (
+          <div key={`weekday-${index}`} className="p-2 text-center font-semibold text-gray-600 bg-gray-50 text-xs">
             {day}
           </div>
         ))}
