@@ -9,6 +9,28 @@ export interface CalendarEvent {
   assignedTo?: string
   location?: string
   description?: string
+  customer?: {
+    id: string
+    nome_razao: string
+    nome_fantasia?: string
+    email?: string
+    telefone?: string
+    celular?: string
+    tipo_pessoa: string
+    cpf?: string
+    cnpj?: string
+  }
+  employee?: {
+    id: string
+    name: string
+    email?: string
+    phone?: string
+  }
+  service_order?: {
+    id: string
+    order_number: string
+    status: string
+  }
   [key: string]: any
 }
 
@@ -32,7 +54,10 @@ export const mapAgendaEventToCalendarEvent = (event: any): CalendarEvent => {
     status: event.status || 'scheduled',
     assignedTo: event.employee_id,
     location: event.location || '',
-    description: event.description || event.notes || ''
+    description: event.description || event.notes || '',
+    customer: event.customer || null,
+    employee: event.employee || null,
+    service_order: event.service_order || null
   }
 }
 

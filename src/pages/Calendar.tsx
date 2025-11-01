@@ -504,10 +504,23 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                         <Clock className="h-3 w-3 mr-1" />
                         {event.time}
                       </div>
-                      {event.assignedTo && (
+                      {event.customer && (
+                        <div className="flex items-center font-medium text-blue-600">
+                          <User className="h-3 w-3 mr-1" />
+                          {event.customer.nome_fantasia || event.customer.nome_razao}
+                          {event.customer.telefone && ` • ${event.customer.telefone}`}
+                        </div>
+                      )}
+                      {event.employee && (
                         <div className="flex items-center">
                           <Users className="h-3 w-3 mr-1" />
-                          {event.assignedTo}
+                          {event.employee.name}
+                        </div>
+                      )}
+                      {event.service_order && (
+                        <div className="flex items-center text-purple-600 font-medium">
+                          <FileText className="h-3 w-3 mr-1" />
+                          OS #{event.service_order.order_number}
                         </div>
                       )}
                       {event.location && (
@@ -615,10 +628,42 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                         <Clock className="h-3 w-3 ml-2 mr-1" />
                         {event.time}
                       </div>
-                      {event.assignedTo && (
+                      {event.customer && (
+                        <>
+                          <div className="flex items-center font-medium text-blue-600">
+                            <User className="h-3 w-3 mr-1" />
+                            <span className="truncate">{event.customer.nome_fantasia || event.customer.nome_razao}</span>
+                          </div>
+                          {event.customer.telefone && (
+                            <div className="flex items-center">
+                              <Phone className="h-3 w-3 mr-1" />
+                              <span className="truncate">{event.customer.telefone}</span>
+                            </div>
+                          )}
+                          {event.customer.email && (
+                            <div className="flex items-center">
+                              <Mail className="h-3 w-3 mr-1" />
+                              <span className="truncate">{event.customer.email}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {event.employee && (
                         <div className="flex items-center">
                           <Users className="h-3 w-3 mr-1" />
-                          <span className="truncate">{event.assignedTo}</span>
+                          <span className="truncate">{event.employee.name}</span>
+                        </div>
+                      )}
+                      {event.service_order && (
+                        <div className="flex items-center text-purple-600 font-medium">
+                          <FileText className="h-3 w-3 mr-1" />
+                          <span>OS #{event.service_order.order_number}</span>
+                        </div>
+                      )}
+                      {event.location && (
+                        <div className="flex items-center">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          <span className="truncate">{event.location}</span>
                         </div>
                       )}
                     </div>
@@ -678,18 +723,46 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h4 className="font-medium text-sm text-gray-900">{event.title}</h4>
-                        <div className="flex items-center space-x-3 mt-1 text-xs text-gray-600">
+                        <div className="flex items-center space-x-3 mt-1 text-xs text-gray-600 flex-wrap">
                           <div className="flex items-center">
                             <Clock className="h-3 w-3 mr-1" />
                             {event.time}
                           </div>
-                          {event.assignedTo && (
+                          {event.customer && (
+                            <div className="flex items-center font-medium text-blue-600">
+                              <User className="h-3 w-3 mr-1" />
+                              {event.customer.nome_fantasia || event.customer.nome_razao}
+                            </div>
+                          )}
+                          {event.employee && (
                             <div className="flex items-center">
                               <Users className="h-3 w-3 mr-1" />
-                              {event.assignedTo}
+                              {event.employee.name}
+                            </div>
+                          )}
+                          {event.service_order && (
+                            <div className="flex items-center text-purple-600 font-medium">
+                              <FileText className="h-3 w-3 mr-1" />
+                              OS #{event.service_order.order_number}
                             </div>
                           )}
                         </div>
+                        {event.customer && (event.customer.telefone || event.customer.email) && (
+                          <div className="flex items-center space-x-3 mt-1 text-xs text-gray-500">
+                            {event.customer.telefone && (
+                              <div className="flex items-center">
+                                <Phone className="h-3 w-3 mr-1" />
+                                {event.customer.telefone}
+                              </div>
+                            )}
+                            {event.customer.email && (
+                              <div className="flex items-center">
+                                <Mail className="h-3 w-3 mr-1" />
+                                {event.customer.email}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center space-x-1">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(event.priority)}`}>

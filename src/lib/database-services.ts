@@ -656,7 +656,31 @@ export const deleteContract = async (id: string) => { await supabase.from('contr
 export const getAgendaEvents = async () => {
   const { data, error } = await supabase
     .from('agenda_events')
-    .select('*')
+    .select(`
+      *,
+      customer:customers(
+        id,
+        nome_razao,
+        nome_fantasia,
+        email,
+        telefone,
+        celular,
+        tipo_pessoa,
+        cpf,
+        cnpj
+      ),
+      employee:employees(
+        id,
+        name,
+        email,
+        phone
+      ),
+      service_order:service_orders(
+        id,
+        order_number,
+        status
+      )
+    `)
     .order('start_date', { ascending: true })
 
   if (error) {
