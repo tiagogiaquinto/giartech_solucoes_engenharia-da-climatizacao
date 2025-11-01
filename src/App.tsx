@@ -94,6 +94,7 @@ import MobileAgenda from './pages/mobile/MobileAgenda'
 import MobileLibrary from './pages/mobile/MobileLibrary'
 import MobileRoutes from './pages/mobile/MobileRoutes'
 import MobilePurchases from './pages/mobile/MobilePurchases'
+import MobileLogin from './pages/mobile/MobileLogin'
 import OSDistribution from './pages/OSDistribution'
 
 // Protected route component - DESABILITADO para acesso livre
@@ -244,6 +245,7 @@ function App() {
       <AnimatePresence mode="wait" initial={false}>
         <Routes location={location} key={location.pathname}>
           <Route path="/login" element={<Login />} />
+          <Route path="/mobile/login" element={<MobileLogin />} />
           <Route path="/pricing" element={<PricingPlans />} />
           
           <Route path="/" element={
