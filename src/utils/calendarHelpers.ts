@@ -44,11 +44,17 @@ export const mapAgendaEventToCalendarEvent = (event: any): CalendarEvent => {
     return null as any
   }
 
+  const startDateTime = new Date(startDate)
+  const endDateTime = new Date(endDate)
+
   return {
     id: event.id,
     title: event.title || 'Sem título',
-    start: new Date(startDate),
-    end: new Date(endDate),
+    start: startDateTime,
+    end: endDateTime,
+    // Adicionar compatibilidade com Calendar.tsx que usa date e time
+    date: startDateTime.toISOString().split('T')[0],
+    time: startDateTime.toTimeString().substring(0, 5),
     type: event.event_type || 'pessoal',
     priority: event.priority || 'medium',
     status: event.status || 'scheduled',
