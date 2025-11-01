@@ -50,28 +50,9 @@ interface MenuItem {
 }
 
 const DEFAULT_MENU_ITEMS: MenuItem[] = [
-  { id: 'inicio', path: '/', icon: BarChart3, label: 'Dashboard CFO', description: '20+ KPIs executivos em tempo real para decisões estratégicas' },
-  { id: 'agenda', path: '/calendar', icon: Calendar, label: 'Agenda', description: 'Compromissos e eventos' },
   { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes', description: 'Gestão de clientes PF/PJ' },
-  { id: 'rfm', path: '/customer-rfm', icon: Target, label: 'Análise RFM', description: 'Segmentação inteligente de clientes por Recência, Frequência e Valor' },
-  { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores' },
-  { id: 'compras', path: '/purchasing', icon: ShoppingCart, label: 'Compras', description: 'Pedidos e alertas de estoque' },
   { id: 'service-orders', path: '/service-orders', icon: ClipboardList, label: 'Ordens de Serviço', description: 'Gestão de OS' },
-  { id: 'rotas', path: '/rotas', icon: Navigation, label: 'Rotas', description: 'Rastreamento e gestão de rotas' },
   { id: 'financeiro', path: '/financeiro', icon: DollarSign, label: 'Financeiro', description: 'Centro financeiro completo com dashboard, movimentações, análises, contas e categorias' },
-  { id: 'executivo', path: '/executivo', icon: TrendingUp, label: 'Consolidado Executivo', description: 'Visão consolidada com Credit Scoring, Metas & Targets e análises estratégicas' },
-  { id: 'relatorios', path: '/relatorios', icon: FileText, label: 'Relatórios', description: 'Todos os relatórios: dashboards interativos, PDFs profissionais e análises customizadas' },
-  { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis' },
-  { id: 'inventory', path: '/inventory', icon: Package, label: 'Estoque', description: 'Controle de materiais' },
-  { id: 'automacoes', path: '/automacoes', icon: Activity, label: 'Automações', description: 'Workflows e automações' },
-  { id: 'whatsapp-crm', path: '/whatsapp-crm', icon: MessageCircle, label: 'WhatsApp CRM', description: 'Gestão de conversas' },
-  { id: 'thomaz', path: '/thomaz', icon: Brain, label: 'Thomaz AI', description: 'Consultor Empresarial' },
-  { id: 'thomaz-metrics', path: '/thomaz-metrics', icon: Brain, label: 'Métricas Thomaz', description: 'Performance da IA' },
-  { id: 'email', path: '/email/inbox', icon: Mail, label: 'Email Corporativo', description: 'Enviar e receber emails' },
-  { id: 'library', path: '/digital-library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos' },
-  { id: 'people', path: '/people', icon: Users, label: 'Gestão de Pessoas', description: 'Funcionários, usuários e acessos unificados' },
-  { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações' },
-  { id: 'document-templates', path: '/document-templates', icon: FileText, label: 'Templates de Documentos', description: 'Gerenciar templates de OS, contratos e propostas' },
   { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais' }
 ]
 

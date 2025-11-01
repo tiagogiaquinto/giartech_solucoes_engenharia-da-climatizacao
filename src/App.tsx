@@ -238,7 +238,7 @@ function App() {
           <Route path="/" element={
             <ProtectedRoute>
               <WebLayout>
-                <CFODashboard />
+                <ClientManagement />
               </WebLayout>
             </ProtectedRoute>
           } />
@@ -729,6 +729,9 @@ function App() {
           <Route path="/sobre" element={<About />} />
           <Route path="/servicos" element={<Services />} />
           <Route path="/contato" element={<Contact />} />
+
+          {/* Redirecionar qualquer rota não encontrada para Clientes */}
+          <Route path="*" element={<Navigate to="/client-management" replace />} />
         </Routes>
 
         {/* Tutorial Interativo */}
