@@ -2,10 +2,10 @@ import React, { useState } from 'react'
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ClipboardList, Plus, Search, ListFilter as Filter, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle, X, User, Calendar, CreditCard as Edit, Eye, Copy, PlayCircle, Trash2, Smartphone } from 'lucide-react'
+import { ClipboardList, Plus, Search, ListFilter as Filter, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle, X, User, Calendar, Edit as EditIcon, Eye, Copy, PlayCircle, Trash2, Smartphone } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { getServiceOrders, createServiceOrder, updateServiceOrder, deleteServiceOrder, type ServiceOrder } from '../lib/supabase'
-import ServiceOrderModal from '../components/ServiceOrderModal'
+import { ServiceOrderModalOptimized } from '../components/ServiceOrderModalOptimized'
 import { cache } from '../utils/cache'
 import { getServiceOrderStatusLabel, getPriorityLabel } from '../utils/databaseMappers'
 
@@ -438,7 +438,7 @@ const ServiceOrders = () => {
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     title="Editar OS"
                   >
-                    <Edit className="h-4 w-4" />
+                    <EditIcon className="h-4 w-4" />
                   </button>
                   <button
                     onClick={(e) => {
@@ -595,7 +595,7 @@ const ServiceOrders = () => {
         </div>
       )}
 
-      <ServiceOrderModal
+      <ServiceOrderModalOptimized
         isOpen={showOrderModal}
         onClose={() => {
           setShowOrderModal(false)
@@ -606,7 +606,7 @@ const ServiceOrders = () => {
           setShowOrderModal(false)
           setEditingOrderId(undefined)
         }}
-        orderId={editingOrderId}
+        serviceOrderId={editingOrderId || null}
       />
     </div>
   )
