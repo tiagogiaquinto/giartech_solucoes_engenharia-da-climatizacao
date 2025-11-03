@@ -53,7 +53,7 @@ interface ServiceOrderModalProps {
 const STORAGE_KEY = 'serviceOrderDraft'
 
 const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderModalProps) => {
-  const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'materiais' | 'mao-obra' | 'pagamento' | 'garantia' | 'custos-extras' | 'resumo'>('dados')
+  const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'pagamento' | 'garantia' | 'contrato'>('dados')
   const [loading, setLoading] = useState(false)
   const [materialSearch, setMaterialSearch] = useState('')
   const [laborSearch, setLaborSearch] = useState('')
@@ -909,30 +909,57 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
           </button>
         </div>
 
-        <div className="flex border-b bg-gray-50">
-          {[
-            { id: 'dados', label: 'Dados Básicos', icon: Info },
-            { id: 'servicos', label: 'Serviços', icon: Package },
-            { id: 'materiais', label: 'Materiais', icon: Package },
-            { id: 'mao-obra', label: 'Mão de Obra', icon: Users },
-            { id: 'pagamento', label: 'Pagamento', icon: DollarSign },
-            { id: 'garantia', label: 'Garantia & Contrato', icon: Shield },
-            { id: 'custos-extras', label: 'Custos Extras', icon: Receipt },
-            { id: 'resumo', label: 'Resumo Financeiro', icon: Calculator }
-          ].map(tab => {
-            const Icon = tab.icon
-            return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 px-6 py-4 font-medium text-sm flex items-center justify-center gap-2 border-b-2 transition-all ${
-                  activeTab === tab.id
-                    ? 'border-blue-600 text-blue-600 bg-white'
-                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}>
-                <Icon className="h-4 w-4" />
-                {tab.label}
-              </button>
-            )
-          })}
+        <div className="flex border-b">
+          <button
+            onClick={() => setActiveTab('dados')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'dados'
+                ? 'bg-blue-500 text-white border-b-4 border-blue-600'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <User className="h-5 w-5" />
+            📋 Dados Básicos
+          </button>
+          <button
+            onClick={() => setActiveTab('servicos')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'servicos'
+                ? 'bg-green-500 text-white border-b-4 border-green-600'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <Package className="h-5 w-5" />
+            🔧 Serviços e Materiais
+          </button>
+          <button
+            onClick={() => setActiveTab('pagamento')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'pagamento'
+                ? 'bg-emerald-500 text-white border-b-4 border-emerald-600'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <DollarSign className="h-5 w-5" />
+            💰 Pagamento
+          </button>
+          <button
+            onClick={() => setActiveTab('garantia')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'garantia'
+                ? 'bg-amber-500 text-white border-b-4 border-amber-600'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <Shield className="h-5 w-5" />
+            ⏰ Garantia
+          </button>
+          <button
+            onClick={() => setActiveTab('contrato')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'contrato'
+                ? 'bg-purple-500 text-white border-b-4 border-purple-600'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <FileText className="h-5 w-5" />
+            📄 Contrato
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
