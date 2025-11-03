@@ -645,7 +645,6 @@ const ServiceOrderCreate = () => {
       ).toISOString().split('T')[0] : null
 
       const orderPayload = {
-        client_id: formData.customer_id || null,
         customer_id: formData.customer_id || null,
         description: formData.description,
         scheduled_at: formData.scheduled_at || null,
@@ -654,8 +653,6 @@ const ServiceOrderCreate = () => {
         data_inicio_execucao: formData.data_inicio_execucao || null,
         status: 'aberta',
         total_value: totals.total,
-        subtotal_value: totals.subtotal,
-        discount_value: totals.desconto,
         desconto_percentual: formData.desconto_percentual,
         desconto_valor: formData.desconto_valor,
         custo_total_materiais: totals.custo_total_materiais,
