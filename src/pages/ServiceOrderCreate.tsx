@@ -76,6 +76,7 @@ const ServiceOrderCreate = () => {
   const [emailMessage, setEmailMessage] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
   const [orderNumber, setOrderNumber] = useState('')
+  const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'pagamento' | 'garantia' | 'contrato'>('dados')
 
   const [formData, setFormData] = useState<{
     customer_id: string
@@ -1244,8 +1245,66 @@ const ServiceOrderCreate = () => {
         }}
       />
 
+      {/* Sistema de Abas */}
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="flex border-b">
+          <button
+            onClick={() => setActiveTab('dados')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'dados'
+                ? 'bg-blue-500 text-white border-b-4 border-blue-600'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <User className="h-5 w-5" />
+            Dados Básicos
+          </button>
+          <button
+            onClick={() => setActiveTab('servicos')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'servicos'
+                ? 'bg-green-500 text-white border-b-4 border-green-600'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <Wrench className="h-5 w-5" />
+            Serviços e Materiais
+          </button>
+          <button
+            onClick={() => setActiveTab('pagamento')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'pagamento'
+                ? 'bg-emerald-500 text-white border-b-4 border-emerald-600'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <DollarSign className="h-5 w-5" />
+            Pagamento
+          </button>
+          <button
+            onClick={() => setActiveTab('garantia')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'garantia'
+                ? 'bg-amber-500 text-white border-b-4 border-amber-600'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <Clock className="h-5 w-5" />
+            Garantia
+          </button>
+          <button
+            onClick={() => setActiveTab('contrato')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'contrato'
+                ? 'bg-purple-500 text-white border-b-4 border-purple-600'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <FileText className="h-5 w-5" />
+            Contrato
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {/* ABA: DADOS BÁSICOS */}
+          {activeTab === 'dados' && (
           <div className="bg-white rounded-xl p-6 shadow-sm border">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <User className="h-5 w-5 text-blue-600" />
@@ -1373,7 +1432,10 @@ const ServiceOrderCreate = () => {
               </div>
             )}
           </div>
+          )}
 
+          {/* ABA: PAGAMENTO */}
+          {activeTab === 'pagamento' && (
           <div className="bg-white rounded-xl p-6 shadow-sm border">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-green-600" />
@@ -1417,7 +1479,10 @@ const ServiceOrderCreate = () => {
               </div>
             </div>
           </div>
+          )}
 
+          {/* ABA: GARANTIA */}
+          {activeTab === 'garantia' && (
           <div className="bg-white rounded-xl p-6 shadow-sm border">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Clock className="h-5 w-5 text-amber-600" />
@@ -1459,6 +1524,7 @@ const ServiceOrderCreate = () => {
               </div>
             </div>
           </div>
+          )}
 
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 shadow-md border-2 border-green-300">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -1580,6 +1646,8 @@ const ServiceOrderCreate = () => {
             </div>
           </div>
 
+          {/* ABA: CONTRATO */}
+          {activeTab === 'contrato' && (
           <div className="bg-white rounded-xl p-6 shadow-sm border">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <FileText className="h-5 w-5 text-blue-600" />
@@ -1604,6 +1672,7 @@ const ServiceOrderCreate = () => {
               </div>
             </div>
           </div>
+          )}
 
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 shadow-md border-2 border-blue-300">
             <button
@@ -1816,6 +1885,9 @@ const ServiceOrderCreate = () => {
             )}
           </div>
 
+          {/* ABA: SERVIÇOS */}
+          {activeTab === 'servicos' && (
+          <>
           {serviceItems.map((item, index) => (
             <motion.div key={item.id} initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}}
               className="bg-white rounded-xl p-6 shadow-sm border">
@@ -2281,6 +2353,8 @@ const ServiceOrderCreate = () => {
             <Plus className="h-5 w-5" />
             Adicionar Outro Serviço
           </button>
+          </>
+          )}
         </div>
 
         <div className="space-y-6">
