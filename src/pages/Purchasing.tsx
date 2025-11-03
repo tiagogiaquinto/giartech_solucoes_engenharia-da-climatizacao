@@ -158,12 +158,21 @@ const Purchasing = () => {
 
   const handleCreatePurchaseOrder = async (item: LowStockItem) => {
     try {
-      const { data: poNumberData } = await supabase.rpc('generate_purchase_order_number')
-      const orderNumber = poNumberData || `PO${Date.now()}`
+      // Gerar número do pedido
+      let orderNumber = `PO${Date.now()}`
+      try {
+        const { data: poNumberData, error: rpcError } = await supabase.rpc('generate_purchase_order_number')
+        if (!rpcError && poNumberData) {
+          orderNumber = poNumberData
+        }
+      } catch (rpcErr) {
+        console.warn('Erro ao gerar número do pedido, usando timestamp:', rpcErr)
+      }
 
       const supplierName = item.supplier || 'A Definir'
       const unitPrice = item.unit_price || (item.estimated_cost / item.recommended_order_qty)
 
+      // Criar pedido de compra
       const { data: po, error: poError } = await supabase
         .from('purchase_orders')
         .insert([{
@@ -177,8 +186,16 @@ const Purchasing = () => {
         .select()
         .single()
 
-      if (poError) throw poError
+      if (poError) {
+        console.error('Erro ao criar pedido:', poError)
+        throw new Error(poError.message)
+      }
 
+      if (!po) {
+        throw new Error('Pedido criado mas sem retorno de dados')
+      }
+
+      // Adicionar item ao pedido
       const { error: itemError } = await supabase
         .from('purchase_order_items')
         .insert([{
@@ -190,13 +207,16 @@ const Purchasing = () => {
           urgency_level: item.urgency
         }])
 
-      if (itemError) throw itemError
+      if (itemError) {
+        console.error('Erro ao adicionar item:', itemError)
+        throw new Error(itemError.message)
+      }
 
       alert(`✅ Pedido ${orderNumber} criado com sucesso!\n\nFornecedor: ${supplierName}\nQuantidade: ${item.recommended_order_qty}\nValor: R$ ${item.estimated_cost.toFixed(2)}`)
       await loadData()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating purchase order:', error)
-      alert('Erro ao criar pedido de compra')
+      alert(`❌ Erro ao criar pedido de compra: ${error.message || 'Erro desconhecido'}`)
     }
   }
 
