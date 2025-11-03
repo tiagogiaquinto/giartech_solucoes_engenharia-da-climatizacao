@@ -385,36 +385,46 @@ const ServiceOrderCreate = () => {
 
   const loadData = async () => {
     try {
-      const [customersRes, materialsRes, staffRes, bankAccountsRes, contractsRes, catalogRes, inventoryRes] = await Promise.all([
-        supabase.from('customers').select('*').order('nome_razao'),
-        supabase.from('materials').select('*').eq('active', true).order('name'),
-        supabase.from('employees').select('id, name, role, custo_hora, especialidade, nivel').eq('active', true).order('name'),
-        supabase.from('bank_accounts').select('*').eq('active', true).order('account_name'),
-        supabase.from('contract_templates').select('*').order('name'),
-        supabase.from('service_catalog').select(`
-          *,
-          service_catalog_materials (
-            id,
-            material_id,
-            quantity,
-            material_name,
-            material_unit,
-            unit_cost_at_time,
-            unit_sale_price
-          )
-        `).order('name'),
-        supabase.from('inventory').select('*').order('name')
-      ])
+      console.log('🔄 Carregando dados...')
 
+      const customersRes = await supabase.from('customers').select('*').order('nome_razao')
+      if (customersRes.error) console.error('Erro clientes:', customersRes.error)
+      else console.log('✅ Clientes carregados:', customersRes.data?.length || 0)
       setCustomers(customersRes.data || [])
+
+      const materialsRes = await supabase.from('materials').select('*').eq('active', true).order('name')
+      if (materialsRes.error) console.error('Erro materiais:', materialsRes.error)
+      else console.log('✅ Materiais carregados:', materialsRes.data?.length || 0)
       setMaterials(materialsRes.data || [])
+
+      const staffRes = await supabase.from('employees').select('id, name, role, custo_hora, especialidade, nivel').eq('active', true).order('name')
+      if (staffRes.error) console.error('Erro funcionários:', staffRes.error)
+      else console.log('✅ Funcionários carregados:', staffRes.data?.length || 0)
       setStaff(staffRes.data || [])
+
+      const bankAccountsRes = await supabase.from('bank_accounts').select('*').eq('active', true).order('account_name')
+      if (bankAccountsRes.error) console.error('Erro contas:', bankAccountsRes.error)
+      else console.log('✅ Contas bancárias carregadas:', bankAccountsRes.data?.length || 0)
       setBankAccounts(bankAccountsRes.data || [])
+
+      const contractsRes = await supabase.from('contract_templates').select('*').order('name')
+      if (contractsRes.error) console.error('Erro contratos:', contractsRes.error)
+      else console.log('✅ Contratos carregados:', contractsRes.data?.length || 0)
       setContractTemplates(contractsRes.data || [])
+
+      const catalogRes = await supabase.from('service_catalog').select('*').eq('active', true).order('name')
+      if (catalogRes.error) console.error('Erro catálogo:', catalogRes.error)
+      else console.log('✅ Catálogo carregado:', catalogRes.data?.length || 0)
       setServiceCatalog(catalogRes.data || [])
+
+      const inventoryRes = await supabase.from('inventory').select('*').order('name')
+      if (inventoryRes.error) console.error('Erro inventário:', inventoryRes.error)
+      else console.log('✅ Inventário carregado:', inventoryRes.data?.length || 0)
       setInventory(inventoryRes.data || [])
+
+      console.log('✅ Todos os dados carregados!')
     } catch (error) {
-      console.error('Error loading data:', error)
+      console.error('❌ Erro geral ao carregar dados:', error)
     }
   }
 
