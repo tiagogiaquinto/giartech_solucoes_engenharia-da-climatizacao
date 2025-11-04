@@ -70,6 +70,7 @@ import CompanySettings from './pages/CompanySettings'
 import Equipments from './pages/Equipments'
 import Suppliers from './pages/Suppliers'
 import Purchasing from './pages/Purchasing'
+import GoogleAdsTracking from './pages/GoogleAdsTracking'
 import RouteTracking from './pages/RouteTracking'
 import Documents from './pages/Documents'
 import EmailSettings from './pages/EmailSettings'
@@ -763,6 +764,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <Purchasing />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/google-ads-tracking" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <GoogleAdsTracking />
               </WebLayout>
             </ProtectedRoute>
           } />
