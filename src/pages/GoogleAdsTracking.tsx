@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import {
   TrendingUp, MousePointer, DollarSign, Target, AlertCircle, RefreshCw,
   Eye, Bell, Settings, ChevronRight, Sparkles, Zap, TrendingDown,
@@ -29,6 +30,7 @@ interface Alert {
 }
 
 const GoogleAdsTracking = () => {
+  const navigate = useNavigate()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
@@ -275,9 +277,12 @@ const GoogleAdsTracking = () => {
                 </div>
                 <h2 className="text-xl font-bold text-gray-900">Campanhas em Tempo Real</h2>
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <button
+                onClick={() => navigate('/google-ads-settings')}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
                 <Settings className="h-4 w-4" />
-                Configurar Alertas
+                Configurações
               </button>
             </div>
           </div>
@@ -297,7 +302,10 @@ const GoogleAdsTracking = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Nenhuma campanha ativa</h3>
               <p className="text-gray-600 mb-6">Conecte sua conta do Google Ads para começar</p>
-              <button className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg">
+              <button
+                onClick={() => navigate('/google-ads-settings')}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
+              >
                 <Sparkles className="h-4 w-4" />
                 Conectar Google Ads
               </button>
@@ -429,7 +437,10 @@ const GoogleAdsTracking = () => {
                   <span>Receba notificações instantâneas quando limites forem atingidos</span>
                 </li>
               </ol>
-              <button className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-semibold shadow-lg">
+              <button
+                onClick={() => navigate('/google-ads-settings')}
+                className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-semibold shadow-lg"
+              >
                 <Settings className="h-5 w-5" />
                 Configurar Agora
               </button>
