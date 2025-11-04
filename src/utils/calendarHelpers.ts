@@ -67,17 +67,38 @@ export const mapAgendaEventToCalendarEvent = (event: any): CalendarEvent => {
   }
 }
 
-export const mapCalendarEventToAgendaEvent = (event: CalendarEvent) => {
+export const mapCalendarEventToAgendaEvent = (event: CalendarEvent | any) => {
+  // Se event.start é uma string (do formulário), converter para Date
+  let startDate: Date
+  let endDate: Date
+
+  if (typeof event.start === 'string' || !event.start) {
+    // Vem do formulário com date e time separados
+    const dateStr = event.date || new Date().toISOString().split('T')[0]
+    const timeStr = event.time || '00:00'
+    startDate = new Date(`${dateStr}T${timeStr}:00`)
+
+    const endDateStr = event.endDate || dateStr
+    const endTimeStr = event.endTime || timeStr
+    endDate = new Date(`${endDateStr}T${endTimeStr}:00`)
+  } else {
+    // Já é um Date
+    startDate = event.start instanceof Date ? event.start : new Date(event.start)
+    endDate = event.end instanceof Date ? event.end : new Date(event.end)
+  }
+
   return {
     title: event.title,
-    start_date: event.start.toISOString(),
-    end_date: event.end.toISOString(),
+    start_date: startDate.toISOString(),
+    end_date: endDate.toISOString(),
     event_type: event.type || 'pessoal',
     priority: event.priority || 'medium',
     status: event.status || 'scheduled',
-    employee_id: event.assignedTo,
-    location: event.location,
-    description: event.description
+    employee_id: event.assignedTo || null,
+    customer_id: event.customerId || null,
+    service_order_id: event.serviceOrderId || null,
+    location: event.location || null,
+    description: event.description || null
   }
 }
 

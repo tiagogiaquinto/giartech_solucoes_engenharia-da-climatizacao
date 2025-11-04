@@ -9,4 +9,16 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom'],
+          'charts': ['chart.js', 'react-chartjs-2', 'recharts'],
+          'utils': ['date-fns', 'clsx', 'tailwind-merge']
+        }
+      }
+    }
+  }
 })
