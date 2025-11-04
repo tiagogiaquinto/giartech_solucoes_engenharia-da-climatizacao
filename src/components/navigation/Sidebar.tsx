@@ -56,6 +56,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'rfm', path: '/customer-rfm', icon: Target, label: 'Análise RFM', description: 'Segmentação inteligente de clientes por Recência, Frequência e Valor' },
   { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores' },
   { id: 'compras', path: '/purchasing', icon: ShoppingCart, label: 'Compras', description: 'Pedidos e alertas de estoque' },
+  { id: 'google-ads', path: '/google-ads-tracking', icon: Target, label: 'Google Ads Premium', description: 'Rastreamento em tempo real de cliques, conversões e ROI das suas campanhas' },
   { id: 'service-orders', path: '/service-orders', icon: ClipboardList, label: 'Ordens de Serviço', description: 'Gestão de OS' },
   { id: 'rotas', path: '/rotas', icon: Navigation, label: 'Rotas', description: 'Rastreamento e gestão de rotas' },
   { id: 'financeiro', path: '/financeiro', icon: DollarSign, label: 'Financeiro', description: 'Centro financeiro completo com dashboard, movimentações, análises, contas e categorias' },
