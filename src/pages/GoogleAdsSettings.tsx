@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Target, Plus, Settings, Trash2, RefreshCw, CheckCircle, XCircle, AlertTriangle, Save, Key, Link as LinkIcon, Zap } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Target, Plus, Settings, Trash2, RefreshCw, CheckCircle, XCircle, AlertTriangle, Save, Key, Link as LinkIcon, Zap, Shield } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 interface GoogleAdsAccount {
@@ -14,6 +15,7 @@ interface GoogleAdsAccount {
 }
 
 const GoogleAdsSettings = () => {
+  const navigate = useNavigate()
   const [accounts, setAccounts] = useState<GoogleAdsAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -186,6 +188,24 @@ const GoogleAdsSettings = () => {
             </ol>
           </div>
 
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-300 rounded-lg p-4">
+            <p className="font-semibold text-green-900 mb-2 flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Quer usar dados REAIS do Google Ads?
+            </p>
+            <p className="text-green-800 mb-3">
+              Configure a conexão OAuth 2.0 para sincronizar automaticamente
+              suas campanhas, cliques e conversões reais!
+            </p>
+            <button
+              onClick={() => navigate('/google-ads-oauth')}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+            >
+              <Shield className="h-4 w-4" />
+              Configurar API Real
+            </button>
+          </div>
+
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
             <p className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
@@ -193,8 +213,7 @@ const GoogleAdsSettings = () => {
             </p>
             <p className="text-amber-800">
               Atualmente o sistema está em modo demonstração e irá gerar dados simulados.
-              Para conectar com a API real do Google Ads, será necessário configurar OAuth 2.0
-              com as credenciais da API.
+              Perfeito para testar a interface antes de conectar com a API real.
             </p>
           </div>
         </div>

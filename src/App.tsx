@@ -72,6 +72,7 @@ import Suppliers from './pages/Suppliers'
 import Purchasing from './pages/Purchasing'
 import GoogleAdsTracking from './pages/GoogleAdsTracking'
 import GoogleAdsSettings from './pages/GoogleAdsSettings'
+import GoogleAdsOAuthSetup from './pages/GoogleAdsOAuthSetup'
 import RouteTracking from './pages/RouteTracking'
 import Documents from './pages/Documents'
 import EmailSettings from './pages/EmailSettings'
@@ -781,6 +782,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <GoogleAdsSettings />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/google-ads-oauth" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <GoogleAdsOAuthSetup />
               </WebLayout>
             </ProtectedRoute>
           } />
