@@ -87,19 +87,43 @@ export const mapCalendarEventToAgendaEvent = (event: CalendarEvent | any) => {
     endDate = event.end instanceof Date ? event.end : new Date(event.end)
   }
 
-  return {
+  // Função helper para validar UUID
+  const isValidUUID = (value: any): boolean => {
+    if (!value || typeof value !== 'string') return false
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    return uuidRegex.test(value)
+  }
+
+  // Montar objeto apenas com campos válidos
+  const agendaEvent: any = {
     title: event.title,
     start_date: startDate.toISOString(),
     end_date: endDate.toISOString(),
     event_type: event.type || 'pessoal',
     priority: event.priority || 'medium',
-    status: event.status || 'scheduled',
-    employee_id: event.assignedTo || null,
-    customer_id: event.customerId || null,
-    service_order_id: event.serviceOrderId || null,
-    location: event.location || null,
-    description: event.description || null
+    status: event.status || 'scheduled'
   }
+
+  // Adicionar campos UUID apenas se válidos
+  if (isValidUUID(event.assignedTo)) {
+    agendaEvent.employee_id = event.assignedTo
+  }
+  if (isValidUUID(event.customerId)) {
+    agendaEvent.customer_id = event.customerId
+  }
+  if (isValidUUID(event.serviceOrderId)) {
+    agendaEvent.service_order_id = event.serviceOrderId
+  }
+
+  // Adicionar campos opcionais se não vazios
+  if (event.location && event.location.trim()) {
+    agendaEvent.location = event.location
+  }
+  if (event.description && event.description.trim()) {
+    agendaEvent.description = event.description
+  }
+
+  return agendaEvent
 }
 
 export const expandMultiDayEvents = (events: CalendarEvent[]): CalendarEvent[] => {
