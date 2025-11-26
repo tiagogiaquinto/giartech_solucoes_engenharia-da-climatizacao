@@ -97,6 +97,7 @@ import MobileAgenda from './pages/mobile/MobileAgenda'
 import MobileLibrary from './pages/mobile/MobileLibrary'
 import MobileRoutes from './pages/mobile/MobileRoutes'
 import MobilePurchases from './pages/mobile/MobilePurchases'
+import SalaryManagement from './pages/SalaryManagement'
 import MobileLogin from './pages/mobile/MobileLogin'
 import OSDistribution from './pages/OSDistribution'
 
@@ -530,6 +531,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <FinancialManagement />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/salary-management" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <SalaryManagement />
               </WebLayout>
             </ProtectedRoute>
           } />
