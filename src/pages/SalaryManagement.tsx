@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
-import { DollarSign, TrendingDown, BarChart3 } from 'lucide-react'
+import { DollarSign, TrendingDown, BarChart3, Users } from 'lucide-react'
 import SalaryPaymentManager from '../components/SalaryPaymentManager'
 import SalaryAdvanceManager from '../components/SalaryAdvanceManager'
 import SalaryReports from '../components/SalaryReports'
+import EmployeeSalaryEditor from '../components/EmployeeSalaryEditor'
 
 const SalaryManagement = () => {
-  const [activeTab, setActiveTab] = useState<'payments' | 'advances' | 'reports'>('payments')
+  const [activeTab, setActiveTab] = useState<'payments' | 'advances' | 'employees' | 'reports'>('payments')
 
   const tabs = [
     { id: 'payments' as const, label: 'Pagamentos', icon: DollarSign },
     { id: 'advances' as const, label: 'Vales/Adiantamentos', icon: TrendingDown },
+    { id: 'employees' as const, label: 'Editar Salários', icon: Users },
     { id: 'reports' as const, label: 'Relatórios', icon: BarChart3 }
   ]
 
@@ -45,6 +47,7 @@ const SalaryManagement = () => {
         <div>
           {activeTab === 'payments' && <SalaryPaymentManager />}
           {activeTab === 'advances' && <SalaryAdvanceManager />}
+          {activeTab === 'employees' && <EmployeeSalaryEditor />}
           {activeTab === 'reports' && <SalaryReports />}
         </div>
       </div>
