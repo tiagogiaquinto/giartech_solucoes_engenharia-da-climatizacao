@@ -1,0 +1,3 @@
+# Placeholder para ícone 192x192
+# Use uma ferramenta online para gerar um ícone PNG válido
+# Exemplo: https://www.favicon-generator.org/
