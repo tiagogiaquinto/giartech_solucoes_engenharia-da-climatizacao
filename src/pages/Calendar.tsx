@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, Users, MapPin, X, Save, CircleCheck as CheckCircle, CircleAlert as AlertCircle, CreditCard as Edit, Trash2, ArrowRight, Flag, List, LayoutGrid, ChartGantt as GanttChart, GitBranch } from 'lucide-react'
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, Users, MapPin, X, Save, CircleCheck as CheckCircle, CircleAlert as AlertCircle, CreditCard as Edit, Trash2, ArrowRight, Flag, List, LayoutGrid, ChartGantt as GanttChart, GitBranch, Search, User, FileText, Phone, Mail } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
-import { getAgendaEvents, createAgendaEvent, updateAgendaEvent, deleteAgendaEvent, type AgendaEvent } from '../lib/supabase'
+import { getAgendaEvents, createAgendaEvent, updateAgendaEvent, deleteAgendaEvent, type AgendaEvent, supabase } from '../lib/supabase'
 import { mapAgendaEventToCalendarEvent, mapCalendarEventToAgendaEvent, expandMultiDayEvents, type CalendarEvent } from '../utils/calendarHelpers'
 
 interface CalendarProps {
@@ -65,8 +65,65 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
     status: 'a_fazer' as Event['status'],
     location: '',
     assignedTo: '',
+    customerId: '',
+    serviceOrderId: '',
     description: ''
   })
+
+  const [searchCustomer, setSearchCustomer] = useState('')
+  const [customers, setCustomers] = useState<any[]>([])
+  const [searchEmployee, setSearchEmployee] = useState('')
+  const [employees, setEmployees] = useState<any[]>([])
+  const [searchServiceOrder, setSearchServiceOrder] = useState('')
+  const [serviceOrders, setServiceOrders] = useState<any[]>([])
+
+  useEffect(() => {
+    const searchCustomers = async () => {
+      if (searchCustomer.length >= 2) {
+        const { data } = await supabase
+          .from('customers')
+          .select('id, nome_razao, nome_fantasia, email, telefone, celular, tipo_pessoa, cpf, cnpj')
+          .or(`nome_razao.ilike.%${searchCustomer}%,nome_fantasia.ilike.%${searchCustomer}%,cpf.ilike.%${searchCustomer}%,cnpj.ilike.%${searchCustomer}%`)
+          .limit(10)
+        setCustomers(data || [])
+      } else {
+        setCustomers([])
+      }
+    }
+    searchCustomers()
+  }, [searchCustomer])
+
+  useEffect(() => {
+    const searchEmployees = async () => {
+      if (searchEmployee.length >= 2) {
+        const { data } = await supabase
+          .from('employees')
+          .select('id, name, email, phone')
+          .ilike('name', `%${searchEmployee}%`)
+          .limit(10)
+        setEmployees(data || [])
+      } else {
+        setEmployees([])
+      }
+    }
+    searchEmployees()
+  }, [searchEmployee])
+
+  useEffect(() => {
+    const searchOrders = async () => {
+      if (searchServiceOrder.length >= 1) {
+        const { data } = await supabase
+          .from('service_orders')
+          .select('id, order_number, status, customer_id, customers(nome_razao, nome_fantasia)')
+          .or(`order_number.ilike.%${searchServiceOrder}%`)
+          .limit(10)
+        setServiceOrders(data || [])
+      } else {
+        setServiceOrders([])
+      }
+    }
+    searchOrders()
+  }, [searchServiceOrder])
 
   // Obter data de amanhã
   function getTomorrowDate() {
@@ -162,8 +219,11 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
   const handleCreateEvent = async () => {
     if (newEvent.title && newEvent.date && newEvent.time) {
       try {
+        console.log('Creating event with data:', newEvent)
         const agendaEventData = mapCalendarEventToAgendaEvent(newEvent) as any
-        await createAgendaEvent(agendaEventData)
+        console.log('Mapped to agenda event:', agendaEventData)
+        const result = await createAgendaEvent(agendaEventData)
+        console.log('Event created:', result)
         await loadEvents()
 
         setNewEvent({
@@ -177,12 +237,17 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
           status: 'a_fazer',
           location: '',
           assignedTo: '',
+          customerId: '',
+          serviceOrderId: '',
           description: ''
         })
+        setSearchCustomer('')
+        setSearchEmployee('')
+        setSearchServiceOrder('')
         setShowEventModal(false)
       } catch (error) {
         console.error('Error creating event:', error)
-        alert('Erro ao criar evento. Verifique os campos de data e hora.')
+        alert(`Erro ao criar evento: ${error instanceof Error ? error.message : 'Verifique os campos de data e hora.'}`)
       }
     } else {
       alert('Por favor, preencha título, data e horário de início.')
@@ -227,14 +292,15 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
   }
 
   const getEventTypeColor = (type: Event['type']) => {
-    switch (type) {
-      case 'pessoal': return 'bg-purple-600'
-      case 'networking': return 'bg-blue-500'
-      case 'financeiro': return 'bg-green-500'
-      case 'cobrar': return 'bg-yellow-500'
-      case 'pagar': return 'bg-red-500'
-      default: return 'bg-gray-500'
+    const colors = {
+      'pessoal': 'bg-purple-600',
+      'networking': 'bg-blue-500',
+      'financeiro': 'bg-green-500',
+      'operacional': 'bg-orange-500',
+      'cobrar': 'bg-yellow-500',
+      'pagar': 'bg-red-500'
     }
+    return colors[type as keyof typeof colors] || 'bg-gray-500'
   }
 
   const getEventTypeText = (type: Event['type']) => {
@@ -1497,16 +1563,116 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Responsável
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                  <User className="h-4 w-4 mr-1 text-blue-500" />
+                  Cliente
                 </label>
-                <input
-                  type="text"
-                  value={newEvent.assignedTo}
-                  onChange={(e) => setNewEvent({...newEvent, assignedTo: e.target.value})}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Nome do responsável"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchCustomer}
+                    onChange={(e) => setSearchCustomer(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Buscar cliente..."
+                  />
+                  <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                  {customers.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {customers.map((customer) => (
+                        <div
+                          key={customer.id}
+                          onClick={() => {
+                            setNewEvent({...newEvent, customerId: customer.id})
+                            setSearchCustomer(customer.nome_fantasia || customer.nome_razao)
+                            setCustomers([])
+                          }}
+                          className="p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100"
+                        >
+                          <div className="font-medium text-sm">{customer.nome_fantasia || customer.nome_razao}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-2">
+                            {customer.telefone && <span className="flex items-center"><Phone className="h-3 w-3 mr-1" />{customer.telefone}</span>}
+                            {customer.email && <span className="flex items-center"><Mail className="h-3 w-3 mr-1" />{customer.email}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                  <Users className="h-4 w-4 mr-1 text-green-500" />
+                  Funcionário Responsável
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchEmployee}
+                    onChange={(e) => setSearchEmployee(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Buscar funcionário..."
+                  />
+                  <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                  {employees.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {employees.map((employee) => (
+                        <div
+                          key={employee.id}
+                          onClick={() => {
+                            setNewEvent({...newEvent, assignedTo: employee.id})
+                            setSearchEmployee(employee.name)
+                            setEmployees([])
+                          }}
+                          className="p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100"
+                        >
+                          <div className="font-medium text-sm">{employee.name}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-2">
+                            {employee.email && <span className="flex items-center"><Mail className="h-3 w-3 mr-1" />{employee.email}</span>}
+                            {employee.phone && <span className="flex items-center"><Phone className="h-3 w-3 mr-1" />{employee.phone}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                  <FileText className="h-4 w-4 mr-1 text-purple-500" />
+                  Ordem de Serviço
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchServiceOrder}
+                    onChange={(e) => setSearchServiceOrder(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Buscar OS..."
+                  />
+                  <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                  {serviceOrders.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {serviceOrders.map((order: any) => (
+                        <div
+                          key={order.id}
+                          onClick={() => {
+                            setNewEvent({...newEvent, serviceOrderId: order.id})
+                            setSearchServiceOrder(`OS #${order.order_number}`)
+                            setServiceOrders([])
+                          }}
+                          className="p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100"
+                        >
+                          <div className="font-medium text-sm">OS #{order.order_number}</div>
+                          <div className="text-xs text-gray-500">
+                            {order.customers?.nome_fantasia || order.customers?.nome_razao} - Status: {order.status}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -1699,16 +1865,116 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Responsável
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                  <User className="h-4 w-4 mr-1 text-blue-500" />
+                  Cliente {showEditModal.customer && <span className="ml-2 text-xs text-blue-600">({showEditModal.customer.nome_fantasia || showEditModal.customer.nome_razao})</span>}
                 </label>
-                <input
-                  type="text"
-                  value={showEditModal.assignedTo || ''}
-                  onChange={(e) => setShowEditModal({...showEditModal, assignedTo: e.target.value})}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Nome do responsável"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchCustomer}
+                    onChange={(e) => setSearchCustomer(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Buscar novo cliente..."
+                  />
+                  <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                  {customers.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {customers.map((customer) => (
+                        <div
+                          key={customer.id}
+                          onClick={() => {
+                            setShowEditModal({...showEditModal, customerId: customer.id, customer})
+                            setSearchCustomer(customer.nome_fantasia || customer.nome_razao)
+                            setCustomers([])
+                          }}
+                          className="p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100"
+                        >
+                          <div className="font-medium text-sm">{customer.nome_fantasia || customer.nome_razao}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-2">
+                            {customer.telefone && <span className="flex items-center"><Phone className="h-3 w-3 mr-1" />{customer.telefone}</span>}
+                            {customer.email && <span className="flex items-center"><Mail className="h-3 w-3 mr-1" />{customer.email}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                  <Users className="h-4 w-4 mr-1 text-green-500" />
+                  Funcionário {showEditModal.employee && <span className="ml-2 text-xs text-green-600">({showEditModal.employee.name})</span>}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchEmployee}
+                    onChange={(e) => setSearchEmployee(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Buscar novo funcionário..."
+                  />
+                  <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                  {employees.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {employees.map((employee) => (
+                        <div
+                          key={employee.id}
+                          onClick={() => {
+                            setShowEditModal({...showEditModal, assignedTo: employee.id, employee})
+                            setSearchEmployee(employee.name)
+                            setEmployees([])
+                          }}
+                          className="p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100"
+                        >
+                          <div className="font-medium text-sm">{employee.name}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-2">
+                            {employee.email && <span className="flex items-center"><Mail className="h-3 w-3 mr-1" />{employee.email}</span>}
+                            {employee.phone && <span className="flex items-center"><Phone className="h-3 w-3 mr-1" />{employee.phone}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                  <FileText className="h-4 w-4 mr-1 text-purple-500" />
+                  Ordem de Serviço {showEditModal.service_order && <span className="ml-2 text-xs text-purple-600">(OS #{showEditModal.service_order.order_number})</span>}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchServiceOrder}
+                    onChange={(e) => setSearchServiceOrder(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Buscar nova OS..."
+                  />
+                  <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                  {serviceOrders.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {serviceOrders.map((order: any) => (
+                        <div
+                          key={order.id}
+                          onClick={() => {
+                            setShowEditModal({...showEditModal, serviceOrderId: order.id, service_order: order})
+                            setSearchServiceOrder(`OS #${order.order_number}`)
+                            setServiceOrders([])
+                          }}
+                          className="p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100"
+                        >
+                          <div className="font-medium text-sm">OS #{order.order_number}</div>
+                          <div className="text-xs text-gray-500">
+                            {order.customers?.nome_fantasia || order.customers?.nome_razao} - Status: {order.status}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
