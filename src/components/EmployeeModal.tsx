@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Save, User, Mail, Phone, MapPin, Briefcase, Calendar, DollarSign, FileText, Users, Building } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import PhotoUploader from './PhotoUploader'
 
 interface EmployeeModalProps {
   isOpen: boolean
@@ -34,7 +35,8 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employeeId }: EmployeeModalPro
     emergency_contact_name: '',
     emergency_contact_phone: '',
     notes: '',
-    active: true
+    active: true,
+    photo_url: ''
   })
 
   useEffect(() => {
@@ -76,7 +78,8 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employeeId }: EmployeeModalPro
           emergency_contact_name: employee.emergency_contact_name || '',
           emergency_contact_phone: employee.emergency_contact_phone || '',
           notes: employee.notes || '',
-          active: employee.active ?? true
+          active: employee.active ?? true,
+          photo_url: employee.photo_url || ''
         })
       }
     } catch (error) {
@@ -105,7 +108,8 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employeeId }: EmployeeModalPro
       emergency_contact_name: '',
       emergency_contact_phone: '',
       notes: '',
-      active: true
+      active: true,
+      photo_url: ''
     })
   }
 
@@ -138,7 +142,8 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employeeId }: EmployeeModalPro
         emergency_contact_name: formData.emergency_contact_name || null,
         emergency_contact_phone: formData.emergency_contact_phone || null,
         notes: formData.notes || null,
-        active: formData.active
+        active: formData.active,
+        photo_url: formData.photo_url || null
       }
 
       if (employeeId) {
@@ -225,6 +230,16 @@ const EmployeeModal = ({ isOpen, onClose, onSave, employeeId }: EmployeeModalPro
                 exit={{opacity: 0, x: 20}}
                 className="space-y-6"
               >
+                <div className="flex justify-center pb-6 border-b">
+                  <PhotoUploader
+                    currentPhotoUrl={formData.photo_url}
+                    employeeId={employeeId}
+                    employeeName={formData.name || 'Funcionário'}
+                    onPhotoUploaded={(url) => setFormData({...formData, photo_url: url})}
+                    size="large"
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium mb-1 flex items-center gap-2">
