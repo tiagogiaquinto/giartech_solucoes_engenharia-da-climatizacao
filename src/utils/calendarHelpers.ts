@@ -81,7 +81,7 @@ export const mapAgendaEventToCalendarEvent = (event: any): CalendarEvent => {
     endTime: getLocalTimeString(endDateTime),
     type: event.event_type || 'pessoal',
     priority: event.priority || 'medium',
-    status: event.status || 'scheduled',
+    status: event.status || 'a_fazer',
     assignedTo: event.employee_id,
     location: event.location || '',
     description: event.description || event.notes || '',
@@ -131,7 +131,7 @@ export const mapCalendarEventToAgendaEvent = (event: CalendarEvent | any) => {
     end_date: endDate.toISOString(),
     event_type: event.type || 'pessoal',
     priority: event.priority || 'medium',
-    status: event.status || 'scheduled'
+    status: event.status || 'a_fazer'
   }
 
   if (isValidUUID(event.assignedTo)) {
