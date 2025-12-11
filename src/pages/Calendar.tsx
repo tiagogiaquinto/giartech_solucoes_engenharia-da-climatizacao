@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, Users, MapPin, X, Save, CircleCheck as CheckCircle, CircleAlert as AlertCircle, CreditCard as Edit, Trash2, ArrowRight, Flag, List, LayoutGrid, ChartGantt as GanttChart, GitBranch, Search, User, FileText, Phone, Mail } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { getAgendaEvents, createAgendaEvent, updateAgendaEvent, deleteAgendaEvent, type AgendaEvent, supabase } from '../lib/supabase'
@@ -258,7 +258,8 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
     if (showEditModal) {
       try {
         const updates = mapCalendarEventToAgendaEvent(showEditModal)
-        await updateAgendaEvent(showEditModal.id, updates)
+        const eventId = (showEditModal as any).originalId || showEditModal.id
+        await updateAgendaEvent(eventId, updates)
         await loadEvents()
         setShowEditModal(null)
       } catch (error) {
@@ -271,7 +272,9 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
   const handleDeleteEvent = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este evento?')) {
       try {
-        await deleteAgendaEvent(id)
+        const eventToDelete = events.find(e => e.id === id)
+        const eventId = (eventToDelete as any)?.originalId || id
+        await deleteAgendaEvent(eventId)
         await loadEvents()
         setShowEditModal(null)
       } catch (error) {
@@ -283,7 +286,9 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
 
   const handleCompleteTask = async (id: string) => {
     try {
-      await updateAgendaEvent(id, { status: 'feito' })
+      const eventToComplete = events.find(e => e.id === id)
+      const eventId = (eventToComplete as any)?.originalId || id
+      await updateAgendaEvent(eventId, { status: 'feito' })
       await loadEvents()
     } catch (error) {
       console.error('Error completing task:', error)

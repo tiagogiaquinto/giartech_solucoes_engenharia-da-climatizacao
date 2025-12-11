@@ -164,6 +164,7 @@ export const expandMultiDayEvents = (events: CalendarEvent[]): CalendarEvent[] =
     if (isSameDay(start, end)) {
       expanded.push({
         ...event,
+        id: event.id,
         date: getLocalDateString(start),
         time: getLocalTimeString(start),
         endDate: getLocalDateString(end),
@@ -173,24 +174,31 @@ export const expandMultiDayEvents = (events: CalendarEvent[]): CalendarEvent[] =
     }
 
     const currentDate = new Date(start)
+    let dayIndex = 0
     while (currentDate <= end) {
       const isLastDay = isSameDay(currentDate, end)
       const dayEnd = isLastDay
         ? new Date(end)
         : new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 23, 59, 59)
 
+      const dateStr = getLocalDateString(currentDate)
       expanded.push({
         ...event,
+        id: `${event.id}-${dateStr}`,
+        originalId: event.id,
         start: new Date(currentDate),
         end: dayEnd,
-        date: getLocalDateString(currentDate),
+        date: dateStr,
         time: getLocalTimeString(currentDate),
         endDate: getLocalDateString(dayEnd),
-        endTime: getLocalTimeString(dayEnd)
+        endTime: getLocalTimeString(dayEnd),
+        isMultiDay: true,
+        dayIndex
       })
 
       currentDate.setDate(currentDate.getDate() + 1)
       currentDate.setHours(0, 0, 0, 0)
+      dayIndex++
     }
   })
 

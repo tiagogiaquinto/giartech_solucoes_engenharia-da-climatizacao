@@ -246,7 +246,7 @@ function App() {
 
   return (
     <UserProvider>
-      <AnimatePresence mode="wait" initial={false}>
+      <AnimatePresence initial={false}>
         <Routes location={location} key={location.pathname}>
           <Route path="/login" element={<Login />} />
           <Route path="/mobile/login" element={<MobileLogin />} />
