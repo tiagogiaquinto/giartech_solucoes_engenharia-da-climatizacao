@@ -49,6 +49,7 @@ interface PaymentHistory {
 const SalaryPaymentManager = () => {
   const [salaries, setSalaries] = useState<SalaryTracking[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState({
     totalToPay: 0,
     totalPaid: 0,
@@ -84,6 +85,7 @@ const SalaryPaymentManager = () => {
   const loadSalaries = async () => {
     try {
       setLoading(true)
+      setError(null)
 
       let query = supabase
         .from('v_pending_salary_payments')
@@ -105,8 +107,9 @@ const SalaryPaymentManager = () => {
       const overdueCount = data?.filter(s => s.payment_status === 'overdue').length || 0
 
       setStats({ totalToPay, totalPaid, totalRemaining, overdueCount })
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading salaries:', error)
+      setError(error.message || 'Erro ao carregar salários')
     } finally {
       setLoading(false)
     }
@@ -254,6 +257,23 @@ const SalaryPaymentManager = () => {
     )
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 font-medium">{error}</p>
+          <button
+            onClick={() => loadSalaries()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -372,14 +392,21 @@ const SalaryPaymentManager = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {salaries.map((salary) => {
-                const isEditing = editingId === salary.id
-                const calculatedGross = isEditing
-                  ? Number(editValues.base_salary || 0) + Number(editValues.bonuses || 0) - Number(editValues.discounts || 0)
-                  : Number(salary.gross_amount)
+              {salaries.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    Nenhum salário pendente encontrado
+                  </td>
+                </tr>
+              ) : (
+                salaries.map((salary) => {
+                  const isEditing = editingId === salary.id
+                  const calculatedGross = isEditing
+                    ? Number(editValues.base_salary || 0) + Number(editValues.bonuses || 0) - Number(editValues.discounts || 0)
+                    : Number(salary.gross_amount || 0)
 
-                return (
-                  <tr key={salary.id} className={`${isEditing ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                  return (
+                    <tr key={salary.id} className={`${isEditing ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Users className="w-5 h-5 text-gray-400 mr-2" />
@@ -517,9 +544,10 @@ const SalaryPaymentManager = () => {
                         )}
                       </div>
                     </td>
-                  </tr>
-                )
-              })}
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
