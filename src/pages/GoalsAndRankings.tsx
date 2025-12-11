@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Target, Trophy, TrendingUp, Users, Award, Star, Zap,
   Calendar, DollarSign, Percent, Medal, Crown, Gift,
-  Plus, Edit2, Save, X, RefreshCw, ChevronRight, Sparkles
+  Plus, Edit2, Save, X, RefreshCw, ChevronRight, Sparkles,
+  Check, AlertCircle
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -70,6 +71,12 @@ interface RankingConfig {
   third_place_value: number
 }
 
+interface Employee {
+  id: string
+  name: string
+  role: string
+}
+
 const GoalsAndRankings = () => {
   const [activeTab, setActiveTab] = useState<'supermeta' | 'individual' | 'rankings' | 'conquistas'>('supermeta')
   const [loading, setLoading] = useState(true)
@@ -79,14 +86,40 @@ const GoalsAndRankings = () => {
   const [rankings, setRankings] = useState<RankingEntry[]>([])
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [rankingConfigs, setRankingConfigs] = useState<RankingConfig[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
 
   const [showNewGoalModal, setShowNewGoalModal] = useState(false)
+  const [showNewIndividualModal, setShowNewIndividualModal] = useState(false)
   const [showEditPrizeModal, setShowEditPrizeModal] = useState(false)
   const [selectedConfig, setSelectedConfig] = useState<RankingConfig | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const [newGoalForm, setNewGoalForm] = useState({
+    period_type: 'mensal',
+    start_date: '',
+    end_date: '',
+    target_amount: '',
+    bonus_pool: '',
+    notes: ''
+  })
+
+  const [newIndividualForm, setNewIndividualForm] = useState({
+    employee_id: '',
+    target_amount: '',
+    bonus_percentage: '5',
+    super_bonus_percentage: '10'
+  })
 
   useEffect(() => {
     loadAllData()
   }, [])
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [toast])
 
   const loadAllData = async () => {
     try {
@@ -96,10 +129,12 @@ const GoalsAndRankings = () => {
         loadEmployeeGoals(),
         loadRankings(),
         loadAchievements(),
-        loadRankingConfigs()
+        loadRankingConfigs(),
+        loadEmployees()
       ])
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
+      showToast('Erro ao carregar dados', 'error')
     } finally {
       setLoading(false)
     }
@@ -158,12 +193,123 @@ const GoalsAndRankings = () => {
     if (data) setRankingConfigs(data)
   }
 
+  const loadEmployees = async () => {
+    const { data } = await supabase
+      .from('employees')
+      .select('id, name, role')
+      .eq('active', true)
+      .order('name')
+
+    if (data) setEmployees(data)
+  }
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type })
+  }
+
   const updateGoalProgress = async () => {
     try {
       await supabase.rpc('update_employee_goal_achievement')
       await loadAllData()
+      showToast('Progresso atualizado com sucesso!', 'success')
     } catch (error) {
       console.error('Erro ao atualizar progresso:', error)
+      showToast('Erro ao atualizar progresso', 'error')
+    }
+  }
+
+  const createCompanyGoal = async () => {
+    try {
+      const { error } = await supabase
+        .from('company_goals')
+        .insert({
+          period_type: newGoalForm.period_type,
+          start_date: newGoalForm.start_date,
+          end_date: newGoalForm.end_date,
+          target_amount: parseFloat(newGoalForm.target_amount),
+          bonus_pool: parseFloat(newGoalForm.bonus_pool),
+          notes: newGoalForm.notes,
+          status: 'ativa'
+        })
+
+      if (error) throw error
+
+      showToast('Supermeta criada com sucesso!', 'success')
+      setShowNewGoalModal(false)
+      setNewGoalForm({
+        period_type: 'mensal',
+        start_date: '',
+        end_date: '',
+        target_amount: '',
+        bonus_pool: '',
+        notes: ''
+      })
+      await loadCompanyGoal()
+    } catch (error) {
+      console.error('Erro ao criar supermeta:', error)
+      showToast('Erro ao criar supermeta', 'error')
+    }
+  }
+
+  const createIndividualGoal = async () => {
+    try {
+      if (!companyGoal) {
+        showToast('Crie uma supermeta primeiro!', 'error')
+        return
+      }
+
+      const { error } = await supabase
+        .from('employee_goals')
+        .insert({
+          employee_id: newIndividualForm.employee_id,
+          company_goal_id: companyGoal.id,
+          target_amount: parseFloat(newIndividualForm.target_amount),
+          bonus_percentage: parseFloat(newIndividualForm.bonus_percentage),
+          super_bonus_percentage: parseFloat(newIndividualForm.super_bonus_percentage),
+          status: 'ativa'
+        })
+
+      if (error) throw error
+
+      showToast('Meta individual criada com sucesso!', 'success')
+      setShowNewIndividualModal(false)
+      setNewIndividualForm({
+        employee_id: '',
+        target_amount: '',
+        bonus_percentage: '5',
+        super_bonus_percentage: '10'
+      })
+      await loadEmployeeGoals()
+    } catch (error) {
+      console.error('Erro ao criar meta individual:', error)
+      showToast('Erro ao criar meta individual', 'error')
+    }
+  }
+
+  const updateRankingConfig = async () => {
+    try {
+      if (!selectedConfig) return
+
+      const { error } = await supabase
+        .from('rankings_config')
+        .update({
+          first_place_prize: selectedConfig.first_place_prize,
+          second_place_prize: selectedConfig.second_place_prize,
+          third_place_prize: selectedConfig.third_place_prize,
+          first_place_value: selectedConfig.first_place_value,
+          second_place_value: selectedConfig.second_place_value,
+          third_place_value: selectedConfig.third_place_value
+        })
+        .eq('id', selectedConfig.id)
+
+      if (error) throw error
+
+      showToast('Premiações atualizadas com sucesso!', 'success')
+      setShowEditPrizeModal(false)
+      await loadRankingConfigs()
+    } catch (error) {
+      console.error('Erro ao atualizar premiações:', error)
+      showToast('Erro ao atualizar premiações', 'error')
     }
   }
 
@@ -202,8 +348,16 @@ const GoalsAndRankings = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
+          toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+        }`}>
+          {toast.type === 'success' ? <Check className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
+          {toast.message}
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
@@ -221,7 +375,6 @@ const GoalsAndRankings = () => {
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="bg-white rounded-xl shadow-md border border-gray-200 p-2">
           <div className="flex gap-2">
             {[
@@ -246,7 +399,6 @@ const GoalsAndRankings = () => {
           </div>
         </div>
 
-        {/* Content */}
         <AnimatePresence mode="wait">
           {activeTab === 'supermeta' && (
             <motion.div
@@ -258,7 +410,6 @@ const GoalsAndRankings = () => {
             >
               {companyGoal ? (
                 <>
-                  {/* Supermeta Card */}
                   <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl p-8 text-white shadow-2xl">
                     <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center gap-3">
@@ -319,7 +470,6 @@ const GoalsAndRankings = () => {
                     )}
                   </div>
 
-                  {/* Distribuição do Bônus */}
                   <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                       <Gift className="h-6 w-6 text-purple-600" />
@@ -355,7 +505,11 @@ const GoalsAndRankings = () => {
                   <Target className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhuma Supermeta Ativa</h3>
                   <p className="text-gray-600 mb-6">Crie uma supermeta para a empresa e motive toda a equipe!</p>
-                  <button className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all">
+                  <button
+                    onClick={() => setShowNewGoalModal(true)}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 mx-auto"
+                  >
+                    <Plus className="h-5 w-5" />
                     Criar Supermeta
                   </button>
                 </div>
@@ -371,7 +525,6 @@ const GoalsAndRankings = () => {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white rounded-xl p-6 shadow-md border border-gray-200">
                   <div className="flex items-center justify-between">
@@ -417,68 +570,77 @@ const GoalsAndRankings = () => {
                 </div>
               </div>
 
-              {/* Employee Goals List */}
               <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-200 flex items-center justify-between">
                   <h3 className="text-xl font-bold text-gray-900">Metas Individuais</h3>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2">
+                  <button
+                    onClick={() => setShowNewIndividualModal(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+                  >
                     <Plus className="h-4 w-4" />
                     Nova Meta
                   </button>
                 </div>
                 <div className="divide-y divide-gray-200">
-                  {employeeGoals.map((goal) => (
-                    <div key={goal.id} className="p-6 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h4 className="font-bold text-lg text-gray-900">{goal.employee_name}</h4>
-                          <p className="text-sm text-gray-600">{goal.role}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-gray-600">Bônus Ganho</p>
-                          <p className="text-xl font-bold text-green-600">{formatCurrency(goal.bonus_earned)}</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Meta</p>
-                          <p className="font-semibold text-gray-900">{formatCurrency(goal.target_amount)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Alcançado</p>
-                          <p className="font-semibold text-blue-600">{formatCurrency(goal.achieved_amount)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Status</p>
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                            goal.status_label === 'Atingida' ? 'bg-green-100 text-green-800' :
-                            goal.status_label === 'Perto' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {goal.status_label}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs text-gray-600">
-                          <span>Progresso</span>
-                          <span className="font-bold">{goal.progress_percentage.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-3">
-                          <div
-                            className={`${getProgressColor(goal.progress_percentage)} h-3 rounded-full transition-all duration-500`}
-                            style={{ width: `${Math.min(100, goal.progress_percentage)}%` }}
-                          />
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <span>Bônus: {goal.bonus_percentage}%</span>
-                          <span>Super Bônus: {goal.super_bonus_percentage}%</span>
-                        </div>
-                      </div>
+                  {employeeGoals.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">Nenhuma meta individual criada ainda</p>
                     </div>
-                  ))}
+                  ) : (
+                    employeeGoals.map((goal) => (
+                      <div key={goal.id} className="p-6 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h4 className="font-bold text-lg text-gray-900">{goal.employee_name}</h4>
+                            <p className="text-sm text-gray-600">{goal.role}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-600">Bônus Ganho</p>
+                            <p className="text-xl font-bold text-green-600">{formatCurrency(goal.bonus_earned)}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 mb-4">
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Meta</p>
+                            <p className="font-semibold text-gray-900">{formatCurrency(goal.target_amount)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Alcançado</p>
+                            <p className="font-semibold text-blue-600">{formatCurrency(goal.achieved_amount)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Status</p>
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              goal.status_label === 'Atingida' ? 'bg-green-100 text-green-800' :
+                              goal.status_label === 'Perto' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {goal.status_label}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-xs text-gray-600">
+                            <span>Progresso</span>
+                            <span className="font-bold">{goal.progress_percentage.toFixed(1)}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div
+                              className={`${getProgressColor(goal.progress_percentage)} h-3 rounded-full transition-all duration-500`}
+                              style={{ width: `${Math.min(100, goal.progress_percentage)}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span>Bônus: {goal.bonus_percentage}%</span>
+                            <span>Super Bônus: {goal.super_bonus_percentage}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -492,7 +654,6 @@ const GoalsAndRankings = () => {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              {/* Prize Config */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {rankingConfigs.map((config) => (
                   <div key={config.id} className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
@@ -537,7 +698,6 @@ const GoalsAndRankings = () => {
                 ))}
               </div>
 
-              {/* Rankings Table */}
               <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-200">
                   <h3 className="text-xl font-bold text-gray-900">Ranking de Vendas - Mês Atual</h3>
@@ -554,44 +714,53 @@ const GoalsAndRankings = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {rankings.map((entry) => (
-                        <tr
-                          key={entry.employee_id}
-                          className={`hover:bg-gray-50 ${
-                            entry.position <= 3 ? 'bg-gradient-to-r from-yellow-50 to-transparent' : ''
-                          }`}
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              {entry.position === 1 && <Crown className="h-5 w-5 text-yellow-600" />}
-                              {entry.position === 2 && <Medal className="h-5 w-5 text-gray-600" />}
-                              {entry.position === 3 && <Medal className="h-5 w-5 text-orange-600" />}
-                              <span className="text-lg font-bold text-gray-900">{entry.position_label}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <p className="font-semibold text-gray-900">{entry.employee_name}</p>
-                              <p className="text-sm text-gray-600">{entry.role}</p>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                              {entry.total_orders}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <span className="text-lg font-bold text-green-600">
-                              {formatCurrency(entry.total_revenue)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <span className="text-gray-900 font-medium">
-                              {formatCurrency(entry.avg_order_value)}
-                            </span>
+                      {rankings.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-12 text-center">
+                            <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                            <p className="text-gray-600">Nenhum dado de ranking disponível</p>
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        rankings.map((entry) => (
+                          <tr
+                            key={entry.employee_id}
+                            className={`hover:bg-gray-50 ${
+                              entry.position <= 3 ? 'bg-gradient-to-r from-yellow-50 to-transparent' : ''
+                            }`}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                {entry.position === 1 && <Crown className="h-5 w-5 text-yellow-600" />}
+                                {entry.position === 2 && <Medal className="h-5 w-5 text-gray-600" />}
+                                {entry.position === 3 && <Medal className="h-5 w-5 text-orange-600" />}
+                                <span className="text-lg font-bold text-gray-900">{entry.position_label}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <p className="font-semibold text-gray-900">{entry.employee_name}</p>
+                                <p className="text-sm text-gray-600">{entry.role}</p>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                                {entry.total_orders}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <span className="text-lg font-bold text-green-600">
+                                {formatCurrency(entry.total_revenue)}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <span className="text-gray-900 font-medium">
+                                {formatCurrency(entry.avg_order_value)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -612,34 +781,318 @@ const GoalsAndRankings = () => {
                   <Sparkles className="h-6 w-6 text-yellow-600" />
                   Conquistas Recentes
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {achievements.map((achievement) => (
-                    <div
-                      key={achievement.id}
-                      className={`p-6 rounded-xl border-2 ${getBadgeColor(achievement.badge_level)} transition-all hover:scale-105`}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md">
-                          <Star className="h-6 w-6 text-yellow-600" />
+                {achievements.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Award className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">Nenhuma conquista registrada ainda</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {achievements.map((achievement) => (
+                      <div
+                        key={achievement.id}
+                        className={`p-6 rounded-xl border-2 ${getBadgeColor(achievement.badge_level)} transition-all hover:scale-105`}
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md">
+                            <Star className="h-6 w-6 text-yellow-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-bold text-gray-900">{achievement.title}</p>
+                            <p className="text-xs opacity-75">{achievement.employee_name}</p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-gray-900">{achievement.title}</p>
-                          <p className="text-xs opacity-75">{achievement.employee_name}</p>
+                        <p className="text-sm mb-3">{achievement.description}</p>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium capitalize">{achievement.badge_level}</span>
+                          <span className="font-bold">{achievement.points} pts</span>
                         </div>
                       </div>
-                      <p className="text-sm mb-3">{achievement.description}</p>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-medium capitalize">{achievement.badge_level}</span>
-                        <span className="font-bold">{achievement.points} pts</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
+      {showNewGoalModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Criar Supermeta</h2>
+              <button onClick={() => setShowNewGoalModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
+                <select
+                  value={newGoalForm.period_type}
+                  onChange={(e) => setNewGoalForm({ ...newGoalForm, period_type: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="mensal">Mensal</option>
+                  <option value="trimestral">Trimestral</option>
+                  <option value="semestral">Semestral</option>
+                  <option value="anual">Anual</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Data Início</label>
+                  <input
+                    type="date"
+                    value={newGoalForm.start_date}
+                    onChange={(e) => setNewGoalForm({ ...newGoalForm, start_date: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Data Fim</label>
+                  <input
+                    type="date"
+                    value={newGoalForm.end_date}
+                    onChange={(e) => setNewGoalForm({ ...newGoalForm, end_date: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Valor da Meta (R$)</label>
+                  <input
+                    type="number"
+                    value={newGoalForm.target_amount}
+                    onChange={(e) => setNewGoalForm({ ...newGoalForm, target_amount: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="100000.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Pool de Bônus (R$)</label>
+                  <input
+                    type="number"
+                    value={newGoalForm.bonus_pool}
+                    onChange={(e) => setNewGoalForm({ ...newGoalForm, bonus_pool: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="5000.00"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                <textarea
+                  value={newGoalForm.notes}
+                  onChange={(e) => setNewGoalForm({ ...newGoalForm, notes: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Notas sobre a meta..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowNewGoalModal(false)}
+                  className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={createCompanyGoal}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                >
+                  Criar Supermeta
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showNewIndividualModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Criar Meta Individual</h2>
+              <button onClick={() => setShowNewIndividualModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Funcionário</label>
+                <select
+                  value={newIndividualForm.employee_id}
+                  onChange={(e) => setNewIndividualForm({ ...newIndividualForm, employee_id: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecione um funcionário</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} - {emp.role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Valor da Meta (R$)</label>
+                <input
+                  type="number"
+                  value={newIndividualForm.target_amount}
+                  onChange={(e) => setNewIndividualForm({ ...newIndividualForm, target_amount: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="15000.00"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bônus (%)</label>
+                  <input
+                    type="number"
+                    value={newIndividualForm.bonus_percentage}
+                    onChange={(e) => setNewIndividualForm({ ...newIndividualForm, bonus_percentage: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="5"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Super Bônus (%)</label>
+                  <input
+                    type="number"
+                    value={newIndividualForm.super_bonus_percentage}
+                    onChange={(e) => setNewIndividualForm({ ...newIndividualForm, super_bonus_percentage: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="10"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <p className="text-sm text-blue-900">
+                  Bônus: {newIndividualForm.bonus_percentage}% ao atingir 100% da meta
+                  <br />
+                  Super Bônus: {newIndividualForm.super_bonus_percentage}% ao superar 110% da meta
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowNewIndividualModal(false)}
+                  className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={createIndividualGoal}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                >
+                  Criar Meta
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditPrizeModal && selectedConfig && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Editar Premiações</h2>
+              <button onClick={() => setShowEditPrizeModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">1º Lugar - Premiação</label>
+                <input
+                  type="text"
+                  value={selectedConfig.first_place_prize}
+                  onChange={(e) => setSelectedConfig({ ...selectedConfig, first_place_prize: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">1º Lugar - Valor (R$)</label>
+                <input
+                  type="number"
+                  value={selectedConfig.first_place_value}
+                  onChange={(e) => setSelectedConfig({ ...selectedConfig, first_place_value: parseFloat(e.target.value) })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">2º Lugar - Premiação</label>
+                <input
+                  type="text"
+                  value={selectedConfig.second_place_prize}
+                  onChange={(e) => setSelectedConfig({ ...selectedConfig, second_place_prize: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">2º Lugar - Valor (R$)</label>
+                <input
+                  type="number"
+                  value={selectedConfig.second_place_value}
+                  onChange={(e) => setSelectedConfig({ ...selectedConfig, second_place_value: parseFloat(e.target.value) })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">3º Lugar - Premiação</label>
+                <input
+                  type="text"
+                  value={selectedConfig.third_place_prize}
+                  onChange={(e) => setSelectedConfig({ ...selectedConfig, third_place_prize: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">3º Lugar - Valor (R$)</label>
+                <input
+                  type="number"
+                  value={selectedConfig.third_place_value}
+                  onChange={(e) => setSelectedConfig({ ...selectedConfig, third_place_value: parseFloat(e.target.value) })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowEditPrizeModal(false)}
+                  className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={updateRankingConfig}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                >
+                  Salvar Alterações
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
