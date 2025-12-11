@@ -32,7 +32,8 @@ import {
   Brain,
   Navigation,
   Activity,
-  Mail
+  Mail,
+  Trophy
 } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { supabase } from '../../lib/supabase'
@@ -61,6 +62,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'rotas', path: '/rotas', icon: Navigation, label: 'Rotas', description: 'Rastreamento e gestão de rotas' },
   { id: 'financeiro', path: '/financeiro', icon: DollarSign, label: 'Financeiro', description: 'Centro financeiro completo com dashboard, movimentações, análises, contas e categorias' },
   { id: 'salarios', path: '/salary-management', icon: DollarSign, label: 'Gestão de Salários', description: 'Controle de pagamentos de salários com suporte a parcelas e histórico completo' },
+  { id: 'metas-rankings', path: '/goals-rankings', icon: Trophy, label: 'Metas & Rankings', description: 'Sistema de metas individuais, supermetas, bônus, rankings e gamificação da equipe' },
   { id: 'executivo', path: '/executivo', icon: TrendingUp, label: 'Consolidado Executivo', description: 'Visão consolidada com Credit Scoring, Metas & Targets e análises estratégicas' },
   { id: 'relatorios', path: '/relatorios', icon: FileText, label: 'Relatórios', description: 'Todos os relatórios: dashboards interativos, PDFs profissionais e análises customizadas' },
   { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis' },
