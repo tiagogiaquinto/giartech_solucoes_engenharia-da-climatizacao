@@ -77,6 +77,10 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
   const [searchServiceOrder, setSearchServiceOrder] = useState('')
   const [serviceOrders, setServiceOrders] = useState<any[]>([])
 
+  // Filtros da lista de compromissos
+  const [listPeriod, setListPeriod] = useState<'month' | 'quarter' | 'next3'>('month')
+  const [listSort, setListSort] = useState<'date' | 'priority' | 'status' | 'type'>('date')
+
   useEffect(() => {
     const searchCustomers = async () => {
       if (searchCustomer.length >= 2) {
@@ -355,6 +359,143 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
       case 'feito': return 'Concluído'
       case 'cancelado': return 'Cancelado'
       default: return 'Desconhecido'
+    }
+  }
+
+  // Funções de filtragem e ordenação da lista de compromissos
+  const getFilteredAndSortedEvents = () => {
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth()
+
+    // Filtrar por período
+    let filtered = events.filter(event => {
+      const eventDate = new Date(event.date)
+      const eventYear = eventDate.getFullYear()
+      const eventMonth = eventDate.getMonth()
+
+      switch (listPeriod) {
+        case 'month':
+          // Somente mês atual
+          return eventMonth === currentMonth && eventYear === currentYear
+
+        case 'quarter':
+          // Trimestre central: mês anterior, atual e próximo
+          const prevMonth = currentMonth - 1
+          const nextMonth = currentMonth + 1
+
+          // Lidar com virada de ano
+          if (prevMonth < 0) {
+            return (
+              (eventMonth === 11 && eventYear === currentYear - 1) ||
+              (eventMonth === currentMonth && eventYear === currentYear) ||
+              (eventMonth === nextMonth && eventYear === currentYear)
+            )
+          } else if (nextMonth > 11) {
+            return (
+              (eventMonth === prevMonth && eventYear === currentYear) ||
+              (eventMonth === currentMonth && eventYear === currentYear) ||
+              (eventMonth === 0 && eventYear === currentYear + 1)
+            )
+          } else {
+            return (
+              eventYear === currentYear &&
+              eventMonth >= prevMonth &&
+              eventMonth <= nextMonth
+            )
+          }
+
+        case 'next3':
+          // Atual e próximos 2 meses (3 meses totais)
+          const twoMonthsLater = currentMonth + 2
+
+          // Lidar com virada de ano
+          if (twoMonthsLater > 11) {
+            return (
+              (eventYear === currentYear && eventMonth >= currentMonth) ||
+              (eventYear === currentYear + 1 && eventMonth <= twoMonthsLater - 12)
+            )
+          } else {
+            return (
+              eventYear === currentYear &&
+              eventMonth >= currentMonth &&
+              eventMonth <= twoMonthsLater
+            )
+          }
+
+        default:
+          return true
+      }
+    })
+
+    // Ordenar
+    const sorted = [...filtered].sort((a, b) => {
+      switch (listSort) {
+        case 'date':
+          // Ordenar por data e hora
+          const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime()
+          if (dateCompare !== 0) return dateCompare
+          return a.time.localeCompare(b.time)
+
+        case 'priority':
+          // Ordenar por prioridade (urgent > high > medium > low)
+          const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 }
+          const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 4
+          const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 4
+          if (aPriority !== bPriority) return aPriority - bPriority
+          // Se mesma prioridade, ordenar por data
+          return new Date(a.date).getTime() - new Date(b.date).getTime()
+
+        case 'status':
+          // Ordenar por status (a_fazer > em_andamento > feito > cancelado)
+          const statusOrder = { a_fazer: 0, em_andamento: 1, feito: 2, cancelado: 3 }
+          const aStatus = statusOrder[a.status as keyof typeof statusOrder] ?? 4
+          const bStatus = statusOrder[b.status as keyof typeof statusOrder] ?? 4
+          if (aStatus !== bStatus) return aStatus - bStatus
+          // Se mesmo status, ordenar por data
+          return new Date(a.date).getTime() - new Date(b.date).getTime()
+
+        case 'type':
+          // Ordenar por tipo
+          const typeCompare = (a.type || '').localeCompare(b.type || '')
+          if (typeCompare !== 0) return typeCompare
+          // Se mesmo tipo, ordenar por data
+          return new Date(a.date).getTime() - new Date(b.date).getTime()
+
+        default:
+          return 0
+      }
+    })
+
+    return sorted
+  }
+
+  const getPeriodLabel = () => {
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ]
+
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+
+    switch (listPeriod) {
+      case 'month':
+        return `${monthNames[currentMonth]} ${currentYear}`
+
+      case 'quarter':
+        const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
+        const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1
+        return `${monthNames[prevMonth]} - ${monthNames[currentMonth]} - ${monthNames[nextMonth]}`
+
+      case 'next3':
+        const month2 = (currentMonth + 1) % 12
+        const month3 = (currentMonth + 2) % 12
+        return `${monthNames[currentMonth]} - ${monthNames[month2]} - ${monthNames[month3]}`
+
+      default:
+        return monthNames[currentMonth]
     }
   }
 
@@ -1193,22 +1334,60 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
           </p>
         </div>
 
-        {/* Lista de Compromissos do Mês Atual */}
+        {/* Lista de Compromissos com Filtros */}
         {view === 'calendar' && (
           <div className="mt-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-              <List className="h-4 w-4 mr-2 text-blue-500" />
-              Compromissos do Mês
-            </h3>
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                <List className="h-4 w-4 mr-2 text-blue-500" />
+                Lista de Compromissos
+                <span className="ml-2 text-xs font-normal text-gray-500">({getFilteredAndSortedEvents().length})</span>
+              </h3>
+
+              {/* Filtros */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Filtro de Período */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      📅 Período de Exibição
+                    </label>
+                    <select
+                      value={listPeriod}
+                      onChange={(e) => setListPeriod(e.target.value as 'month' | 'quarter' | 'next3')}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    >
+                      <option value="month">📆 Mês Atual</option>
+                      <option value="quarter">📊 Trimestre Central (anterior + atual + próximo)</option>
+                      <option value="next3">📈 Próximos 3 Meses (atual + 2 próximos)</option>
+                    </select>
+                    <p className="mt-1 text-xs text-gray-600">
+                      {getPeriodLabel()}
+                    </p>
+                  </div>
+
+                  {/* Filtro de Ordenação */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      🔄 Ordenar Por
+                    </label>
+                    <select
+                      value={listSort}
+                      onChange={(e) => setListSort(e.target.value as 'date' | 'priority' | 'status' | 'type')}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    >
+                      <option value="date">📅 Data</option>
+                      <option value="priority">⚠️ Prioridade</option>
+                      <option value="status">📊 Status</option>
+                      <option value="type">🏷️ Tipo</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              {events
-                .filter(event => {
-                  const eventDate = new Date(event.date)
-                  return eventDate.getMonth() === currentDate.getMonth() &&
-                         eventDate.getFullYear() === currentDate.getFullYear()
-                })
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                .map(event => (
+              {getFilteredAndSortedEvents().map(event => (
                   <div
                     key={event.id}
                     onClick={() => setShowEditModal(event)}
@@ -1248,14 +1427,13 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                     </div>
                   </div>
                 ))}
-              {events.filter(event => {
-                const eventDate = new Date(event.date)
-                return eventDate.getMonth() === currentDate.getMonth() &&
-                       eventDate.getFullYear() === currentDate.getFullYear()
-              }).length === 0 && (
-                <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200">
-                  <CalendarIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-600">Nenhum compromisso neste mês</p>
+              {getFilteredAndSortedEvents().length === 0 && (
+                <div className="text-center py-8 bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600 font-medium">Nenhum compromisso encontrado</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Altere os filtros ou período para ver mais compromissos
+                  </p>
                 </div>
               )}
             </div>
