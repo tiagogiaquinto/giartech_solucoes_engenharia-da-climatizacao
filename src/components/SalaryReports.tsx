@@ -71,18 +71,16 @@ const SalaryReports = () => {
 
   const loadMonthlyData = async () => {
     try {
-      const startDate = startOfYear(new Date(selectedYear, 0, 1))
-      const endDate = endOfYear(new Date(selectedYear, 11, 31))
-
-      const { data, error } = await supabase
-        .from('employee_salary_tracking')
-        .select('*')
-        .gte('reference_month', format(startDate, 'yyyy-MM-dd'))
-        .lte('reference_month', format(endDate, 'yyyy-MM-dd'))
+      const { data, error } = await supabase.rpc('get_yearly_salary_report', {
+        p_year: selectedYear
+      })
 
       if (error) throw error
 
+      const startDate = startOfYear(new Date(selectedYear, 0, 1))
+      const endDate = endOfYear(new Date(selectedYear, 11, 31))
       const months = eachMonthOfInterval({ start: startDate, end: endDate })
+
       const monthlyMap = new Map<string, MonthlySalaryData>()
 
       months.forEach(month => {
@@ -99,19 +97,17 @@ const SalaryReports = () => {
         })
       })
 
-      data?.forEach(salary => {
-        const monthKey = format(new Date(salary.reference_month), 'yyyy-MM')
-        const current = monthlyMap.get(monthKey)
-
-        if (current) {
-          current.total_base += Number(salary.base_salary)
-          current.total_bonuses += Number(salary.bonuses || 0)
-          current.total_discounts += Number(salary.discounts || 0)
-          current.total_gross += Number(salary.gross_amount)
-          current.total_paid += Number(salary.paid_amount)
-          current.total_remaining += Number(salary.remaining_amount)
-          current.employee_count++
-        }
+      data?.forEach(item => {
+        monthlyMap.set(item.month, {
+          month: item.month,
+          total_base: Number(item.total_base),
+          total_bonuses: Number(item.total_bonuses),
+          total_discounts: Number(item.total_discounts),
+          total_gross: Number(item.total_gross),
+          total_paid: Number(item.total_paid),
+          total_remaining: Number(item.total_remaining),
+          employee_count: item.employee_count
+        })
       })
 
       setMonthlyData(Array.from(monthlyMap.values()))
@@ -137,27 +133,23 @@ const SalaryReports = () => {
 
   const loadYearlyStats = async () => {
     try {
-      const startDate = startOfYear(new Date(selectedYear, 0, 1))
-      const endDate = endOfYear(new Date(selectedYear, 11, 31))
-
       const { data, error } = await supabase
-        .from('employee_salary_tracking')
-        .select('paid_amount, remaining_amount, employee_id')
-        .gte('reference_month', format(startDate, 'yyyy-MM-dd'))
-        .lte('reference_month', format(endDate, 'yyyy-MM-dd'))
+        .from('v_monthly_salary_consolidated')
+        .select('total_paid, total_remaining, employee_count')
+        .eq('year', selectedYear)
 
       if (error) throw error
 
-      const totalPaid = data?.reduce((sum, s) => sum + Number(s.paid_amount), 0) || 0
-      const totalRemaining = data?.reduce((sum, s) => sum + Number(s.remaining_amount), 0) || 0
-      const uniqueEmployees = new Set(data?.map(s => s.employee_id) || []).size
-      const averageMonthly = totalPaid / 12
+      const totalPaid = data?.reduce((sum, s) => sum + Number(s.total_paid), 0) || 0
+      const totalRemaining = data?.reduce((sum, s) => sum + Number(s.total_remaining), 0) || 0
+      const maxEmployees = Math.max(...(data?.map(s => s.employee_count) || [0]))
+      const averageMonthly = data && data.length > 0 ? totalPaid / data.length : 0
 
       setYearlyStats({
         totalPaid,
         totalRemaining,
         averageMonthly,
-        employeeCount: uniqueEmployees
+        employeeCount: maxEmployees
       })
     } catch (error) {
       console.error('Error loading yearly stats:', error)
@@ -204,7 +196,9 @@ const SalaryReports = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Relatórios de Salários</h2>
-          <p className="text-sm text-gray-600">Análises e exportações detalhadas</p>
+          <p className="text-sm text-gray-600">
+            Análises consolidadas de todos os pagamentos (funcionários de simulação excluídos)
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <select
@@ -216,6 +210,28 @@ const SalaryReports = () => {
               <option key={year} value={year}>{year}</option>
             ))}
           </select>
+        </div>
+      </div>
+
+      {/* Info Alert */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <FileText className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <h3 className="font-semibold text-green-900 mb-1">Relatório Consolidado</h3>
+            <p className="text-sm text-green-800">
+              Este relatório resgata <strong>TODOS os valores pagos</strong> nos meses anteriores, incluindo:
+            </p>
+            <ul className="text-sm text-green-800 mt-2 space-y-1">
+              <li>• Pagamentos feitos através do tracking de salários</li>
+              <li>• Pagamentos parciais de meses anteriores</li>
+              <li>• Lançamentos diretos do financeiro (quando vinculados)</li>
+              <li>• Vales e adiantamentos descontados</li>
+            </ul>
+            <p className="text-sm text-green-800 mt-2">
+              <strong>Observação:</strong> Funcionários de simulação/teste foram automaticamente excluídos dos relatórios.
+            </p>
+          </div>
         </div>
       </div>
 
