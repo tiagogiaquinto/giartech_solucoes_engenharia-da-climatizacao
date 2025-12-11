@@ -78,11 +78,49 @@ const ExecutiveDashboard = () => {
   const [metrics, setMetrics] = useState<ExecutiveMetrics | null>(null)
   const [chartData, setChartData] = useState<ChartData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [timeRange, setTimeRange] = useState<'month' | 'quarter' | 'year'>('month')
+  const [timeRange, setTimeRange] = useState<'month' | 'quarter' | 'semester' | 'year'>('month')
+  const [customDateStart, setCustomDateStart] = useState('')
+  const [customDateEnd, setCustomDateEnd] = useState('')
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false)
 
   useEffect(() => {
     loadExecutiveData()
-  }, [timeRange])
+  }, [timeRange, customDateStart, customDateEnd])
+
+  const getDateRange = () => {
+    const now = new Date()
+    let startDate = new Date()
+    let endDate = new Date()
+
+    if (showCustomDatePicker && customDateStart && customDateEnd) {
+      return {
+        start: new Date(customDateStart).toISOString(),
+        end: new Date(customDateEnd).toISOString()
+      }
+    }
+
+    switch (timeRange) {
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      case 'quarter':
+        const currentQuarter = Math.floor(now.getMonth() / 3)
+        startDate = new Date(now.getFullYear(), currentQuarter * 3, 1)
+        break
+      case 'semester':
+        const currentSemester = now.getMonth() < 6 ? 0 : 6
+        startDate = new Date(now.getFullYear(), currentSemester, 1)
+        break
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1)
+        break
+    }
+
+    return {
+      start: startDate.toISOString(),
+      end: endDate.toISOString()
+    }
+  }
 
   const loadExecutiveData = async () => {
     try {
@@ -276,32 +314,84 @@ const ExecutiveDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-[1800px] mx-auto px-6 py-8 space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard Executivo</h1>
-            <p className="text-gray-600">Visão estratégica para tomada de decisões</p>
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard Executivo</h1>
+              <p className="text-gray-600">Visão estratégica para tomada de decisões</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 shadow-sm">
+                <Calendar className="w-5 h-5 text-gray-500" />
+                <select
+                  value={showCustomDatePicker ? 'custom' : timeRange}
+                  onChange={(e) => {
+                    if (e.target.value === 'custom') {
+                      setShowCustomDatePicker(true)
+                    } else {
+                      setShowCustomDatePicker(false)
+                      setTimeRange(e.target.value as any)
+                    }
+                  }}
+                  className="bg-transparent border-none outline-none text-sm font-medium text-gray-700"
+                >
+                  <option value="month">Mês Atual</option>
+                  <option value="quarter">Trimestre Atual</option>
+                  <option value="semester">Semestre Atual</option>
+                  <option value="year">Ano Atual</option>
+                  <option value="custom">Período Personalizado</option>
+                </select>
+              </div>
+
+              {showCustomDatePicker && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={customDateStart}
+                    onChange={(e) => setCustomDateStart(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm"
+                  />
+                  <span className="text-gray-500">até</span>
+                  <input
+                    type="date"
+                    value={customDateEnd}
+                    onChange={(e) => setCustomDateEnd(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm"
+                  />
+                </div>
+              )}
+
+              <button
+                onClick={loadExecutiveData}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Atualizar
+              </button>
+              <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm">
+                <Download className="h-4 w-4" />
+                Exportar
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="month">Último Mês</option>
-              <option value="quarter">Último Trimestre</option>
-              <option value="year">Último Ano</option>
-            </select>
-            <button
-              onClick={loadExecutiveData}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Atualizar
-            </button>
-            <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm">
-              <Download className="h-4 w-4" />
-              Exportar
-            </button>
+
+          {/* Period Indicator */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center gap-2 shadow-sm">
+            <Calendar className="w-5 h-5 text-blue-600" />
+            <span className="text-sm font-medium text-blue-900">
+              {showCustomDatePicker && customDateStart && customDateEnd ? (
+                <>Período Analisado: {new Date(customDateStart).toLocaleDateString('pt-BR')} até {new Date(customDateEnd).toLocaleDateString('pt-BR')}</>
+              ) : (
+                <>
+                  Análise: {
+                    timeRange === 'month' ? 'Mês Atual' :
+                    timeRange === 'quarter' ? 'Trimestre Atual' :
+                    timeRange === 'semester' ? 'Semestre Atual' :
+                    'Ano Atual'
+                  }
+                </>
+              )}
+            </span>
           </div>
         </div>
 

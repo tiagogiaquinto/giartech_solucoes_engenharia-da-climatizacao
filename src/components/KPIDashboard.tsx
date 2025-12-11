@@ -72,26 +72,195 @@ const KPIDashboard = () => {
   const [teamProd, setTeamProd] = useState<TeamProductivity[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'services' | 'customers' | 'team'>('overview')
+  const [timeRange, setTimeRange] = useState<'month' | 'quarter' | 'semester' | 'year'>('month')
+  const [customDateStart, setCustomDateStart] = useState('')
+  const [customDateEnd, setCustomDateEnd] = useState('')
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false)
 
   useEffect(() => {
     loadKPIData()
-  }, [])
+  }, [timeRange, customDateStart, customDateEnd])
+
+  const getDateRange = () => {
+    const now = new Date()
+    let startDate = new Date()
+    let endDate = new Date()
+
+    if (showCustomDatePicker && customDateStart && customDateEnd) {
+      return {
+        start: new Date(customDateStart).toISOString(),
+        end: new Date(customDateEnd).toISOString()
+      }
+    }
+
+    switch (timeRange) {
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      case 'quarter':
+        const currentQuarter = Math.floor(now.getMonth() / 3)
+        startDate = new Date(now.getFullYear(), currentQuarter * 3, 1)
+        break
+      case 'semester':
+        const currentSemester = now.getMonth() < 6 ? 0 : 6
+        startDate = new Date(now.getFullYear(), currentSemester, 1)
+        break
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1)
+        break
+    }
+
+    return {
+      start: startDate.toISOString(),
+      end: endDate.toISOString()
+    }
+  }
 
   const loadKPIData = async () => {
     try {
       setLoading(true)
 
+      const dateRange = getDateRange()
+
       const [kpisResult, serviceResult, customerResult, teamResult] = await Promise.all([
         supabase.from('v_business_kpis').select('*').maybeSingle(),
-        supabase.from('v_service_performance').select('*').order('total_revenue', { ascending: false }),
-        supabase.from('v_customer_profitability').select('*').order('total_revenue', { ascending: false }).limit(20),
-        supabase.from('v_team_productivity').select('*').order('total_revenue_generated', { ascending: false })
+        supabase.from('service_orders')
+          .select(`
+            service_order_items!inner(
+              service_catalog(name),
+              subtotal
+            ),
+            created_at,
+            status
+          `)
+          .gte('created_at', dateRange.start)
+          .lte('created_at', dateRange.end),
+        supabase.from('service_orders')
+          .select(`
+            customers!inner(name, company_name),
+            total,
+            total_cost,
+            created_at
+          `)
+          .gte('created_at', dateRange.start)
+          .lte('created_at', dateRange.end),
+        supabase.from('service_orders')
+          .select(`
+            service_order_team!inner(
+              employees(name, role)
+            ),
+            total,
+            created_at,
+            status
+          `)
+          .gte('created_at', dateRange.start)
+          .lte('created_at', dateRange.end)
       ])
 
       if (kpisResult.data) setKpis(kpisResult.data)
-      if (serviceResult.data) setServicePerf(serviceResult.data)
-      if (customerResult.data) setCustomerProf(customerResult.data)
-      if (teamResult.data) setTeamProd(teamResult.data)
+
+      if (serviceResult.data) {
+        const servicesMap = new Map<string, ServicePerformance>()
+
+        serviceResult.data.forEach((order: any) => {
+          order.service_order_items?.forEach((item: any) => {
+            const serviceName = item.service_catalog?.name || 'Sem Serviço'
+            const existing = servicesMap.get(serviceName) || {
+              service_name: serviceName,
+              total_orders: 0,
+              completed_orders: 0,
+              completion_rate: 0,
+              total_revenue: 0,
+              avg_revenue_per_service: 0,
+              avg_completion_time_hours: 0,
+              unique_customers: 0
+            }
+
+            existing.total_orders++
+            if (order.status === 'concluido') existing.completed_orders++
+            existing.total_revenue += Number(item.subtotal || 0)
+
+            servicesMap.set(serviceName, existing)
+          })
+        })
+
+        const services = Array.from(servicesMap.values()).map(s => ({
+          ...s,
+          completion_rate: (s.completed_orders / s.total_orders) * 100,
+          avg_revenue_per_service: s.total_revenue / s.total_orders
+        }))
+
+        setServicePerf(services.sort((a, b) => b.total_revenue - a.total_revenue))
+      }
+
+      if (customerResult.data) {
+        const customersMap = new Map<string, CustomerProfitability>()
+
+        customerResult.data.forEach((order: any) => {
+          const customerName = order.customers?.name || 'Cliente Desconhecido'
+          const existing = customersMap.get(customerName) || {
+            customer_name: customerName,
+            company_name: order.customers?.company_name || '',
+            total_orders: 0,
+            total_revenue: 0,
+            avg_order_value: 0,
+            total_material_cost: 0,
+            gross_profit: 0,
+            profit_margin: 0,
+            days_since_last_order: 0
+          }
+
+          existing.total_orders++
+          existing.total_revenue += Number(order.total || 0)
+          existing.total_material_cost += Number(order.total_cost || 0)
+
+          customersMap.set(customerName, existing)
+        })
+
+        const customers = Array.from(customersMap.values()).map(c => ({
+          ...c,
+          avg_order_value: c.total_revenue / c.total_orders,
+          gross_profit: c.total_revenue - c.total_material_cost,
+          profit_margin: ((c.total_revenue - c.total_material_cost) / c.total_revenue) * 100
+        }))
+
+        setCustomerProf(customers.sort((a, b) => b.total_revenue - a.total_revenue).slice(0, 20))
+      }
+
+      if (teamResult.data) {
+        const teamMap = new Map<string, TeamProductivity>()
+
+        teamResult.data.forEach((order: any) => {
+          order.service_order_team?.forEach((member: any) => {
+            const employeeName = member.employees?.name || 'Funcionário'
+            const existing = teamMap.get(employeeName) || {
+              employee_name: employeeName,
+              role: member.employees?.role || '',
+              total_orders_assigned: 0,
+              completed_orders: 0,
+              completion_rate: 0,
+              total_revenue_generated: 0,
+              avg_completion_time_hours: 0,
+              monthly_salary: 0,
+              revenue_to_salary_ratio: 0
+            }
+
+            existing.total_orders_assigned++
+            if (order.status === 'concluido') existing.completed_orders++
+            existing.total_revenue_generated += Number(order.total || 0)
+
+            teamMap.set(employeeName, existing)
+          })
+        })
+
+        const team = Array.from(teamMap.values()).map(t => ({
+          ...t,
+          completion_rate: (t.completed_orders / t.total_orders_assigned) * 100,
+          revenue_to_salary_ratio: t.monthly_salary > 0 ? t.total_revenue_generated / t.monthly_salary : 0
+        }))
+
+        setTeamProd(team.sort((a, b) => b.total_revenue_generated - a.total_revenue_generated))
+      }
     } catch (error) {
       console.error('Erro ao carregar KPIs:', error)
     } finally {
@@ -189,17 +358,82 @@ const KPIDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">KPIs e OKRs</h2>
           <p className="text-gray-600 mt-1">Indicadores-chave de performance e objetivos</p>
         </div>
-        <button
-          onClick={loadKPIData}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Atualizar
-        </button>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Time Range Filter */}
+          <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2">
+            <Calendar className="w-5 h-5 text-gray-500" />
+            <select
+              value={showCustomDatePicker ? 'custom' : timeRange}
+              onChange={(e) => {
+                if (e.target.value === 'custom') {
+                  setShowCustomDatePicker(true)
+                } else {
+                  setShowCustomDatePicker(false)
+                  setTimeRange(e.target.value as any)
+                }
+              }}
+              className="bg-transparent border-none outline-none text-sm font-medium text-gray-700"
+            >
+              <option value="month">Mês Atual</option>
+              <option value="quarter">Trimestre Atual</option>
+              <option value="semester">Semestre Atual</option>
+              <option value="year">Ano Atual</option>
+              <option value="custom">Período Personalizado</option>
+            </select>
+          </div>
+
+          {/* Custom Date Range */}
+          {showCustomDatePicker && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={customDateStart}
+                onChange={(e) => setCustomDateStart(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+              <span className="text-gray-500">até</span>
+              <input
+                type="date"
+                value={customDateEnd}
+                onChange={(e) => setCustomDateEnd(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+          )}
+
+          <button
+            onClick={loadKPIData}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <Activity className="w-4 h-4" />
+            Atualizar
+          </button>
+        </div>
+      </div>
+
+      {/* Period Indicator */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center gap-2">
+        <Calendar className="w-5 h-5 text-blue-600" />
+        <span className="text-sm text-blue-900">
+          {showCustomDatePicker && customDateStart && customDateEnd ? (
+            <>Período: {new Date(customDateStart).toLocaleDateString('pt-BR')} até {new Date(customDateEnd).toLocaleDateString('pt-BR')}</>
+          ) : (
+            <>
+              Análise: {
+                timeRange === 'month' ? 'Mês Atual' :
+                timeRange === 'quarter' ? 'Trimestre Atual' :
+                timeRange === 'semester' ? 'Semestre Atual' :
+                'Ano Atual'
+              }
+            </>
+          )}
+        </span>
       </div>
 
       {/* Main KPIs - OKRs */}
