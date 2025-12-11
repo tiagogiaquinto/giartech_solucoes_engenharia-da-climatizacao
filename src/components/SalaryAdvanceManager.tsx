@@ -116,11 +116,11 @@ const SalaryAdvanceManager = () => {
     }
 
     try {
-      const { data, error } = await supabase.rpc('register_salary_advance', {
+      const { data, error } = await supabase.rpc('register_monthly_advance', {
         p_employee_id: selectedEmployeeId,
+        p_reference_month: deductFromMonth,
         p_amount: Number(advanceAmount),
-        p_advance_date: advanceDate,
-        p_deducted_from_month: deductFromMonth,
+        p_payment_date: advanceDate,
         p_notes: advanceNotes || null
       })
 
