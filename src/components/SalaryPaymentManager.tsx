@@ -11,7 +11,10 @@ import {
   Calendar,
   TrendingUp,
   Filter,
-  Download
+  Download,
+  Edit,
+  X,
+  Save
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
@@ -61,6 +64,18 @@ const SalaryPaymentManager = () => {
   const [paymentNotes, setPaymentNotes] = useState('')
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([])
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValues, setEditValues] = useState<{
+    base_salary: string
+    bonuses: string
+    discounts: string
+    due_date: string
+  }>({
+    base_salary: '',
+    bonuses: '',
+    discounts: '',
+    due_date: ''
+  })
 
   useEffect(() => {
     loadSalaries()
@@ -152,6 +167,48 @@ const SalaryPaymentManager = () => {
     } catch (error: any) {
       console.error('Error registering payment:', error)
       alert('Erro ao registrar pagamento: ' + error.message)
+    }
+  }
+
+  const handleStartEdit = (salary: SalaryTracking) => {
+    setEditingId(salary.id)
+    setEditValues({
+      base_salary: salary.base_salary.toString(),
+      bonuses: (salary.bonuses || 0).toString(),
+      discounts: (salary.discounts || 0).toString(),
+      due_date: format(new Date(salary.due_date), 'yyyy-MM-dd')
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditValues({
+      base_salary: '',
+      bonuses: '',
+      discounts: '',
+      due_date: ''
+    })
+  }
+
+  const handleSaveEdit = async (salaryId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('update_salary_tracking', {
+        p_salary_id: salaryId,
+        p_base_salary: editValues.base_salary ? Number(editValues.base_salary) : null,
+        p_bonuses: editValues.bonuses ? Number(editValues.bonuses) : null,
+        p_discounts: editValues.discounts ? Number(editValues.discounts) : null,
+        p_due_date: editValues.due_date || null,
+        p_notes: null
+      })
+
+      if (error) throw error
+
+      alert('Salário atualizado com sucesso!')
+      handleCancelEdit()
+      loadSalaries()
+    } catch (error: any) {
+      console.error('Error updating salary:', error)
+      alert('Erro ao atualizar salário: ' + error.message)
     }
   }
 
@@ -315,55 +372,154 @@ const SalaryPaymentManager = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {salaries.map((salary) => (
-                <tr key={salary.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Users className="w-5 h-5 text-gray-400 mr-2" />
-                      <span className="text-sm font-medium text-gray-900">
-                        {salary.employee_name}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {format(new Date(salary.reference_month), 'MM/yyyy', { locale: ptBR })}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    R$ {Number(salary.gross_amount).toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                    R$ {Number(salary.paid_amount).toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 font-medium">
-                    R$ {Number(salary.remaining_amount).toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {format(new Date(salary.due_date), 'dd/MM/yyyy', { locale: ptBR })}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(salary.payment_status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleOpenPayment(salary)}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        Pagar
-                      </button>
-                      {salary.payment_count > 0 && (
-                        <button
-                          onClick={() => loadPaymentHistory(salary.id)}
-                          className="text-gray-600 hover:text-gray-800"
-                          title="Ver histórico"
-                        >
-                          <History className="w-5 h-5" />
-                        </button>
+              {salaries.map((salary) => {
+                const isEditing = editingId === salary.id
+                const calculatedGross = isEditing
+                  ? Number(editValues.base_salary || 0) + Number(editValues.bonuses || 0) - Number(editValues.discounts || 0)
+                  : Number(salary.gross_amount)
+
+                return (
+                  <tr key={salary.id} className={`${isEditing ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <Users className="w-5 h-5 text-gray-400 mr-2" />
+                        <span className="text-sm font-medium text-gray-900">
+                          {salary.employee_name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {format(new Date(salary.reference_month), 'MM/yyyy', { locale: ptBR })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {isEditing ? (
+                        <div className="space-y-1">
+                          <div>
+                            <label className="text-xs text-gray-500">Base:</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editValues.base_salary}
+                              onChange={(e) => setEditValues({...editValues, base_salary: e.target.value})}
+                              className="w-28 px-2 py-1 text-sm border border-gray-300 rounded"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500">Bônus:</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editValues.bonuses}
+                              onChange={(e) => setEditValues({...editValues, bonuses: e.target.value})}
+                              className="w-28 px-2 py-1 text-sm border border-gray-300 rounded"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500">Desc:</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editValues.discounts}
+                              onChange={(e) => setEditValues({...editValues, discounts: e.target.value})}
+                              className="w-28 px-2 py-1 text-sm border border-gray-300 rounded"
+                            />
+                          </div>
+                          <div className="text-xs font-medium text-blue-600 mt-1">
+                            Total: R$ {calculatedGross.toFixed(2)}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900">R$ {Number(salary.gross_amount).toFixed(2)}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Base: R$ {Number(salary.base_salary).toFixed(2)}
+                          </div>
+                          {salary.bonuses > 0 && (
+                            <div className="text-xs text-green-600">
+                              +Bônus: R$ {Number(salary.bonuses).toFixed(2)}
+                            </div>
+                          )}
+                          {salary.discounts > 0 && (
+                            <div className="text-xs text-red-600">
+                              -Desc: R$ {Number(salary.discounts).toFixed(2)}
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                      R$ {Number(salary.paid_amount).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 font-medium">
+                      R$ {isEditing ? (calculatedGross - Number(salary.paid_amount)).toFixed(2) : Number(salary.remaining_amount).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={editValues.due_date}
+                          onChange={(e) => setEditValues({...editValues, due_date: e.target.value})}
+                          className="px-2 py-1 text-sm border border-gray-300 rounded"
+                        />
+                      ) : (
+                        <span className="text-gray-500">
+                          {format(new Date(salary.due_date), 'dd/MM/yyyy', { locale: ptBR })}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(salary.payment_status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center gap-2">
+                        {isEditing ? (
+                          <>
+                            <button
+                              onClick={() => handleSaveEdit(salary.id)}
+                              className="flex items-center gap-1 text-green-600 hover:text-green-800 font-medium"
+                              title="Salvar"
+                            >
+                              <Save className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="flex items-center gap-1 text-red-600 hover:text-red-800 font-medium"
+                              title="Cancelar"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleStartEdit(salary)}
+                              className="text-gray-600 hover:text-gray-800"
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleOpenPayment(salary)}
+                              className="text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              Pagar
+                            </button>
+                            {salary.payment_count > 0 && (
+                              <button
+                                onClick={() => loadPaymentHistory(salary.id)}
+                                className="text-gray-600 hover:text-gray-800"
+                                title="Ver histórico"
+                              >
+                                <History className="w-5 h-5" />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
