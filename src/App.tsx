@@ -194,6 +194,16 @@ function App() {
     const checkForUpdates = async () => {
       try {
         const response = await fetch('/version.json?t=' + Date.now())
+
+        if (!response.ok) {
+          return
+        }
+
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          return
+        }
+
         const serverVersion = await response.json()
         const localVersion = localStorage.getItem('app_version')
 
@@ -207,7 +217,7 @@ function App() {
           localStorage.setItem('app_version', serverVersion.version)
         }
       } catch (error) {
-        console.error('Erro ao verificar atualizações:', error)
+        // Silenciosamente ignora erros de verificação de versão
       }
     }
 
@@ -246,7 +256,7 @@ function App() {
 
   return (
     <UserProvider>
-      <AnimatePresence initial={false}>
+      <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/login" element={<Login />} />
           <Route path="/mobile/login" element={<MobileLogin />} />
