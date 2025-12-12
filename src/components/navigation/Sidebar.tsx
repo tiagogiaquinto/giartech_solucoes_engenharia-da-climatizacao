@@ -58,6 +58,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes', description: 'Gestão de clientes PF/PJ' },
   { id: 'rfm', path: '/customer-rfm', icon: Target, label: 'Análise RFM', description: 'Segmentação inteligente de clientes por Recência, Frequência e Valor' },
   { id: 'customer-gamification', path: '/customer-gamification', icon: Star, label: 'Gamificação de Clientes', description: 'Sistema de pontos, níveis, badges e benefícios para fidelização de clientes' },
+  { id: 'customer-gamification-manager', path: '/customer-gamification-manager', icon: Settings, label: 'Gerenciar Gamificação', description: 'Controle quais clientes participam e quais OSs geram pontos' },
   { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores' },
   { id: 'compras', path: '/purchasing', icon: ShoppingCart, label: 'Compras', description: 'Pedidos e alertas de estoque' },
   { id: 'google-ads', path: '/google-ads-tracking', icon: Target, label: 'Google Ads Premium', description: 'Rastreamento em tempo real de cliques, conversões e ROI das suas campanhas' },
