@@ -190,7 +190,7 @@ export default function CustomerGamificationManager() {
   };
 
   const filteredCustomers = customers.filter(c => {
-    const matchesSearch = c.nome_razao.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = c.nome_razao?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
     const matchesFilter =
       filterStatus === 'all' ||
       (filterStatus === 'participants' && c.participa_gamificacao) ||
@@ -200,8 +200,8 @@ export default function CustomerGamificationManager() {
 
   const filteredOrders = serviceOrders.filter(o => {
     const matchesSearch =
-      o.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.order_number.toLowerCase().includes(searchTerm.toLowerCase());
+      o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.order_number?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter =
       filterOrderStatus === 'all' ||
       (filterOrderStatus === 'available' && o.pode_incluir) ||
@@ -365,11 +365,11 @@ export default function CustomerGamificationManager() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {customer.nome_razao}
+                        {customer.nome_razao || 'Cliente sem nome'}
                       </h3>
-                      {customer.participa_gamificacao && (
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${TIER_COLORS[customer.current_tier]}`}>
-                          {TIER_NAMES[customer.current_tier]}
+                      {customer.participa_gamificacao && customer.current_tier && (
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${TIER_COLORS[customer.current_tier] || 'bg-gray-100 text-gray-800'}`}>
+                          {TIER_NAMES[customer.current_tier] || 'Sem Tier'}
                         </span>
                       )}
                     </div>
@@ -506,22 +506,22 @@ export default function CustomerGamificationManager() {
 
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-1">
-                          <h4 className="font-semibold text-gray-900">OS #{order.order_number}</h4>
+                          <h4 className="font-semibold text-gray-900">OS #{order.order_number || 'S/N'}</h4>
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
                             order.status_gamificacao === 'Disponível' ? 'bg-blue-100 text-blue-800' :
                             order.status_gamificacao === 'Já incluída' ? 'bg-green-100 text-green-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {order.status_gamificacao}
+                            {order.status_gamificacao || 'Status indefinido'}
                           </span>
                         </div>
                         <div className="flex gap-6 text-sm text-gray-600">
-                          <span>{order.customer_name}</span>
-                          <span>R$ {order.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                          <span>{new Date(order.created_at).toLocaleDateString('pt-BR')}</span>
-                          {order.incluir_gamificacao && order.pontos_gerados > 0 && (
+                          <span>{order.customer_name || 'Cliente não informado'}</span>
+                          <span>R$ {(order.total_value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span>{order.created_at ? new Date(order.created_at).toLocaleDateString('pt-BR') : 'Data não informada'}</span>
+                          {order.incluir_gamificacao && (order.pontos_gerados || 0) > 0 && (
                             <span className="text-green-600 font-semibold">
-                              {order.pontos_gerados} pontos
+                              {order.pontos_gerados || 0} pontos
                             </span>
                           )}
                         </div>

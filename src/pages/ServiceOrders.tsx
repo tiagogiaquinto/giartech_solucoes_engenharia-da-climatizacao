@@ -173,9 +173,9 @@ const ServiceOrders = () => {
 
   // Filter orders
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.service_type.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.service_type?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = selectedStatus === 'all' || order.status === selectedStatus
     const matchesPriority = selectedPriority === 'all' || order.priority === selectedPriority
     return matchesSearch && matchesStatus && matchesPriority
