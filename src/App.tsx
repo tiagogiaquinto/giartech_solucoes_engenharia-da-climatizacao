@@ -89,6 +89,8 @@ import FinanceiroConsolidado from './pages/FinanceiroConsolidado'
 import ExecutivoConsolidado from './pages/ExecutivoConsolidado'
 import RelatoriosConsolidado from './pages/RelatoriosConsolidado'
 import CustomerRFM from './pages/CustomerRFM'
+import CustomerReferrals from './pages/CustomerReferrals'
+import CustomerCredits from './pages/CustomerCredits'
 import TechnicianPerformance from './pages/TechnicianPerformance'
 import MobileLayout from './components/layouts/MobileLayout'
 import MobileHome from './pages/mobile/MobileHome'
@@ -638,6 +640,22 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <CustomerRFM />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/customer-referrals" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <CustomerReferrals />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/customer-credits" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <CustomerCredits />
               </WebLayout>
             </ProtectedRoute>
           } />
