@@ -33,7 +33,9 @@ import {
   Navigation,
   Activity,
   Mail,
-  Trophy
+  Trophy,
+  Star,
+  Award
 } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { supabase } from '../../lib/supabase'
@@ -55,6 +57,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'agenda', path: '/calendar', icon: Calendar, label: 'Agenda', description: 'Compromissos e eventos' },
   { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes', description: 'Gestão de clientes PF/PJ' },
   { id: 'rfm', path: '/customer-rfm', icon: Target, label: 'Análise RFM', description: 'Segmentação inteligente de clientes por Recência, Frequência e Valor' },
+  { id: 'customer-gamification', path: '/customer-gamification', icon: Star, label: 'Gamificação de Clientes', description: 'Sistema de pontos, níveis, badges e benefícios para fidelização de clientes' },
   { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores' },
   { id: 'compras', path: '/purchasing', icon: ShoppingCart, label: 'Compras', description: 'Pedidos e alertas de estoque' },
   { id: 'google-ads', path: '/google-ads-tracking', icon: Target, label: 'Google Ads Premium', description: 'Rastreamento em tempo real de cliques, conversões e ROI das suas campanhas' },
