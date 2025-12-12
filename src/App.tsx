@@ -91,6 +91,7 @@ import RelatoriosConsolidado from './pages/RelatoriosConsolidado'
 import CustomerRFM from './pages/CustomerRFM'
 import CustomerReferrals from './pages/CustomerReferrals'
 import CustomerCredits from './pages/CustomerCredits'
+import CustomerGamification from './pages/CustomerGamification'
 import TechnicianPerformance from './pages/TechnicianPerformance'
 import MobileLayout from './components/layouts/MobileLayout'
 import MobileHome from './pages/mobile/MobileHome'
@@ -656,6 +657,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <CustomerCredits />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/customer-gamification" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <CustomerGamification />
               </WebLayout>
             </ProtectedRoute>
           } />
