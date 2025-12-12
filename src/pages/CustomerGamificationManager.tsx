@@ -352,7 +352,32 @@ export default function CustomerGamificationManager() {
 
         {activeTab === 'customers' ? (
           <div className="space-y-4">
-            {filteredCustomers.map((customer) => (
+            {filteredCustomers.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {customers.length === 0 ? 'Nenhum cliente cadastrado' : 'Nenhum cliente encontrado'}
+                </h3>
+                <p className="text-gray-600">
+                  {customers.length === 0
+                    ? 'Cadastre clientes para começar a usar a gamificação'
+                    : 'Tente ajustar os filtros ou o termo de busca'
+                  }
+                </p>
+                {customers.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setFilterStatus('all');
+                    }}
+                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                  >
+                    Limpar filtros
+                  </button>
+                )}
+              </div>
+            ) : (
+              filteredCustomers.map((customer) => (
               <div
                 key={customer.id}
                 className={`border rounded-lg p-4 ${
@@ -441,12 +466,7 @@ export default function CustomerGamificationManager() {
                   </div>
                 </div>
               </div>
-            ))}
-
-            {filteredCustomers.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                Nenhum cliente encontrado
-              </div>
+              ))
             )}
           </div>
         ) : (
@@ -474,7 +494,32 @@ export default function CustomerGamificationManager() {
             )}
 
             <div className="space-y-3">
-              {filteredOrders.map((order) => (
+              {filteredOrders.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <Award className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {serviceOrders.length === 0 ? 'Nenhuma ordem de serviço' : 'Nenhuma ordem encontrada'}
+                  </h3>
+                  <p className="text-gray-600">
+                    {serviceOrders.length === 0
+                      ? 'Não há ordens de serviço concluídas ainda'
+                      : 'Tente ajustar os filtros ou o termo de busca'
+                    }
+                  </p>
+                  {serviceOrders.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setFilterOrderStatus('all');
+                      }}
+                      className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filteredOrders.map((order) => (
                 <div
                   key={order.id}
                   className={`border rounded-lg p-4 ${
@@ -539,12 +584,7 @@ export default function CustomerGamificationManager() {
                     )}
                   </div>
                 </div>
-              ))}
-
-              {filteredOrders.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  Nenhuma ordem de serviço encontrada
-                </div>
+                ))
               )}
             </div>
           </>
