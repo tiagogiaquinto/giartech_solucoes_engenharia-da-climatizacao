@@ -8,6 +8,7 @@ import { getServiceOrders, createServiceOrder, updateServiceOrder, deleteService
 import { ServiceOrderModalOptimized } from '../components/ServiceOrderModalOptimized'
 import { cache } from '../utils/cache'
 import { getServiceOrderStatusLabel, getPriorityLabel } from '../utils/databaseMappers'
+import { GamificationToggle } from '../components/ServiceOrder/GamificationToggle'
 
 
 const ServiceOrders = () => {
@@ -404,6 +405,18 @@ const ServiceOrders = () => {
                     </p>
                   )}
                 </div>
+              </div>
+
+              <div className="mb-3">
+                <GamificationToggle
+                  serviceOrderId={order.id}
+                  customerId={order.client_id}
+                  status={order.status}
+                  totalValue={order.total_value || 0}
+                  orderNumber={order.order_number}
+                  onUpdate={loadServiceOrders}
+                  variant="inline"
+                />
               </div>
 
               <div className="flex items-center justify-between">

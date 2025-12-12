@@ -17,6 +17,7 @@ import { OSChecklist } from '../components/OSChecklist'
 import { ServiceDetailedInfo } from '../components/ServiceDetailedInfo'
 import { ServiceInfoEditModal } from '../components/ServiceInfoEditModal'
 import { ServiceOrderDocuments } from '../components/ServiceOrderDocuments'
+import { GamificationToggle } from '../components/ServiceOrder/GamificationToggle'
 
 const ServiceOrderView = () => {
   const { id } = useParams()
@@ -550,6 +551,22 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
                 </div>
               )}
             </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+          >
+            <GamificationToggle
+              serviceOrderId={order.id}
+              customerId={order.client_id}
+              status={order.status}
+              totalValue={order.total_value || 0}
+              orderNumber={order.order_number}
+              onUpdate={loadOrder}
+              variant="card"
+            />
           </motion.div>
 
           <motion.div
