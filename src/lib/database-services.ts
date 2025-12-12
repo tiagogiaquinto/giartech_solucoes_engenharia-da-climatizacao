@@ -535,6 +535,7 @@ export const getServiceOrderMaterials = async (serviceOrderId: string): Promise<
 export interface ServiceOrder {
   id: string
   order_number: string
+  client_id?: string
   client_name: string
   client_phone?: string
   service_type: string

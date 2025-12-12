@@ -37,10 +37,19 @@ export function GamificationToggle({
   const { showToast } = useToast();
 
   useEffect(() => {
-    loadGamificationStatus();
+    if (serviceOrderId && customerId) {
+      loadGamificationStatus();
+    } else {
+      setLoading(false);
+    }
   }, [serviceOrderId, customerId]);
 
   const loadGamificationStatus = async () => {
+    if (!serviceOrderId || !customerId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -48,17 +57,30 @@ export function GamificationToggle({
         .from('customers')
         .select('nome_razao, participa_gamificacao')
         .eq('id', customerId)
-        .single();
+        .maybeSingle();
 
-      if (customerError) throw customerError;
+      if (customerError) {
+        console.error('Erro ao buscar cliente:', customerError);
+        setLoading(false);
+        return;
+      }
+
+      if (!customer) {
+        setLoading(false);
+        return;
+      }
 
       const { data: serviceOrder, error: osError } = await supabase
         .from('service_orders')
         .select('incluir_gamificacao, pontos_gerados')
         .eq('id', serviceOrderId)
-        .single();
+        .maybeSingle();
 
-      if (osError) throw osError;
+      if (osError) {
+        console.error('Erro ao buscar OS:', osError);
+        setLoading(false);
+        return;
+      }
 
       const canInclude =
         customer.participa_gamificacao &&
@@ -139,6 +161,10 @@ export function GamificationToggle({
       setProcessing(false);
     }
   };
+
+  if (!serviceOrderId || !customerId) {
+    return null;
+  }
 
   if (loading) {
     return (
