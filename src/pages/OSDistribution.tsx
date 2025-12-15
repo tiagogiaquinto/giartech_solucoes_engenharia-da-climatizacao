@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../hooks/useToast'
+import { formatDateSafe } from '../utils/format'
 
 const OSDistribution = () => {
   const [unassignedOrders, setUnassignedOrders] = useState<any[]>([])
@@ -276,7 +277,7 @@ const OSDistribution = () => {
                       </div>
                       <div className="text-right text-sm text-gray-500">
                         <Clock className="w-4 h-4 inline mr-1" />
-                        {new Date(order.created_at).toLocaleDateString('pt-BR')}
+                        {formatDateSafe(order.created_at)}
                       </div>
                     </div>
                     {order.description && (

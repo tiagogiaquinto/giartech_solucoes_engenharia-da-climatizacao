@@ -14,6 +14,7 @@ import {
   Lock
 } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
+import { formatDateSafe } from '../utils/format'
 
 interface Project {
   id: number
@@ -327,7 +328,7 @@ const Projects: React.FC<ProjectsProps> = ({ onPremiumFeature, onEnterpriseFeatu
                 .map(project => (
                   <div key={project.id} className="flex justify-between items-center">
                     <span className="text-xs truncate max-w-[120px]">{project.name}</span>
-                    <span className="text-xs font-medium">{new Date(project.deadline).toLocaleDateString('pt-BR')}</span>
+                    <span className="text-xs font-medium">{formatDateSafe(project.deadline)}</span>
                   </div>
                 ))
               }
@@ -374,7 +375,7 @@ const Projects: React.FC<ProjectsProps> = ({ onPremiumFeature, onEnterpriseFeatu
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-xs text-gray-500">
-                        {new Date(project.deadline).toLocaleDateString('pt-BR')}
+                        {formatDateSafe(project.deadline)}
                       </span>
                     </div>
                   </div>
@@ -449,7 +450,7 @@ const Projects: React.FC<ProjectsProps> = ({ onPremiumFeature, onEnterpriseFeatu
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Prazo</p>
-                    <p className="text-sm font-medium text-gray-900">{new Date(selectedProject.deadline).toLocaleDateString('pt-BR')}</p>
+                    <p className="text-sm font-medium text-gray-900">{formatDateSafe(selectedProject.deadline)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Equipe</p>
@@ -500,7 +501,7 @@ const Projects: React.FC<ProjectsProps> = ({ onPremiumFeature, onEnterpriseFeatu
                           </div>
                           <div className="flex items-center space-x-2">
                             <span className="text-xs text-gray-500">
-                              {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+                              {formatDateSafe(task.dueDate)}
                             </span>
                           </div>
                         </div>

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
+import { formatDateSafe } from '../../utils/format'
 
 const MobileHome = () => {
   const navigate = useNavigate()
@@ -247,7 +248,7 @@ const MobileHome = () => {
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Calendar className="w-4 h-4" />
                     <span>
-                      {new Date(assignment.service_orders.scheduled_date).toLocaleDateString('pt-BR')}
+                      {formatDateSafe(assignment.service_orders.scheduled_date)}
                     </span>
                   </div>
                 )}

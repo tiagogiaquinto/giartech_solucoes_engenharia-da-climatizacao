@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Edit2, Check, X, Loader } from 'lucide-react'
+import { formatDateSafe } from '../utils/format'
 
 interface InlineEditProps {
   value: string | number
@@ -114,7 +115,7 @@ export const InlineEdit = ({
         return new Intl.NumberFormat('pt-BR').format(Number(val) || 0)
 
       case 'date':
-        return val ? new Date(val).toLocaleDateString('pt-BR') : ''
+        return val ? formatDateSafe(val) : ''
 
       default:
         return val || placeholder

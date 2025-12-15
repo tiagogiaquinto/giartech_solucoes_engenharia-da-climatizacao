@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
+import { formatDateSafe } from '../../utils/format'
 
 const MobileRoutes = () => {
   const { user } = useUser()

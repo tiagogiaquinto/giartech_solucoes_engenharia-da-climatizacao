@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
+import { formatDateSafe } from '../utils/format'
   Shield, 
   Users, 
   Settings, 
@@ -406,7 +407,7 @@ const AccessManagement = () => {
                       <div>
                         <span className="text-gray-500">Último Acesso:</span>
                         <p className="font-medium">
-                          {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('pt-BR') : 'Nunca'}
+                          {user.lastLogin ? formatDateSafe(user.lastLogin) : 'Nunca'}
                         </p>
                       </div>
                       <div>

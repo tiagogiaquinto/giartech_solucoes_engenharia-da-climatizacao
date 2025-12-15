@@ -36,6 +36,7 @@ import {
   Filler
 } from 'chart.js'
 import { Bar, Pie, Line } from 'react-chartjs-2'
+import { formatDateSafe } from '../utils/format'
 
 // Register ChartJS components
 ChartJS.register(
@@ -720,7 +721,7 @@ const Reports = () => {
                     <div className="text-sm text-gray-500">{report.type}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{new Date(report.date).toLocaleDateString('pt-BR')}</div>
+                    <div className="text-sm text-gray-500">{formatDateSafe(report.date)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">{report.user}</div>

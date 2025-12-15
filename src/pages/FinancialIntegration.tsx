@@ -4,6 +4,7 @@ import { DollarSign, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Wal
 import { supabase } from '../lib/supabase'
 import KPIDashboard from '../components/KPIDashboard'
 import { useUser } from '../contexts/UserContext'
+import { formatDateSafe } from '../utils/format'
 import { Line } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -602,7 +603,7 @@ const FinancialIntegration = () => {
                     <div className="flex justify-between">
                       <div>
                         <p className="font-medium text-gray-900">{entry.descricao}</p>
-                        <p className="text-xs text-gray-500">{new Date(entry.data).toLocaleDateString('pt-BR')}</p>
+                        <p className="text-xs text-gray-500">{formatDateSafe(entry.data)}</p>
                       </div>
                       <p className="font-bold text-green-600">{formatCurrency(Number(entry.valor))}</p>
                     </div>
@@ -620,7 +621,7 @@ const FinancialIntegration = () => {
                     <div className="flex justify-between">
                       <div>
                         <p className="font-medium text-gray-900">{entry.descricao}</p>
-                        <p className="text-xs text-gray-500">{new Date(entry.data).toLocaleDateString('pt-BR')}</p>
+                        <p className="text-xs text-gray-500">{formatDateSafe(entry.data)}</p>
                       </div>
                       <p className="font-bold text-red-600">{formatCurrency(Number(entry.valor))}</p>
                     </div>
@@ -808,7 +809,7 @@ const FinancialIntegration = () => {
                 <tbody className="divide-y">
                   {entries.slice(0, 10).map(entry => (
                     <tr key={entry.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm">{new Date(entry.data).toLocaleDateString('pt-BR')}</td>
+                      <td className="px-4 py-3 text-sm">{formatDateSafe(entry.data)}</td>
                       <td className="px-4 py-3 text-sm font-mono">{entry.codigo}</td>
                       <td className="px-4 py-3 text-sm">{entry.descricao}</td>
                       <td className="px-4 py-3 text-sm">

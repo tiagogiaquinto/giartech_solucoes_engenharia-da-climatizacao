@@ -6,6 +6,7 @@ import {
   ArrowUpRight, ArrowDownRight, Percent, Calendar
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { formatDateSafe } from '../utils/format'
 
 interface BusinessKPI {
   total_completed_orders: number
@@ -422,7 +423,7 @@ const KPIDashboard = () => {
         <Calendar className="w-5 h-5 text-blue-600" />
         <span className="text-sm text-blue-900">
           {showCustomDatePicker && customDateStart && customDateEnd ? (
-            <>Período: {new Date(customDateStart).toLocaleDateString('pt-BR')} até {new Date(customDateEnd).toLocaleDateString('pt-BR')}</>
+            <>Período: {formatDateSafe(customDateStart)} até {formatDateSafe(customDateEnd)}</>
           ) : (
             <>
               Análise: {

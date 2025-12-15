@@ -18,6 +18,7 @@ import {
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
 import { useToast } from '../../hooks/useToast'
+import { formatDateSafe } from '../../utils/format'
 
 const MobilePurchases = () => {
   const navigate = useNavigate()
@@ -620,7 +621,7 @@ const MobilePurchases = () => {
                     )}
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500">Data:</span>
-                      <span>{new Date(request.created_at).toLocaleDateString('pt-BR')}</span>
+                      <span>{formatDateSafe(request.created_at)}</span>
                     </div>
                   </div>
 

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import ThomazContextualAssistant from '../components/ThomazContextualAssistant'
+import { formatDateSafe } from '../utils/format'
 import DREComparative from '../components/DREComparative'
 import CashFlowProjection from '../components/CashFlowProjection'
 import { Line, Bar, Doughnut } from 'react-chartjs-2'
@@ -380,7 +381,7 @@ const ExecutiveDashboard = () => {
             <Calendar className="w-5 h-5 text-blue-600" />
             <span className="text-sm font-medium text-blue-900">
               {showCustomDatePicker && customDateStart && customDateEnd ? (
-                <>Período Analisado: {new Date(customDateStart).toLocaleDateString('pt-BR')} até {new Date(customDateEnd).toLocaleDateString('pt-BR')}</>
+                <>Período Analisado: {formatDateSafe(customDateStart)} até {formatDateSafe(customDateEnd)}</>
               ) : (
                 <>
                   Análise: {

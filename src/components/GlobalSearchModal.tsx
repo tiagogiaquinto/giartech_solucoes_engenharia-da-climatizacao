@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Search, X, Clock, FileText, Users, Package, User, DollarSign, Calendar, ArrowRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
+import { formatDateSafe } from '../utils/format'
 
 interface SearchResult {
   id: string
@@ -191,7 +192,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
         searchResults.push({
           id: event.id,
           title: event.title,
-          subtitle: new Date(event.start_date).toLocaleDateString('pt-BR'),
+          subtitle: formatDateSafe(event.start_date),
           type: 'agenda',
           url: `/agenda`,
           icon: <Calendar className="h-5 w-5 text-indigo-600" />,

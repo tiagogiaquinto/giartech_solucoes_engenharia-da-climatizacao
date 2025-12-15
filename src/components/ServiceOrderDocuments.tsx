@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../hooks/useToast'
+import { formatDateSafe } from '../utils/format'
 
 interface ServiceOrderDocument {
   id: string
@@ -363,7 +364,7 @@ export function ServiceOrderDocuments({
                     {doc.title || doc.file_name}
                   </h4>
                   <p className="text-xs text-gray-500 mb-3">
-                    {formatFileSize(doc.file_size)} • {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
+                    {formatFileSize(doc.file_size)} • {formatDateSafe(doc.uploaded_at)}
                   </p>
 
                   {/* Actions */}

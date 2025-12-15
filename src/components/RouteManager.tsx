@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, MapPin, Clock, User, Car, Play, Pause, CheckCircle, XCircle, Navigation, TrendingUp } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { formatDateSafe } from '../utils/format'
 
 interface RouteManagerProps {
   onRouteSelect?: (routeId: string) => void
@@ -253,7 +254,7 @@ const RouteManager = ({ onRouteSelect }: RouteManagerProps) => {
   }
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('pt-BR')
+    return formatDateSafe(date)
   }
 
   const formatTime = (dateTime?: string) => {

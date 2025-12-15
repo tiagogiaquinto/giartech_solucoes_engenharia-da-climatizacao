@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FileText, Plus, Edit, Trash2, Save, X, Check, AlertCircle, Star, Upload, Image, Eye, Copy, ArrowUp, ArrowDown, Palette } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { formatDateSafe } from '../utils/format'
 
 interface DocumentTemplate {
   id: string
@@ -331,7 +332,7 @@ const DocumentTemplates = () => {
                         )}
                       </div>
                       <div className="text-sm text-gray-500 mt-1">
-                        Atualizado em {new Date(template.updated_at).toLocaleDateString('pt-BR')}
+                        Atualizado em {formatDateSafe(template.updated_at)}
                       </div>
                     </div>
 

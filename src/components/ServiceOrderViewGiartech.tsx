@@ -4,6 +4,7 @@ import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPD
 import { getCompanyInfo } from '../utils/companyData'
 import { ServiceItemComplete } from '../utils/serviceOrderDataMapper'
 import { useEffect, useState } from 'react'
+import { formatDateSafe } from '../utils/format'
 
 type ServiceItem = ServiceItemComplete
 
@@ -116,7 +117,7 @@ export default function ServiceOrderViewGiartech({ isOpen, onClose, data }: Prop
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR')
+    return formatDateSafe(dateString)
   }
 
   return (

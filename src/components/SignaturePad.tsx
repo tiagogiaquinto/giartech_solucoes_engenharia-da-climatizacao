@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X, Check, RotateCcw, Download, Pen } from 'lucide-react'
+import { formatDateSafe } from '../utils/format'
 
 interface SignaturePadProps {
   onSave: (signature: string) => void
@@ -161,7 +162,7 @@ export default function SignaturePad({ onSave, onClose, customerName }: Signatur
 
           <div className="mt-4 text-xs text-gray-500 text-center">
             <p>Ao assinar, você confirma o recebimento do serviço conforme especificado</p>
-            <p className="mt-1">Data: {new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+            <p className="mt-1">Data: {formatDateSafe()} {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
           </div>
         </div>
 

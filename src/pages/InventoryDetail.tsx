@@ -15,6 +15,7 @@ import {
   BarChart3
 } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
+import { formatDateSafe } from '../utils/format'
 
 const InventoryDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -304,7 +305,7 @@ const InventoryDetail = () => {
                           <h4 className={`font-medium ${getHistoryTypeColor(entry.type)}`}>
                             {entry.type === 'entrada' ? 'Entrada' : 'Saída'} de {entry.quantity} unidades
                           </h4>
-                          <span className="text-sm text-gray-500">{new Date(entry.date).toLocaleDateString('pt-BR')}</span>
+                          <span className="text-sm text-gray-500">{formatDateSafe(entry.date)}</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-1">Realizado por: {entry.user}</p>
                         {entry.notes && <p className="text-sm text-gray-700">Observação: {entry.notes}</p>}

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, X, Image, FileText, File, Trash2, Eye, Download, FolderOpen } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import { supabase } from '../lib/supabase'
+import { formatDateSafe } from '../utils/format'
 
 interface MediaFile {
   id: string
@@ -225,7 +226,7 @@ export const MediaUploader = ({ serviceOrderId, onUploadComplete }: MediaUploade
                       <div className="flex items-center gap-3 text-xs text-gray-500">
                         <span>{formatFileSize(file.file_size)}</span>
                         <span>•</span>
-                        <span>{new Date(file.created_at).toLocaleDateString('pt-BR')}</span>
+                        <span>{formatDateSafe(file.created_at)}</span>
                       </div>
                     </div>
 

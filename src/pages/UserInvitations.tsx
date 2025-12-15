@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Plus, X, Clock, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, Send, Copy, Link as LinkIcon } from 'lucide-react'
 import { getUserInvitations, createUserInvitation, cancelUserInvitation, expireOldInvitations, type UserInvitation } from '../lib/database-services'
 import { useUser } from '../contexts/UserContext'
+import { formatDateSafe } from '../utils/format'
 
 const UserInvitations = () => {
   const { user } = useUser()

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { FileText, Plus, Search, Filter, Download, Eye, Edit, Trash2, Clock, CheckCircle, FileCheck, Archive, X, Save, Tag, Users, Calendar } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { generateDocumentPDF } from '../utils/generateDocumentPDF'
+import { formatDateSafe } from '../utils/format'
 
 interface Document {
   id: string
@@ -393,7 +394,7 @@ const Documents = () => {
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {new Date(doc.updated_at).toLocaleDateString('pt-BR')}
+                      {formatDateSafe(doc.updated_at)}
                     </span>
                   </div>
 

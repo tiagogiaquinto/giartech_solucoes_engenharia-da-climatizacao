@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, DollarSign, Calendar, FileText, TrendingUp, Package, Fuel, Car, Users, Coffee, CreditCard, AlertCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { formatDateSafe } from '../utils/format'
 
 interface ServiceOrderCostManagerProps {
   serviceOrderId: string
@@ -136,7 +137,7 @@ const ServiceOrderCostManager = ({ serviceOrderId, onUpdate }: ServiceOrderCostM
   }
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('pt-BR')
+    return formatDateSafe(date)
   }
 
   const totalCosts = costs.reduce((sum, cost) => sum + Number(cost.amount), 0)

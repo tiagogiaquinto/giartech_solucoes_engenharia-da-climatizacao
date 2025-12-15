@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Mail, Send, Inbox, Archive, Star, Trash2, Reply, Forward, Paperclip, RefreshCw, Plus, Search, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useNavigate, Link } from 'react-router-dom'
+import { formatDateSafe } from '../utils/format'
 
 interface EmailMessage {
   id: string
@@ -376,7 +377,7 @@ const EmailInbox = () => {
                             </p>
                           </div>
                           <span className="text-xs text-gray-500 whitespace-nowrap">
-                            {new Date(message.created_at).toLocaleDateString('pt-BR')}
+                            {formatDateSafe(message.created_at)}
                           </span>
                         </div>
                         <p className="text-sm text-gray-500 truncate">

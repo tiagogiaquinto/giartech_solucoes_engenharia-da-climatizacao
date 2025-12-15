@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, Users, UserPlus, Shield, Wrench, UserCheck } from 'lucide-react'
 import { getServiceOrderTeam, addTeamMember, removeTeamMember, updateTeamMemberRole, getEmployees, type ServiceOrderTeamMember, type Employee } from '../lib/database-services'
+import { formatDateSafe } from '../utils/format'
 
 interface ServiceOrderTeamManagerProps {
   serviceOrderId: string
@@ -235,7 +236,7 @@ const ServiceOrderTeamManager = ({ serviceOrderId, onUpdate }: ServiceOrderTeamM
 
                   {member.assigned_at && (
                     <div className="mt-2 text-xs text-gray-500">
-                      Atribuído em: {new Date(member.assigned_at).toLocaleDateString('pt-BR')}
+                      Atribuído em: {formatDateSafe(member.assigned_at)}
                     </div>
                   )}
                 </motion.div>

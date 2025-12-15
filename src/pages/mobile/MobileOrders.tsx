@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
+import { formatDateSafe } from '../../utils/format'
 
 const MobileOrders = () => {
   const navigate = useNavigate()
@@ -225,7 +226,7 @@ const MobileOrders = () => {
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Calendar className="w-4 h-4" />
                       <span>
-                        Agendado: {new Date(order.scheduled_date).toLocaleDateString('pt-BR')}
+                        Agendado: {formatDateSafe(order.scheduled_date)}
                       </span>
                     </div>
                   )}
@@ -243,7 +244,7 @@ const MobileOrders = () => {
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Clock className="w-4 h-4" />
                       <span>
-                        Atribuída em {new Date(assignment.assigned_at).toLocaleDateString('pt-BR')}
+                        Atribuída em {formatDateSafe(assignment.assigned_at)}
                       </span>
                     </div>
                   )}

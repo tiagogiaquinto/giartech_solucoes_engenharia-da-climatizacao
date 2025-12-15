@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
+import { formatDateSafe } from '../utils/format'
 
 interface SearchResult {
   id: string

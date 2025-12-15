@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Clock, 
-  AlertTriangle, 
-  X, 
-  ChevronDown, 
-  Check, 
-  ArrowUpRight, 
+import {
+  Clock,
+  AlertTriangle,
+  X,
+  ChevronDown,
+  Check,
+  ArrowUpRight,
   Trash2,
   Search,
   User,
@@ -14,6 +14,7 @@ import {
   Clock as ClockIcon,
   Flag
 } from 'lucide-react';
+import { formatDateSafe } from '../utils/format';
 
 interface Alert {
   id: string;

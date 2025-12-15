@@ -9,6 +9,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { InteractiveKPICard } from '../components/InteractiveKPICard'
 import { useNavigate } from 'react-router-dom'
+import { formatDateSafe } from '../utils/format'
 import { Line, Bar, Doughnut, Radar } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -424,7 +425,7 @@ const CFODashboard = () => {
                     <div className="flex items-center justify-between mb-1">
                       <h4 className="font-semibold">{alert.title}</h4>
                       <span className="text-xs opacity-70">
-                        {new Date(alert.created_at).toLocaleDateString('pt-BR')}
+                        {formatDateSafe(alert.created_at)}
                       </span>
                     </div>
                     <p className="text-sm opacity-90">{alert.description}</p>

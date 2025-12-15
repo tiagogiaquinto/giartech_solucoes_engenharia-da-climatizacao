@@ -10,6 +10,7 @@ import { useAutoSave } from '../hooks/useAutoSave'
 import { SmartServiceSearch } from '../components/SmartServiceSearch'
 import { TemplateSelector } from '../components/TemplateSelector'
 import { RealtimeCalculationPanel } from '../components/RealtimeCalculationPanel'
+import { formatDateSafe } from '../utils/format'
 
 interface ServiceItem {
   id: string

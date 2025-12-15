@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
+import { formatDateSafe } from '../../utils/format'
 
 const MobileAgenda = () => {
   const { user } = useUser()
@@ -139,7 +140,7 @@ const MobileAgenda = () => {
         {isToday() && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
             <p className="text-sm font-semibold text-blue-700">
-              📅 Hoje - {new Date().toLocaleDateString('pt-BR')}
+              📅 Hoje - {formatDateSafe()}
             </p>
           </div>
         )}

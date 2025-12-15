@@ -18,6 +18,7 @@ import { ServiceDetailedInfo } from '../components/ServiceDetailedInfo'
 import { ServiceInfoEditModal } from '../components/ServiceInfoEditModal'
 import { ServiceOrderDocuments } from '../components/ServiceOrderDocuments'
 import { GamificationToggle } from '../components/ServiceOrder/GamificationToggle'
+import { formatDateSafe } from '../utils/format'
 
 const ServiceOrderView = () => {
   const { id } = useParams()
@@ -371,7 +372,7 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
   }
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('pt-BR')
+    return formatDateSafe(date)
   }
 
   const handleDeleteClick = () => {

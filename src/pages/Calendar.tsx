@@ -4,6 +4,7 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, Users
 import { useUser } from '../contexts/UserContext'
 import { getAgendaEvents, createAgendaEvent, updateAgendaEvent, deleteAgendaEvent, type AgendaEvent, supabase } from '../lib/supabase'
 import { mapAgendaEventToCalendarEvent, mapCalendarEventToAgendaEvent, expandMultiDayEvents, type CalendarEvent } from '../utils/calendarHelpers'
+import { formatDateSafe } from '../utils/format'
 
 interface CalendarProps {
   onPremiumFeature?: (feature: string) => void
@@ -710,7 +711,7 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                     <div className="flex items-center space-x-4 text-xs text-gray-600">
                       <div className="flex items-center">
                         <CalendarIcon className="h-3 w-3 mr-1" />
-                        {new Date(event.date).toLocaleDateString('pt-BR')}
+                        {formatDateSafe(event.date)}
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-3 w-3 mr-1" />
@@ -1401,7 +1402,7 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                           <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
                             <span className="flex items-center gap-1">
                               <CalendarIcon className="h-3 w-3" />
-                              {new Date(event.date).toLocaleDateString('pt-BR')}
+                              {formatDateSafe(event.date)}
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />

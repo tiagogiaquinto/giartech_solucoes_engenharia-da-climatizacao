@@ -5,6 +5,7 @@ import { useUser } from '../../contexts/UserContext'
 import { Link } from 'react-router-dom'
 import { useDashboardData } from '../../hooks/useDashboardData'
 import ThomazContextualAssistant from '../ThomazContextualAssistant'
+import { formatDateSafe } from '../utils/format'
 
 interface WebDashboardProps {
   onPremiumFeature: (feature: string) => void
@@ -217,7 +218,7 @@ const WebDashboard: React.FC<WebDashboardProps> = ({ onPremiumFeature }) => {
                     <tr key={transaction.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{transaction.descricao}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(transaction.data).toLocaleDateString('pt-BR')}
+                        {formatDateSafe(transaction.data)}
                       </td>
                       <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${transaction.tipo === 'receita' ? 'text-green-600' : 'text-red-600'}`}>
                         {transaction.tipo === 'receita' ? '+' : '-'} R$ {transaction.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -291,7 +292,7 @@ const WebDashboard: React.FC<WebDashboardProps> = ({ onPremiumFeature }) => {
                   </span>
                 </div>
                 <div className="flex justify-between text-xs text-gray-500">
-                  <span>Criado: {new Date(order.created_at).toLocaleDateString('pt-BR')}</span>
+                  <span>Criado: {formatDateSafe(order.created_at)}</span>
                   <span className="font-semibold text-blue-600">R$ {order.final_total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}</span>
                 </div>
               </Link>

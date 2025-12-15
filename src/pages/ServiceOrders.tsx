@@ -9,6 +9,7 @@ import { ServiceOrderModalOptimized } from '../components/ServiceOrderModalOptim
 import { cache } from '../utils/cache'
 import { getServiceOrderStatusLabel, getPriorityLabel } from '../utils/databaseMappers'
 import { GamificationToggle } from '../components/ServiceOrder/GamificationToggle'
+import { formatDateSafe } from '../utils/format'
 
 
 const ServiceOrders = () => {
@@ -381,9 +382,9 @@ const ServiceOrders = () => {
                     <Calendar className="h-4 w-4 text-gray-400" />
                     <p className="text-sm text-gray-900">
                       {order.due_date
-                        ? new Date(order.due_date).toLocaleDateString('pt-BR')
+                        ? formatDateSafe(order.due_date)
                         : order.service_date
-                          ? new Date(order.service_date).toLocaleDateString('pt-BR')
+                          ? formatDateSafe(order.service_date)
                           : 'Não definido'
                       }
                     </p>

@@ -3,6 +3,7 @@ import { Bell, Check, X, AlertCircle, Info, CheckCircle, AlertTriangle, Trash2 }
 import { supabase } from '../lib/supabase'
 import { useToast } from '../hooks/useToast'
 import { useNavigate } from 'react-router-dom'
+import { formatDateSafe } from '../utils/format'
 
 interface Notification {
   id: string

@@ -9,6 +9,7 @@ import { AnimatePresence } from 'framer-motion'
 import AlertsList from '../components/alerts/AlertsList'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
+import { formatDateSafe } from '../utils/format'
 
 // Tipos
 interface Department {
@@ -821,7 +822,7 @@ const DepartmentalDashboard = () => {
                         {report.format.toUpperCase()}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(report.nextDate).toLocaleDateString('pt-BR')}
+                        {formatDateSafe(report.nextDate)}
                       </td>
                     </tr>
                   ))}

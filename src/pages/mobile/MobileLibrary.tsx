@@ -12,6 +12,7 @@ import {
   Filter
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { formatDateSafe } from '../../utils/format'
 
 const MobileLibrary = () => {
   const [documents, setDocuments] = useState<any[]>([])
@@ -245,7 +246,7 @@ const MobileLibrary = () => {
                   <div className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     <span>
-                      {new Date(doc.created_at).toLocaleDateString('pt-BR')}
+                      {formatDateSafe(doc.created_at)}
                     </span>
                   </div>
                 )}

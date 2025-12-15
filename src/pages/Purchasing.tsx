@@ -4,6 +4,7 @@ import { ShoppingCart, Plus, Package, AlertTriangle, TrendingUp, DollarSign, Clo
 import { supabase } from '../lib/supabase'
 import PurchaseScheduleModal from '../components/PurchaseScheduleModal'
 import RentalScheduleModal from '../components/RentalScheduleModal'
+import { formatDateSafe } from '../utils/format'
 
 interface PurchaseOrder {
   id: string
@@ -394,7 +395,7 @@ const Purchasing = () => {
                               <div className="font-medium text-gray-900">{item.supplier || 'A definir'}</div>
                               {item.last_purchase_date && (
                                 <div className="text-xs text-gray-500">
-                                  Última compra: {new Date(item.last_purchase_date).toLocaleDateString('pt-BR')}
+                                  Última compra: {formatDateSafe(item.last_purchase_date)}
                                 </div>
                               )}
                             </div>
@@ -496,9 +497,9 @@ const Purchasing = () => {
                           <div className="text-sm text-gray-600 space-y-1">
                             <div>Fornecedor: <span className="font-medium text-gray-900">{order.supplier_name}</span></div>
                             <div className="flex gap-4">
-                              <span>Data: {new Date(order.order_date).toLocaleDateString('pt-BR')}</span>
+                              <span>Data: {formatDateSafe(order.order_date)}</span>
                               {order.expected_delivery_date && (
-                                <span>Entrega Prevista: {new Date(order.expected_delivery_date).toLocaleDateString('pt-BR')}</span>
+                                <span>Entrega Prevista: {formatDateSafe(order.expected_delivery_date)}</span>
                               )}
                             </div>
                           </div>

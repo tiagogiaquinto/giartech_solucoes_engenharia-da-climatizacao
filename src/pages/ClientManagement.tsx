@@ -17,6 +17,7 @@ import {
   type Contract
 } from '../lib/supabase'
 import CustomerModal from '../components/CustomerModal'
+import { formatDateSafe } from '../utils/format'
 
 const ClientManagement = () => {
   const { isAdmin } = useUser()
@@ -692,13 +693,13 @@ const ClientManagement = () => {
                                 <div>
                                   <span className="text-gray-500">Vigência:</span>
                                   <p className="font-medium">
-                                    {new Date(contract.start_date).toLocaleDateString('pt-BR')} - {new Date(contract.end_date).toLocaleDateString('pt-BR')}
+                                    {formatDateSafe(contract.start_date)} - {formatDateSafe(contract.end_date)}
                                   </p>
                                 </div>
                                 {contract.next_service_date && (
                                   <div>
                                     <span className="text-gray-500">Próximo Serviço:</span>
-                                    <p className="font-medium">{new Date(contract.next_service_date).toLocaleDateString('pt-BR')}</p>
+                                    <p className="font-medium">{formatDateSafe(contract.next_service_date)}</p>
                                   </div>
                                 )}
                                 {contract.sla_response_time && (
@@ -771,7 +772,7 @@ const ClientManagement = () => {
                                     <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                                       <span className="flex items-center gap-1">
                                         <Calendar className="h-3 w-3" />
-                                        {order.opened_at ? new Date(order.opened_at).toLocaleDateString('pt-BR') : 'N/A'}
+                                        {order.opened_at ? formatDateSafe(order.opened_at) : 'N/A'}
                                       </span>
                                       {order.total_value && (
                                         <span className="flex items-center gap-1">
@@ -834,7 +835,7 @@ const ClientManagement = () => {
                                       )}
                                       {equipment.installation_date && (
                                         <div>
-                                          <span className="text-gray-500">Instalado em:</span> {new Date(equipment.installation_date).toLocaleDateString('pt-BR')}
+                                          <span className="text-gray-500">Instalado em:</span> {formatDateSafe(equipment.installation_date)}
                                         </div>
                                       )}
                                     </div>

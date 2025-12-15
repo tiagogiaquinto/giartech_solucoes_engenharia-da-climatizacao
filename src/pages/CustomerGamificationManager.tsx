@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/useToast';
 import { Search, Users, Award, CheckCircle, XCircle, TrendingUp, Filter } from 'lucide-react';
+import { formatDateSafe } from '../utils/format'
 
 interface Customer {
   id: string;
@@ -417,7 +418,7 @@ export default function CustomerGamificationManager() {
                           <span className="text-gray-500">Desde:</span>
                           <p className="font-semibold">
                             {customer.data_adesao_gamificacao
-                              ? new Date(customer.data_adesao_gamificacao).toLocaleDateString('pt-BR')
+                              ? formatDateSafe(customer.data_adesao_gamificacao)
                               : '-'}
                           </p>
                         </div>
@@ -563,7 +564,7 @@ export default function CustomerGamificationManager() {
                         <div className="flex gap-6 text-sm text-gray-600">
                           <span>{order.customer_name || 'Cliente não informado'}</span>
                           <span>R$ {(order.total_value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                          <span>{order.created_at ? new Date(order.created_at).toLocaleDateString('pt-BR') : 'Data não informada'}</span>
+                          <span>{order.created_at ? formatDateSafe(order.created_at) : 'Data não informada'}</span>
                           {order.incluir_gamificacao && (order.pontos_gerados || 0) > 0 && (
                             <span className="text-green-600 font-semibold">
                               {order.pontos_gerados || 0} pontos

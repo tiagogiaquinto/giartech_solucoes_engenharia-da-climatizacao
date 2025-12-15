@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { supabase } from '../lib/supabase'
+import { formatDateSafe } from '../utils/format'
 
 interface Document {
   id: string
@@ -738,7 +739,7 @@ const DigitalLibrary = () => {
                   <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                     <div className="flex items-center text-gray-500">
                       <Calendar className="h-3 w-3 mr-1" />
-                      <span>{new Date(doc.uploadDate).toLocaleDateString('pt-BR')}</span>
+                      <span>{formatDateSafe(doc.uploadDate)}</span>
                     </div>
                     <div className="flex items-center text-gray-500">
                       <FileText className="h-3 w-3 mr-1" />
@@ -747,7 +748,7 @@ const DigitalLibrary = () => {
                     {doc.lastViewed && (
                       <div className="flex items-center text-gray-500">
                         <Clock className="h-3 w-3 mr-1" />
-                        <span>Visto: {new Date(doc.lastViewed).toLocaleDateString('pt-BR')}</span>
+                        <span>Visto: {formatDateSafe(doc.lastViewed)}</span>
                       </div>
                     )}
                     {doc.isDownloaded && (
@@ -1108,7 +1109,7 @@ const DigitalLibrary = () => {
                     <div className="space-y-1 text-sm">
                       <p className="flex items-center text-gray-600">
                         <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                        Enviado em {new Date(showViewModal.uploadDate).toLocaleDateString('pt-BR')}
+                        Enviado em {formatDateSafe(showViewModal.uploadDate)}
                       </p>
                       <p className="flex items-center text-gray-600">
                         <FileText className="h-4 w-4 mr-2 text-gray-400" />

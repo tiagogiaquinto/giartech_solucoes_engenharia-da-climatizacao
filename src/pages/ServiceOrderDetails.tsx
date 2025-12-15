@@ -16,6 +16,7 @@ import {
   Eye
 } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
+import { formatDateSafe } from '../utils/format'
 
 const ServiceOrderDetails = () => {
   const { id } = useParams()
@@ -226,7 +227,7 @@ const ServiceOrderDetails = () => {
                 {getStatusLabel(order.status)}
               </span>
               <p className="text-sm text-gray-600 mt-2">
-                Criado em {new Date(order.created_at).toLocaleDateString('pt-BR')}
+                Criado em {formatDateSafe(order.created_at)}
               </p>
             </div>
           </div>
@@ -312,8 +313,8 @@ const OverviewTab = ({ order, customer }: any) => (
         <h3 className="text-lg font-semibold mb-4">Detalhes da OS</h3>
         <div className="space-y-2">
           <p><span className="font-medium">Número:</span> {order.order_number}</p>
-          <p><span className="font-medium">Data:</span> {new Date(order.created_at).toLocaleDateString('pt-BR')}</p>
-          <p><span className="font-medium">Prazo:</span> {order.execution_deadline ? new Date(order.execution_deadline).toLocaleDateString('pt-BR') : 'Não definido'}</p>
+          <p><span className="font-medium">Data:</span> {formatDateSafe(order.created_at)}</p>
+          <p><span className="font-medium">Prazo:</span> {order.execution_deadline ? formatDateSafe(order.execution_deadline) : 'Não definido'}</p>
         </div>
       </div>
     </div>
@@ -492,7 +493,7 @@ const DocumentsTab = ({ documents, orderId, onUpdate }: any) => (
               <div className="flex-1">
                 <h4 className="font-semibold">{doc.document_name}</h4>
                 <p className="text-sm text-gray-600">{doc.document_type}</p>
-                <p className="text-xs text-gray-500">{new Date(doc.created_at).toLocaleDateString('pt-BR')}</p>
+                <p className="text-xs text-gray-500">{formatDateSafe(doc.created_at)}</p>
               </div>
               <button className="p-2 hover:bg-gray-100 rounded-lg">
                 <Download className="h-5 w-5 text-gray-600" />

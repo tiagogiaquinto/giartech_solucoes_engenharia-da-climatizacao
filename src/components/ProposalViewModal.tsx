@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Download, Send, Mail, Phone, MapPin, Calendar, FileText, DollarSign, Shield, Building2, Globe, Instagram, Facebook, Printer, Share2 } from 'lucide-react'
 import { generateBudgetPDF } from '../utils/generateBudgetPDF'
+import { formatDateSafe } from '../utils/format'
 
 interface ProposalItem {
   description: string
