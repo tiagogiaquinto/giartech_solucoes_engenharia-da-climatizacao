@@ -12,6 +12,7 @@ interface FinanceEntry {
   tipo: 'receita' | 'despesa'
   status: 'recebido' | 'pago' | 'a_receber' | 'a_pagar'
   data: string
+  data_vencimento?: string
   customer_id?: string
   recorrente?: boolean
   frequencia_recorrencia?: 'semanal' | 'quinzenal' | 'mensal' | 'bimestral' | 'trimestral' | 'semestral' | 'anual'
@@ -652,7 +653,16 @@ const FinancialManagement = () => {
                     </div>
                     <div className="text-sm text-gray-500 flex items-center gap-1 justify-end">
                       <Calendar className="h-3 w-3" />
-                      {formatDate(entry.data)}
+                      {(entry.status === 'recebido' || entry.status === 'pago')
+                        ? formatDate(entry.data)
+                        : formatDate((entry as any).data_vencimento || entry.data)
+                      }
+                    </div>
+                    <div className="text-xs text-gray-400 flex items-center gap-1 justify-end mt-0.5">
+                      {(entry.status === 'recebido' || entry.status === 'pago')
+                        ? 'Pago em'
+                        : 'Vence em'
+                      }
                     </div>
                   </div>
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
