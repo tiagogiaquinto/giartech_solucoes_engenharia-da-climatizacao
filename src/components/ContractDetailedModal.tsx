@@ -8,6 +8,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/useToast'
 import jsPDF from 'jspdf'
+import { formatDateSafe } from '../utils/format'
 
 interface ContractDetailedModalProps {
   isOpen: boolean
@@ -270,7 +271,7 @@ const ContractDetailedModal: React.FC<ContractDetailedModalProps> = ({
     doc.text('VIGÊNCIA:', margin, y)
     y += 5
     doc.setFont('helvetica', 'normal')
-    doc.text(`De ${new Date(contract.start_date).toLocaleDateString('pt-BR')} até ${new Date(contract.end_date).toLocaleDateString('pt-BR')}`, margin, y)
+    doc.text(`De ${formatDateSafe(contract.start_date)} até ${formatDateSafe(contract.end_date)}`, margin, y)
     y += 10
 
     doc.setFont('helvetica', 'bold')

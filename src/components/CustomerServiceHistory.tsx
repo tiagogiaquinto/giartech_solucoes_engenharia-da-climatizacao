@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Calendar, Clock, DollarSign, FileText, TrendingUp, Package, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
+import { formatDateSafe } from '../utils/format'
 
 interface CustomerServiceHistoryProps {
   customerId: string
@@ -82,7 +83,7 @@ const CustomerServiceHistory = ({ customerId }: CustomerServiceHistoryProps) => 
 
   const formatDate = (date?: string) => {
     if (!date) return '-'
-    return new Date(date).toLocaleDateString('pt-BR')
+    return formatDateSafe(date)
   }
 
   const totalSpent = orders

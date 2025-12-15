@@ -4,6 +4,7 @@ import { X, Save, Plus, Trash2, User, Building, MapPin, Phone, Mail, Users, Brie
 import { supabase } from '../lib/supabase'
 import { CnpjSearchField } from './CnpjSearchField'
 import ContractDetailedModal from './ContractDetailedModal'
+import { formatDateSafe } from '../utils/format'
 
 interface Address {
   id: string
@@ -1006,8 +1007,8 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
                           <div>
                             <p className="font-medium text-gray-700">Vigência</p>
                             <p>
-                              {contract.start_date ? new Date(contract.start_date).toLocaleDateString('pt-BR') : 'N/A'} até {' '}
-                              {contract.end_date ? new Date(contract.end_date).toLocaleDateString('pt-BR') : 'N/A'}
+                              {contract.start_date ? formatDateSafe(contract.start_date) : 'N/A'} até {' '}
+                              {contract.end_date ? formatDateSafe(contract.end_date) : 'N/A'}
                             </p>
                           </div>
                           <div>

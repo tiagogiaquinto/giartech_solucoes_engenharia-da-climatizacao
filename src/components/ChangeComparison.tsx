@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, AlertTriangle, Info, TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
+import { formatDateSafe } from '../utils/format'
 
 interface Change {
   field: string
@@ -39,7 +40,7 @@ export const ChangeComparison = ({
         return new Intl.NumberFormat('pt-BR').format(Number(value))
 
       case 'date':
-        return new Date(value).toLocaleDateString('pt-BR')
+        return formatDateSafe(value)
 
       case 'status':
         const statusLabels: Record<string, string> = {

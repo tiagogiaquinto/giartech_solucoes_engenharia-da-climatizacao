@@ -24,6 +24,7 @@ import {
   Users
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import { formatDateSafe } from '../utils/format'
 
 interface Message {
   id: string;

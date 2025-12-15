@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, FileText, Download, Printer, Check } from 'lucide-react'
 import { fillContractTemplate, getDefaultTemplate } from '../utils/contractFiller'
 import jsPDF from 'jspdf'
+import { formatDateSafe } from '../utils/format'
 
 interface ContractViewModalProps {
   isOpen: boolean
@@ -148,7 +149,7 @@ const ContractViewModal: React.FC<ContractViewModalProps> = ({
     doc.text('CONTRATADA', pageWidth / 2 + 40, yPosition + 5)
 
     yPosition += 15
-    const currentDate = new Date().toLocaleDateString('pt-BR')
+    const currentDate = formatDateSafe()
     doc.setFontSize(9)
     doc.text(`Data: ${currentDate}`, pageWidth / 2, yPosition, { align: 'center' })
 
@@ -260,7 +261,7 @@ const ContractViewModal: React.FC<ContractViewModalProps> = ({
                       </div>
                     </div>
                     <p className="text-center text-xs text-gray-500 mt-6">
-                      Data: {new Date().toLocaleDateString('pt-BR')}
+                      Data: {formatDateSafe()}
                     </p>
                   </div>
                 </div>

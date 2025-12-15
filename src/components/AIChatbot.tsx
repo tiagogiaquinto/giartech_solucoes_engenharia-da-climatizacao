@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { MessageCircle, Send, X, Trash2, Plus, HelpCircle } from 'lucide-react'
 import { chatbotService, ChatMessage, ChatConversation } from '../services/chatbotService'
+import { formatDateSafe } from '../utils/format'
 
 export function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false)
