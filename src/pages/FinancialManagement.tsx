@@ -4,6 +4,7 @@ import { DollarSign, TrendingUp, TrendingDown, Calendar, ListFilter as Filter, D
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import FinanceEntryModal from '../components/FinanceEntryModal'
+import { formatDateSafe } from '../utils/format'
 
 interface FinanceEntry {
   id: string
@@ -202,14 +203,6 @@ const FinancialManagement = () => {
     }).format(value)
   }
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '-'
-    const date = new Date(dateString)
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const year = date.getFullYear()
-    return `${day}/${month}/${year}`
-  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -654,8 +647,8 @@ const FinancialManagement = () => {
                     <div className="text-sm text-gray-500 flex items-center gap-1 justify-end">
                       <Calendar className="h-3 w-3" />
                       {(entry.status === 'recebido' || entry.status === 'pago')
-                        ? formatDate(entry.data)
-                        : formatDate((entry as any).data_vencimento || entry.data)
+                        ? formatDateSafe(entry.data)
+                        : formatDateSafe((entry as any).data_vencimento || entry.data)
                       }
                     </div>
                     <div className="text-xs text-gray-400 flex items-center gap-1 justify-end mt-0.5">
