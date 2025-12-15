@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Plus, Trash2, User, Building, MapPin, Phone, Mail, Users, Briefcase, Package, Calendar, CircleAlert as AlertCircle, Check } from 'lucide-react'
+import { X, Save, Plus, Trash2, User, Building, MapPin, Phone, Mail, Users, Briefcase, Package, Calendar, CircleAlert as AlertCircle, Check, FileText, Edit, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { CnpjSearchField } from './CnpjSearchField'
+import ContractDetailedModal from './ContractDetailedModal'
 
 interface Address {
   id: string
@@ -49,8 +50,11 @@ interface CustomerModalProps {
 }
 
 const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalProps) => {
-  const [activeTab, setActiveTab] = useState<'dados' | 'enderecos' | 'contatos' | 'equipamentos'>('dados')
+  const [activeTab, setActiveTab] = useState<'dados' | 'enderecos' | 'contatos' | 'equipamentos' | 'contratos'>('dados')
   const [loading, setLoading] = useState(false)
+  const [contracts, setContracts] = useState<any[]>([])
+  const [contractModalOpen, setContractModalOpen] = useState(false)
+  const [selectedContractId, setSelectedContractId] = useState<string | undefined>()
 
   const [formData, setFormData] = useState({
     tipo_pessoa: 'fisica' as 'fisica' | 'juridica',
@@ -76,6 +80,7 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
   useEffect(() => {
     if (customerId) {
       loadCustomerData()
+      loadContracts()
     }
   }, [customerId])
 
@@ -128,6 +133,23 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
       setEquipments(equips || [])
     } catch (error) {
       console.error('Error loading customer:', error)
+    }
+  }
+
+  const loadContracts = async () => {
+    if (!customerId) return
+
+    try {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setContracts(data || [])
+    } catch (error) {
+      console.error('Error loading contracts:', error)
     }
   }
 
@@ -454,7 +476,8 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
             { id: 'dados', label: 'Dados Principais', icon: User },
             { id: 'enderecos', label: 'Endereços', icon: MapPin },
             { id: 'contatos', label: 'Contatos', icon: Users },
-            { id: 'equipamentos', label: 'Equipamentos', icon: Package }
+            { id: 'equipamentos', label: 'Equipamentos', icon: Package },
+            { id: 'contratos', label: 'Contratos', icon: FileText }
           ].map(tab => {
             const Icon = tab.icon
             return (
@@ -917,8 +940,126 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
                 ))}
               </motion.div>
             )}
+
+            {activeTab === 'contratos' && (
+              <motion.div key="contratos" initial={{opacity: 0, x: -20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: 20}} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Contratos do Cliente</h3>
+                  <button
+                    onClick={() => {
+                      setSelectedContractId(undefined)
+                      setContractModalOpen(true)
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    disabled={!customerId}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Novo Contrato
+                  </button>
+                </div>
+
+                {!customerId && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-yellow-900">Salve o cliente primeiro</p>
+                      <p className="text-sm text-yellow-700">Para criar contratos, é necessário salvar o cadastro do cliente primeiro.</p>
+                    </div>
+                  </div>
+                )}
+
+                {contracts.length === 0 && customerId && (
+                  <div className="text-center py-12 text-gray-500">
+                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Nenhum contrato cadastrado</p>
+                    <p className="text-sm mt-1">Clique em "Novo Contrato" para criar o primeiro contrato</p>
+                  </div>
+                )}
+
+                {contracts.map((contract) => (
+                  <div key={contract.id} className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="font-semibold text-lg">{contract.contract_number || 'Contrato'}</h4>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            contract.status === 'ativo' ? 'bg-green-100 text-green-800' :
+                            contract.status === 'rascunho' ? 'bg-gray-100 text-gray-800' :
+                            contract.status === 'suspenso' ? 'bg-yellow-100 text-yellow-800' :
+                            contract.status === 'cancelado' ? 'bg-red-100 text-red-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {contract.status?.toUpperCase() || 'RASCUNHO'}
+                          </span>
+                          {contract.is_pmoc && (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              PMOC
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                          <div>
+                            <p className="font-medium text-gray-700">Tipo</p>
+                            <p className="capitalize">{contract.contract_type || 'Serviço'}</p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-700">Vigência</p>
+                            <p>
+                              {contract.start_date ? new Date(contract.start_date).toLocaleDateString('pt-BR') : 'N/A'} até {' '}
+                              {contract.end_date ? new Date(contract.end_date).toLocaleDateString('pt-BR') : 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-700">Valor</p>
+                            <p className="text-green-600 font-semibold">
+                              {contract.contract_value ? `R$ ${contract.contract_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-700">Pagamento</p>
+                            <p className="capitalize">{contract.payment_frequency || 'Mensal'}</p>
+                          </div>
+                        </div>
+
+                        {contract.scope_description && (
+                          <div className="mt-3 text-sm text-gray-600">
+                            <p className="font-medium text-gray-700">Escopo</p>
+                            <p className="line-clamp-2">{contract.scope_description}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => {
+                            setSelectedContractId(contract.id)
+                            setContractModalOpen(true)
+                          }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Editar contrato"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
+
+        <ContractDetailedModal
+          isOpen={contractModalOpen}
+          onClose={() => {
+            setContractModalOpen(false)
+            setSelectedContractId(undefined)
+            loadContracts()
+          }}
+          contractId={selectedContractId}
+          customerId={customerId}
+        />
 
         <div className="p-6 border-t bg-gray-50 flex gap-3">
           <button onClick={onClose}
