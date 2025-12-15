@@ -84,6 +84,7 @@ import { GiartechAssistant } from './components/GiartechAssistant'
 import ThomazChat from './pages/ThomazChat'
 import ReportsAdvanced from './pages/ReportsAdvanced'
 import Automations from './pages/Automations'
+import AutomationsEnhanced from './pages/AutomationsEnhanced'
 import CreditScoring from './pages/CreditScoring'
 import FinanceiroConsolidado from './pages/FinanceiroConsolidado'
 import ExecutivoConsolidado from './pages/ExecutivoConsolidado'
@@ -601,7 +602,7 @@ function App() {
           <Route path="/automations" element={
             <ProtectedRoute>
               <WebLayout>
-                <Automations />
+                <AutomationsEnhanced />
               </WebLayout>
             </ProtectedRoute>
           } />
