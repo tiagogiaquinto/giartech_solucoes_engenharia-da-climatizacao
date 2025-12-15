@@ -53,7 +53,7 @@ const Suppliers = () => {
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
-        .order('nome_fantasia')
+        .order('name')
 
       if (error) throw error
       setSuppliers(data || [])
@@ -72,12 +72,11 @@ const Suppliers = () => {
       }
 
       const dataToSave = {
-        razao_social: formData.name,
-        nome_fantasia: formData.name,
+        name: formData.name,
         cnpj: formData.cnpj || null,
         email: formData.email || null,
         phone: formData.phone || null,
-        logradouro: formData.address || null,
+        address: formData.address || null,
         contact_person: formData.contact_person || null,
         payment_terms: formData.payment_terms || null,
         notes: formData.notes || null,
@@ -110,11 +109,11 @@ const Suppliers = () => {
   const handleEdit = (supplier: Supplier) => {
     setEditingSupplier(supplier)
     setFormData({
-      name: (supplier as any).nome_fantasia || (supplier as any).razao_social || supplier.name || '',
+      name: supplier.name,
       cnpj: supplier.cnpj || '',
       email: supplier.email || '',
       phone: supplier.phone || '',
-      address: (supplier as any).logradouro || supplier.address || '',
+      address: supplier.address || '',
       contact_person: supplier.contact_person || '',
       payment_terms: supplier.payment_terms || '',
       active: supplier.active,
@@ -248,8 +247,7 @@ const Suppliers = () => {
   }
 
   const filteredSuppliers = suppliers.filter(supplier => {
-    const supplierName = (supplier as any).nome_fantasia || (supplier as any).razao_social || supplier.name || ''
-    const matchesSearch = supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.cnpj?.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = filterStatus === 'all' ||
@@ -372,9 +370,9 @@ const Suppliers = () => {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg text-gray-900 truncate">{(supplier as any).nome_fantasia || (supplier as any).razao_social || supplier.name}</h3>
-                  {(supplier as any).razao_social && (supplier as any).nome_fantasia !== (supplier as any).razao_social && (
-                    <p className="text-sm text-gray-600 truncate">{(supplier as any).razao_social}</p>
+                  <h3 className="font-semibold text-lg text-gray-900 truncate">{supplier.name}</h3>
+                  {supplier.cnpj && (
+                    <p className="text-sm text-gray-600 truncate">{supplier.cnpj}</p>
                   )}
                 </div>
                 <span className={`px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ml-2 ${
@@ -405,10 +403,10 @@ const Suppliers = () => {
                     <span>{supplier.phone}</span>
                   </div>
                 )}
-                {((supplier as any).logradouro || supplier.address) && (
+                {supplier.address && (
                   <div className="flex items-center gap-2 text-gray-600">
                     <MapPin className="h-3 w-3 flex-shrink-0" />
-                    <span className="truncate">{(supplier as any).logradouro || supplier.address}</span>
+                    <span className="truncate">{supplier.address}</span>
                   </div>
                 )}
               </div>
