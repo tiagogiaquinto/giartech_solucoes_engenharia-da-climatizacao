@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { X, Calendar, DollarSign, Target, Users, FileText, Clock, MapPin, Phone, Mail } from 'lucide-react'
+import { X, Calendar, DollarSign, Target, Users, FileText, Clock, MapPin, Phone, Mail, MessageCircle, Plus, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../hooks/useToast'
+import CustomerModal from './CustomerModal'
 
 interface CRMOpportunityModalProps {
   isOpen: boolean
@@ -17,6 +18,9 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
   const [pipelines, setPipelines] = useState<any[]>([])
   const [stages, setStages] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false)
+  const [showNewClientForm, setShowNewClientForm] = useState(false)
+  const [selectedCustomerPhone, setSelectedCustomerPhone] = useState('')
 
   const [formData, setFormData] = useState({
     titulo: '',
@@ -56,7 +60,7 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
   const loadInitialData = async () => {
     try {
       const [customersRes, pipelinesRes, usersRes] = await Promise.all([
-        supabase.from('customers').select('id, nome_razao, tipo_pessoa').order('nome_razao'),
+        supabase.from('customers').select('id, nome_razao, tipo_pessoa, telefone_principal, celular, whatsapp').order('nome_razao'),
         supabase.from('crm_pipelines').select('*').eq('is_ativo', true).order('ordem'),
         supabase.from('user_profiles').select('id, full_name').order('full_name')
       ])
@@ -74,6 +78,51 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
     }
+  }
+
+  const handleCustomerChange = (customerId: string) => {
+    setFormData({ ...formData, customer_id: customerId })
+    const customer = customers.find(c => c.id === customerId)
+    if (customer) {
+      const phone = customer.whatsapp || customer.celular || customer.telefone_principal || ''
+      setSelectedCustomerPhone(phone)
+    } else {
+      setSelectedCustomerPhone('')
+    }
+  }
+
+  const openWhatsApp = async () => {
+    if (!selectedCustomerPhone) {
+      showToast('Cliente sem número de WhatsApp cadastrado', 'error')
+      return
+    }
+
+    const cleanPhone = selectedCustomerPhone.replace(/\D/g, '')
+    const message = encodeURIComponent(`Olá! Vi sua oportunidade "${formData.titulo}" e gostaria de conversar sobre isso.`)
+    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank')
+
+    if (opportunity?.id) {
+      try {
+        await supabase.from('crm_interactions').insert({
+          opportunity_id: opportunity.id,
+          tipo: 'whatsapp',
+          assunto: 'Mensagem via WhatsApp',
+          descricao: `Mensagem enviada: "${formData.titulo}"`,
+          duracao_minutos: 0,
+          resultado: 'enviado',
+          data_interacao: new Date().toISOString()
+        })
+        showToast('Interação registrada!', 'success')
+      } catch (error) {
+        console.error('Erro ao registrar interação:', error)
+      }
+    }
+  }
+
+  const handleNewCustomerSaved = async () => {
+    await loadInitialData()
+    setIsCustomerModalOpen(false)
+    showToast('Cliente cadastrado! Selecione-o na lista', 'success')
   }
 
   const loadStages = async (pipelineId: string) => {
@@ -270,24 +319,53 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
                 />
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Cliente *
                 </label>
-                <select
-                  value={formData.customer_id}
-                  onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Selecione o cliente</option>
-                  {customers.map(customer => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.nome_razao} ({customer.tipo_pessoa === 'fisica' ? 'PF' : 'PJ'})
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={formData.customer_id}
+                    onChange={(e) => handleCustomerChange(e.target.value)}
+                    className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Selecione o cliente</option>
+                    {customers.map(customer => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.nome_razao} ({customer.tipo_pessoa === 'fisica' ? 'PF' : 'PJ'})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomerModalOpen(true)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 whitespace-nowrap"
+                    title="Cadastrar novo cliente"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Novo Cliente
+                  </button>
+                  {formData.customer_id && selectedCustomerPhone && (
+                    <button
+                      type="button"
+                      onClick={openWhatsApp}
+                      className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2 whitespace-nowrap"
+                      title="Abrir WhatsApp"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      WhatsApp
+                    </button>
+                  )}
+                </div>
+                {formData.customer_id && selectedCustomerPhone && (
+                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    <Phone className="w-3 h-3" />
+                    {selectedCustomerPhone}
+                  </p>
+                )}
               </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -555,6 +633,12 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
             </button>
           </div>
         </form>
+
+        <CustomerModal
+          isOpen={isCustomerModalOpen}
+          onClose={() => setIsCustomerModalOpen(false)}
+          onSave={handleNewCustomerSaved}
+        />
       </div>
     </div>
   )
