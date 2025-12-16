@@ -71,6 +71,7 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
     email: '',
     telefone: '',
     celular: '',
+    whatsapp: '',
     observacoes: ''
   })
 
@@ -110,6 +111,7 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
           email: customer.email || '',
           telefone: customer.telefone || '',
           celular: customer.celular || '',
+          whatsapp: customer.whatsapp || '',
           observacoes: customer.observacoes || ''
         })
       }
@@ -174,6 +176,7 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
         email: formData.email || null,
         telefone: formData.telefone || null,
         celular: formData.celular || null,
+        whatsapp: formData.whatsapp || null,
         inscricao_estadual: formData.inscricao_estadual || null,
         inscricao_municipal: formData.inscricao_municipal || null,
         nome_fantasia: formData.nome_fantasia || null,
@@ -600,11 +603,23 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerId }: CustomerModalPro
                       placeholder="Ex: (11) 3333-4444" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Celular / WhatsApp</label>
+                    <label className="block text-sm font-medium mb-1">Celular</label>
                     <input type="tel" value={formData.celular}
                       onChange={(e) => setFormData({...formData, celular: e.target.value})}
                       className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                       placeholder="Ex: (11) 99999-8888" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1 flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4 text-green-600" />
+                      WhatsApp
+                    </label>
+                    <input type="tel" value={formData.whatsapp}
+                      onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                      placeholder="Ex: (11) 98765-4321" />
+                    <p className="text-xs text-gray-500 mt-1">Usado para contato via WhatsApp no CRM</p>
                   </div>
 
                   <div className="md:col-span-2">

@@ -60,12 +60,18 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
   const loadInitialData = async () => {
     try {
       const [customersRes, pipelinesRes, usersRes] = await Promise.all([
-        supabase.from('customers').select('id, nome_razao, tipo_pessoa, telefone_principal, celular, whatsapp').order('nome_razao'),
+        supabase.from('customers').select('id, nome_razao, tipo_pessoa, telefone, celular, whatsapp').order('nome_razao'),
         supabase.from('crm_pipelines').select('*').eq('is_ativo', true).order('ordem'),
         supabase.from('user_profiles').select('id, full_name').order('full_name')
       ])
 
-      if (customersRes.data) setCustomers(customersRes.data)
+      if (customersRes.error) {
+        console.error('Erro ao carregar clientes:', customersRes.error)
+        showToast('Erro ao carregar clientes', 'error')
+      } else {
+        setCustomers(customersRes.data || [])
+      }
+
       if (pipelinesRes.data) {
         setPipelines(pipelinesRes.data)
         if (pipelinesRes.data.length > 0 && !formData.pipeline_id) {
@@ -77,6 +83,7 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
       if (usersRes.data) setUsers(usersRes.data)
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
+      showToast('Erro ao carregar dados iniciais', 'error')
     }
   }
 
@@ -84,7 +91,7 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
     setFormData({ ...formData, customer_id: customerId })
     const customer = customers.find(c => c.id === customerId)
     if (customer) {
-      const phone = customer.whatsapp || customer.celular || customer.telefone_principal || ''
+      const phone = customer.whatsapp || customer.celular || customer.telefone || ''
       setSelectedCustomerPhone(phone)
     } else {
       setSelectedCustomerPhone('')
