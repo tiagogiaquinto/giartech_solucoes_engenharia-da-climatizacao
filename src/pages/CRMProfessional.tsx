@@ -38,7 +38,9 @@ interface Opportunity {
     nome_razao: string
   }
   owner?: {
-    full_name: string
+    name: string
+    role?: string
+    department?: string
   }
   num_interacoes: number
   dias_no_pipeline: number
@@ -103,7 +105,7 @@ const CRMProfessional = () => {
               .select(`
                 *,
                 customer:customers(nome_razao),
-                owner:user_profiles(full_name)
+                owner:employees(name, role, department)
               `)
               .eq('stage_id', stage.id)
               .eq('status', 'aberto')
@@ -410,8 +412,9 @@ const CRMProfessional = () => {
 
                           {/* Responsável */}
                           {opp.owner && (
-                            <div className="mt-2 text-xs text-gray-600 truncate">
-                              👤 {opp.owner.full_name}
+                            <div className="mt-2 text-xs text-gray-600 truncate" title={`${opp.owner.name}${opp.owner.role ? ` - ${opp.owner.role}` : ''}${opp.owner.department ? ` (${opp.owner.department})` : ''}`}>
+                              👤 {opp.owner.name}
+                              {opp.owner.role && <span className="text-gray-500"> • {opp.owner.role}</span>}
                             </div>
                           )}
                         </motion.div>

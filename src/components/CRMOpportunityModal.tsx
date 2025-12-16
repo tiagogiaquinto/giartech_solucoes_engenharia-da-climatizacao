@@ -59,10 +59,10 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
 
   const loadInitialData = async () => {
     try {
-      const [customersRes, pipelinesRes, usersRes] = await Promise.all([
+      const [customersRes, pipelinesRes, employeesRes] = await Promise.all([
         supabase.from('customers').select('id, nome_razao, tipo_pessoa, telefone, celular, whatsapp').order('nome_razao'),
         supabase.from('crm_pipelines').select('*').eq('is_ativo', true).order('ordem'),
-        supabase.from('user_profiles').select('id, full_name').order('full_name')
+        supabase.from('employees').select('id, name, role, department').eq('active', true).order('name')
       ])
 
       if (customersRes.error) {
@@ -80,7 +80,13 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
           loadStages(firstPipeline)
         }
       }
-      if (usersRes.data) setUsers(usersRes.data)
+
+      if (employeesRes.error) {
+        console.error('Erro ao carregar funcionários:', employeesRes.error)
+        showToast('Erro ao carregar funcionários', 'error')
+      } else {
+        setUsers(employeesRes.data || [])
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
       showToast('Erro ao carregar dados iniciais', 'error')
@@ -375,8 +381,9 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
 
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Responsável
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Responsável (Funcionário)
                 </label>
                 <select
                   value={formData.owner_id}
@@ -384,12 +391,19 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Selecione o responsável</option>
-                  {users.map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.full_name}
+                  {users.map(employee => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.name}
+                      {employee.role && ` - ${employee.role}`}
+                      {employee.department && ` (${employee.department})`}
                     </option>
                   ))}
                 </select>
+                {users.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Nenhum funcionário ativo cadastrado. Cadastre funcionários em Gestão de Pessoas.
+                  </p>
+                )}
               </div>
 
               <div>
