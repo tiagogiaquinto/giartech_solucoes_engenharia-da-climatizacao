@@ -9,6 +9,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { formatDateSafe, formatCurrency } from '../utils/format'
 import { useToast } from '../hooks/useToast'
+import CRMOpportunityModal from '../components/CRMOpportunityModal'
 
 interface Pipeline {
   id: string
@@ -50,6 +51,8 @@ const CRMProfessional = () => {
   const [view, setView] = useState<'pipeline' | 'lista' | 'calendario'>('pipeline')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('todos')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedOpportunity, setSelectedOpportunity] = useState<any>(null)
   const { showToast } = useToast()
 
   const [stats, setStats] = useState({
@@ -207,7 +210,13 @@ const CRMProfessional = () => {
             <FileText className="w-4 h-4 inline-block mr-2" />
             Lista
           </button>
-          <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+          <button
+            onClick={() => {
+              setSelectedOpportunity(null)
+              setIsModalOpen(true)
+            }}
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
+          >
             <Plus className="w-5 h-5" />
             Nova Oportunidade
           </button>
@@ -421,6 +430,18 @@ const CRMProfessional = () => {
           </div>
         </div>
       )}
+
+      <CRMOpportunityModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedOpportunity(null)
+        }}
+        onSave={() => {
+          loadCRMData()
+        }}
+        opportunity={selectedOpportunity}
+      />
     </div>
   )
 }
