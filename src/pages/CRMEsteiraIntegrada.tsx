@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Target, Users, Plus, Clock, DollarSign, Phone, Mail, MessageSquare,
   ArrowRight, Search, Eye, GripVertical, Bell, AlertTriangle,
-  Heart, Star, Activity, Zap, TrendingUp, Award, User, Send, X, Edit3
+  Heart, Star, Activity, Zap, TrendingUp, Award, User, Send, X, Edit3, Calendar
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { formatDateSafe, formatCurrency } from '../utils/format'
@@ -196,6 +196,15 @@ const CRMEsteiraIntegrada = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
   const [customMessage, setCustomMessage] = useState('')
 
+  const [showAgendamentoModal, setShowAgendamentoModal] = useState(false)
+  const [selectedOppForAgendamento, setSelectedOppForAgendamento] = useState<Opportunity | null>(null)
+  const [agendamentoData, setAgendamentoData] = useState({
+    data: '',
+    hora: '',
+    tipo: 'whatsapp',
+    observacao: ''
+  })
+
   const handleWhatsAppClick = async (opp: Opportunity) => {
     const whatsapp = opp.customer_whatsapp || opp.customer_celular
     if (!whatsapp) {
@@ -257,6 +266,55 @@ const CRMEsteiraIntegrada = () => {
     const message = encodeURIComponent(customMessage)
     window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank')
     setShowMessageModal(false)
+  }
+
+  const handleOpenAgendamento = (opp: Opportunity) => {
+    setSelectedOppForAgendamento(opp)
+
+    const hoje = new Date()
+    const dataHoje = hoje.toISOString().split('T')[0]
+    const horaAtual = hoje.toTimeString().slice(0, 5)
+
+    setAgendamentoData({
+      data: dataHoje,
+      hora: horaAtual,
+      tipo: 'whatsapp',
+      observacao: ''
+    })
+
+    setShowAgendamentoModal(true)
+  }
+
+  const handleSalvarAgendamento = async () => {
+    if (!selectedOppForAgendamento) return
+
+    try {
+      if (!agendamentoData.data || !agendamentoData.hora) {
+        showToast('Preencha a data e hora do contato', 'error')
+        return
+      }
+
+      const dataHoraCompleta = new Date(`${agendamentoData.data}T${agendamentoData.hora}:00`)
+
+      const { error } = await supabase
+        .from('crm_opportunities')
+        .update({
+          proximo_contato_data: dataHoraCompleta.toISOString(),
+          proximo_contato_tipo: agendamentoData.tipo,
+          proximo_contato_observacao: agendamentoData.observacao,
+          proximo_contato_agendado_em: new Date().toISOString()
+        })
+        .eq('id', selectedOppForAgendamento.id)
+
+      if (error) throw error
+
+      showToast('Próximo contato agendado com sucesso!', 'success')
+      setShowAgendamentoModal(false)
+      loadEsteiraCompleta()
+    } catch (error: any) {
+      console.error('Erro ao agendar contato:', error)
+      showToast('Erro ao agendar próximo contato', 'error')
+    }
   }
 
   const executarAutomacao = async () => {
@@ -563,6 +621,13 @@ const CRMEsteiraIntegrada = () => {
                             </div>
 
                             <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleOpenAgendamento(opp)}
+                                className="p-2 hover:bg-purple-50 rounded-lg transition-colors"
+                                title="Agendar próximo contato"
+                              >
+                                <Calendar className="w-4 h-4 text-purple-600" />
+                              </button>
                               {(opp.customer_whatsapp || opp.customer_celular) && (
                                 <button
                                   onClick={() => handleWhatsAppClick(opp)}
@@ -600,6 +665,139 @@ const CRMEsteiraIntegrada = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Agendamento de Próximo Contato */}
+      <AnimatePresence>
+        {showAgendamentoModal && selectedOppForAgendamento && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-2xl max-w-lg w-full"
+            >
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <Calendar className="w-6 h-6 text-purple-600" />
+                    Agendar Próximo Contato
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedOppForAgendamento.titulo} - {selectedOppForAgendamento.customer_name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAgendamentoModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {/* Data e Hora */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Data *
+                    </label>
+                    <input
+                      type="date"
+                      value={agendamentoData.data}
+                      onChange={(e) => setAgendamentoData({ ...agendamentoData, data: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Hora *
+                    </label>
+                    <input
+                      type="time"
+                      value={agendamentoData.hora}
+                      onChange={(e) => setAgendamentoData({ ...agendamentoData, hora: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Tipo de Contato */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Contato *
+                  </label>
+                  <select
+                    value={agendamentoData.tipo}
+                    onChange={(e) => setAgendamentoData({ ...agendamentoData, tipo: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="telefone">Ligação Telefônica</option>
+                    <option value="email">Email</option>
+                    <option value="reuniao">Reunião</option>
+                    <option value="visita">Visita Presencial</option>
+                  </select>
+                </div>
+
+                {/* Observação */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Observação / Objetivo do Contato
+                  </label>
+                  <textarea
+                    value={agendamentoData.observacao}
+                    onChange={(e) => setAgendamentoData({ ...agendamentoData, observacao: e.target.value })}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                    placeholder="Ex: Enviar proposta atualizada, esclarecer dúvidas sobre pagamento..."
+                  />
+                </div>
+
+                {/* Info do Contato */}
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                  <div className="text-xs text-purple-700 font-semibold mb-2">INFORMAÇÕES DO CLIENTE</div>
+                  <div className="space-y-1 text-sm">
+                    {selectedOppForAgendamento.customer_whatsapp && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <MessageSquare className="w-4 h-4 text-green-600" />
+                        <span>{selectedOppForAgendamento.customer_whatsapp}</span>
+                      </div>
+                    )}
+                    {selectedOppForAgendamento.customer_email && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <Mail className="w-4 h-4 text-blue-600" />
+                        <span>{selectedOppForAgendamento.customer_email}</span>
+                      </div>
+                    )}
+                    {selectedOppForAgendamento.customer_telefone && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <Phone className="w-4 h-4 text-purple-600" />
+                        <span>{selectedOppForAgendamento.customer_telefone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setShowAgendamentoModal(false)}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSalvarAgendamento}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                >
+                  <Calendar className="w-5 h-5" />
+                  Agendar Contato
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Modal de Mensagem Personalizada */}
       <AnimatePresence>
