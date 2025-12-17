@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Plus, Search, Edit2, Trash2, Mail, Phone, Briefcase, UserCheck, UserX, X, Save, User, MapPin, CreditCard, Car, AlertTriangle, FileText } from 'lucide-react'
-import { getEmployees, createEmployee, updateEmployee, deleteEmployee, type Employee, type EmployeeDocument } from '../lib/database-services'
+import { Users, Plus, Search, Edit2, Trash2, Mail, Phone, Briefcase, UserCheck, UserX, X, Save, User, MapPin, CreditCard, Car, AlertTriangle, FileText, MessageCircle, Send } from 'lucide-react'
+import { getEmployees, createEmployee, updateEmployee, deleteEmployee, createUserInvitation, type Employee, type EmployeeDocument } from '../lib/database-services'
 import { EmployeeDocumentUpload } from '../components/EmployeeDocumentUpload'
 import { maskCPF, maskPhone, maskCEP, validateCPF, validateEmail, unmask } from '../utils/masks'
+import { supabase } from '../lib/supabase'
 
 const EmployeeManagement = () => {
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -14,6 +15,7 @@ const EmployeeManagement = () => {
   const [activeTab, setActiveTab] = useState<'personal' | 'address' | 'bank' | 'license' | 'emergency' | 'documents'>('personal')
   const [documents, setDocuments] = useState<EmployeeDocument[]>([])
   const [loadingCEP, setLoadingCEP] = useState(false)
+  const [sendingInvite, setSendingInvite] = useState<string | null>(null)
 
   const [formData, setFormData] = useState<Partial<Employee>>({
     name: '',
@@ -190,6 +192,67 @@ const EmployeeManagement = () => {
     }
   }
 
+  const handleSendInvite = async (employee: Employee, method: 'email' | 'whatsapp') => {
+    if (method === 'email' && !employee.email) {
+      alert('Funcionário não possui email cadastrado')
+      return
+    }
+
+    if (method === 'whatsapp' && !employee.phone) {
+      alert('Funcionário não possui telefone cadastrado')
+      return
+    }
+
+    if (!confirm(`Enviar convite por ${method === 'email' ? 'Email' : 'WhatsApp'} para ${employee.name}?`)) {
+      return
+    }
+
+    try {
+      setSendingInvite(employee.id!)
+
+      const invitation = await createUserInvitation({
+        email: employee.email!,
+        role: 'technician',
+        invited_by: null
+      })
+
+      const { data: companyData } = await supabase
+        .from('company_settings')
+        .select('name')
+        .single()
+
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invitation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          email: employee.email,
+          token: invitation.token,
+          role: 'technician',
+          method: method,
+          whatsapp: employee.phone,
+          companyName: companyData?.name || 'Giartech Sistema'
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        alert(`✅ Convite enviado com sucesso por ${method === 'email' ? 'Email' : 'WhatsApp'}!`)
+      } else {
+        alert('Erro ao enviar convite: ' + result.results.errors.join(', '))
+      }
+    } catch (error) {
+      console.error('Error sending invitation:', error)
+      alert('Erro ao enviar convite')
+    } finally {
+      setSendingInvite(null)
+    }
+  }
+
   const handleDocumentAdd = (doc: Omit<EmployeeDocument, 'id' | 'employee_id'>) => {
     setDocuments(prev => [...prev, { ...doc, id: Date.now().toString(), employee_id: editingEmployee?.id || 'temp' }])
   }
@@ -309,20 +372,49 @@ const EmployeeManagement = () => {
                     )}
                   </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleOpenModal(employee)}
-                      className="flex-1 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => employee.id && handleDelete(employee.id)}
-                      className="px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  <div className="space-y-2">
+                    {(employee.email || employee.phone) && (
+                      <div className="flex gap-2">
+                        {employee.email && (
+                          <button
+                            onClick={() => handleSendInvite(employee, 'email')}
+                            disabled={sendingInvite === employee.id}
+                            className="flex-1 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Enviar convite por Email"
+                          >
+                            <Mail className="h-4 w-4" />
+                            {sendingInvite === employee.id ? 'Enviando...' : 'Email'}
+                          </button>
+                        )}
+                        {employee.phone && (
+                          <button
+                            onClick={() => handleSendInvite(employee, 'whatsapp')}
+                            disabled={sendingInvite === employee.id}
+                            className="flex-1 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Enviar convite por WhatsApp"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            {sendingInvite === employee.id ? 'Enviando...' : 'WhatsApp'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleOpenModal(employee)}
+                        className="flex-1 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => employee.id && handleDelete(employee.id)}
+                        className="px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               ))}
