@@ -35,7 +35,8 @@ import {
   Mail,
   Trophy,
   Star,
-  Award
+  Award,
+  Heart
 } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { supabase } from '../../lib/supabase'
@@ -57,6 +58,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'agenda', path: '/calendar', icon: Calendar, label: 'Agenda', description: 'Compromissos e eventos' },
   { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes', description: 'Gestão de clientes PF/PJ' },
   { id: 'crm-professional', path: '/crm-professional', icon: Target, label: 'CRM Profissional', description: 'Pipeline de vendas, lead scoring, automação de follow-ups e previsão de vendas' },
+  { id: 'pos-venda', path: '/pos-venda', icon: Heart, label: 'Pós-Venda Inteligente', description: 'Cuide dos seus clientes, maximize satisfação e recorrência com follow-ups automáticos' },
   { id: 'customer-gamification', path: '/customer-gamification', icon: Star, label: 'Gamificação de Clientes', description: 'Sistema de pontos, níveis, badges e benefícios para fidelização de clientes' },
   { id: 'customer-gamification-manager', path: '/customer-gamification-manager', icon: Settings, label: 'Gerenciar Gamificação', description: 'Controle quais clientes participam e quais OSs geram pontos' },
   { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores' },

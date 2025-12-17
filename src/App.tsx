@@ -60,6 +60,8 @@ import UserInvitations from './pages/UserInvitations'
 import FinancialCategories from './pages/FinancialCategories'
 import AuditLogs from './pages/AuditLogs'
 import CRMLeads from './pages/CRMLeads'
+import CRMProfessional from './pages/CRMProfessional'
+import PosVenda from './pages/PosVenda'
 import Contracts from './pages/Contracts'
 import ContractTemplates from './pages/ContractTemplates'
 import DocumentTemplates from './pages/DocumentTemplates'
@@ -757,6 +759,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <CRMProfessional />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/pos-venda" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <PosVenda />
               </WebLayout>
             </ProtectedRoute>
           } />
