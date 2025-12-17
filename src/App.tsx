@@ -27,6 +27,10 @@ import ServiceCatalogDetail from './pages/ServiceCatalogDetail'
 import ServiceCatalogCreate from './pages/ServiceCatalogCreate'
 import Tutorial from './components/Tutorial'
 import { UserProvider, useUser } from './contexts/UserContext'
+import { AuthProvider } from './contexts/AuthContext'
+import LoginPage from './pages/LoginPage'
+import UserAccessManagement from './pages/UserAccessManagement'
+import AuditDashboard from './pages/AuditDashboard'
 import FinancialIntegration from './pages/FinancialIntegration'
 import ClientManagement from './pages/ClientManagement'
 import VisualCustomization from './pages/VisualCustomization'
@@ -261,11 +265,12 @@ function App() {
   }
 
   return (
-    <UserProvider>
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/mobile/login" element={<MobileLogin />} />
+    <AuthProvider>
+      <UserProvider>
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/mobile/login" element={<MobileLogin />} />
           <Route path="/pricing" element={<PricingPlans />} />
           
           <Route path="/" element={
@@ -718,7 +723,23 @@ function App() {
           <Route path="/access-management" element={
             <ProtectedRoute>
               <WebLayout>
-                <PeopleManagement />
+                <UserAccessManagement />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/audit-dashboard" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <AuditDashboard />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/user-management" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <UserAccessManagement />
               </WebLayout>
             </ProtectedRoute>
           } />
@@ -951,7 +972,8 @@ function App() {
       {/* Offline Indicator */}
       <OfflineIndicator />
       {isMobile() && <MobileBottomNav />}
-    </UserProvider>
+      </UserProvider>
+    </AuthProvider>
   )
 }
 
