@@ -51,8 +51,6 @@ import AccessRestrictionModal from './components/AccessRestrictionModal'
 import DepartmentalDashboard from './pages/DepartmentalDashboard'
 import DigitalLibrary from './pages/DigitalLibrary'
 import Chat from './components/Chat'
-import WhatsAppCRM from './pages/WhatsAppCRM'
-import WhatsAppCRMNew from './pages/WhatsAppCRM_NEW'
 import ThomazMetrics from './pages/ThomazMetrics'
 import FinancialManagement from './pages/FinancialManagement'
 import FinancialAnalysis from './pages/FinancialAnalysis'
@@ -89,7 +87,6 @@ import CreditScoring from './pages/CreditScoring'
 import FinanceiroConsolidado from './pages/FinanceiroConsolidado'
 import ExecutivoConsolidado from './pages/ExecutivoConsolidado'
 import RelatoriosConsolidado from './pages/RelatoriosConsolidado'
-import CustomerRFM from './pages/CustomerRFM'
 import CustomerReferrals from './pages/CustomerReferrals'
 import CustomerCredits from './pages/CustomerCredits'
 import CustomerGamification from './pages/CustomerGamification'
@@ -522,14 +519,6 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/whatsapp-crm" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <WhatsAppCRMNew />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
           <Route path="/thomaz-metrics" element={
             <ProtectedRoute>
               <WebLayout>
@@ -636,14 +625,6 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <CreditScoring />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/customer-rfm" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <CustomerRFM />
               </WebLayout>
             </ProtectedRoute>
           } />
