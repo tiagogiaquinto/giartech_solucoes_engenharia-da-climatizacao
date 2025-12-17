@@ -768,6 +768,14 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/user-invitations" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <UserInvitations />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/crm-leads" element={
             <ProtectedRoute>
               <WebLayout>

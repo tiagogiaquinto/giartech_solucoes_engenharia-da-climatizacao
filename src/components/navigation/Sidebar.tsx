@@ -37,7 +37,8 @@ import {
   Trophy,
   Star,
   Award,
-  Heart
+  Heart,
+  UserPlus
 } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { supabase } from '../../lib/supabase'
@@ -80,6 +81,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'email', path: '/email/inbox', icon: Mail, label: 'Email Corporativo', description: 'Enviar e receber emails' },
   { id: 'library', path: '/digital-library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos' },
   { id: 'people', path: '/people', icon: Users, label: 'Gestão de Pessoas', description: 'Funcionários, usuários e acessos unificados' },
+  { id: 'user-invitations', path: '/convites-usuarios', icon: UserPlus, label: 'Convites de Usuários', description: 'Convidar novos usuários por email ou WhatsApp para acessar o sistema' },
   { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações' },
   { id: 'document-templates', path: '/document-templates', icon: FileText, label: 'Templates de Documentos', description: 'Gerenciar templates de OS, contratos e propostas' },
   { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais' }
