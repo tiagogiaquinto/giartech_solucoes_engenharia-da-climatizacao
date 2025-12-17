@@ -186,7 +186,7 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
         lead_score: parseInt(formData.lead_score) || 50,
         descricao: formData.descricao,
         status: 'aberto',
-        probabilidade: stages.find(s => s.id === formData.stage_id)?.probabilidade || 0
+        data_criacao: new Date().toISOString().split('T')[0]
       }
 
       let opportunityId = opportunity?.id
