@@ -34,6 +34,7 @@ interface Opportunity {
   lead_score: number
   temperatura: string
   data_fechamento_esperada: string
+  stage_id: string
   customer?: {
     nome_razao: string
   }
@@ -252,6 +253,54 @@ const CRMProfessional = () => {
     }
   }
 
+  const handleEdit = (opportunity: Opportunity) => {
+    setSelectedOpportunity(opportunity)
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = async (opportunity: Opportunity) => {
+    if (!confirm(`Deseja realmente excluir a oportunidade "${opportunity.titulo}"?`)) {
+      return
+    }
+
+    const stageId = opportunity.stage_id
+
+    setPipelines(prevPipelines => {
+      return prevPipelines.map(pipeline => ({
+        ...pipeline,
+        stages: pipeline.stages.map(stage => {
+          if (stage.id === stageId) {
+            return {
+              ...stage,
+              opportunities: stage.opportunities.filter(opp => opp.id !== opportunity.id)
+            }
+          }
+          return stage
+        })
+      }))
+    })
+
+    try {
+      const { error } = await supabase
+        .from('crm_opportunities')
+        .delete()
+        .eq('id', opportunity.id)
+
+      if (error) throw error
+
+      showToast('Oportunidade excluída com sucesso!', 'success')
+
+      const currentPipeline = pipelines.find(p => p.id === selectedPipeline)
+      if (currentPipeline) {
+        calculateStats(currentPipeline.stages)
+      }
+    } catch (error: any) {
+      console.error('Erro ao excluir oportunidade:', error)
+      showToast('Erro ao excluir oportunidade', 'error')
+      loadCRMData()
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -462,17 +511,35 @@ const CRMProfessional = () => {
                           draggable
                           onDragStart={(e) => handleDragStart(e, opp)}
                           onDragEnd={handleDragEnd}
-                          onClick={(e) => {
-                            if (!draggedOpportunity) {
-                              setSelectedOpportunity(opp)
-                              setIsModalOpen(true)
-                            }
-                          }}
                           className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-all cursor-move border border-gray-200 hover:border-blue-400 relative group"
                         >
                           {/* Drag Handle */}
                           <div className="absolute left-2 top-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
                             <GripVertical className="w-4 h-4" />
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEdit(opp)
+                              }}
+                              className="p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                              title="Editar oportunidade"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDelete(opp)
+                              }}
+                              className="p-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                              title="Excluir oportunidade"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
 
                           {/* Temperatura Badge */}
@@ -548,6 +615,12 @@ const CRMProfessional = () => {
         }}
         onSave={() => {
           loadCRMData()
+          setIsModalOpen(false)
+          setSelectedOpportunity(null)
+          showToast(
+            selectedOpportunity ? 'Oportunidade atualizada com sucesso!' : 'Oportunidade criada com sucesso!',
+            'success'
+          )
         }}
         opportunity={selectedOpportunity}
       />
