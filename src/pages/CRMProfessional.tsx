@@ -5,7 +5,7 @@ import {
   Clock, DollarSign, Phone, Mail, Video, MessageSquare,
   FileText, Tag, Award, Zap, BarChart3, Settings,
   ArrowRight, ChevronRight, Search, Eye, Edit, Trash2, GripVertical,
-  Bell, AlertTriangle
+  Bell, AlertTriangle, MapPin
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { formatDateSafe, formatCurrency } from '../utils/format'
@@ -39,8 +39,21 @@ interface Opportunity {
   stage_id: string
   customer?: {
     nome_razao: string
-    whatsapp?: string
+    email?: string
+    telefone?: string
     celular?: string
+    whatsapp?: string
+    tipo_pessoa?: string
+    addresses?: Array<{
+      logradouro: string
+      numero: string
+      bairro: string
+      cidade: string
+      estado: string
+      cep: string
+      complemento?: string
+      principal: boolean
+    }>
   }
   owner?: {
     name: string
@@ -113,7 +126,24 @@ const CRMProfessional = () => {
               .from('crm_opportunities')
               .select(`
                 *,
-                customer:customers(nome_razao, whatsapp, celular),
+                customer:customers(
+                  nome_razao,
+                  email,
+                  telefone,
+                  celular,
+                  whatsapp,
+                  tipo_pessoa,
+                  addresses:customer_addresses(
+                    logradouro,
+                    numero,
+                    bairro,
+                    cidade,
+                    estado,
+                    cep,
+                    complemento,
+                    principal
+                  )
+                ),
                 owner:employees(name, role, department)
               `)
               .eq('stage_id', stage.id)
@@ -625,9 +655,49 @@ const CRMProfessional = () => {
 
                           {/* Cliente */}
                           {opp.customer && (
-                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                              <Users className="w-4 h-4" />
-                              <span className="truncate">{opp.customer.nome_razao}</span>
+                            <div className="space-y-1.5 mb-3">
+                              <div className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+                                <Users className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate">{opp.customer.nome_razao}</span>
+                                {opp.customer.tipo_pessoa && (
+                                  <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                                    {opp.customer.tipo_pessoa === 'fisica' ? 'PF' : 'PJ'}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Telefones */}
+                              {(opp.customer.whatsapp || opp.customer.celular || opp.customer.telefone) && (
+                                <div className="flex items-center gap-2 text-xs text-gray-600">
+                                  <Phone className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {opp.customer.whatsapp || opp.customer.celular || opp.customer.telefone}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Email */}
+                              {opp.customer.email && (
+                                <div className="flex items-center gap-2 text-xs text-gray-600">
+                                  <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span className="truncate">{opp.customer.email}</span>
+                                </div>
+                              )}
+
+                              {/* Endereço */}
+                              {opp.customer.addresses && opp.customer.addresses.length > 0 && (() => {
+                                const mainAddress = opp.customer.addresses.find(addr => addr.principal) || opp.customer.addresses[0]
+                                return (
+                                  <div className="flex items-start gap-2 text-xs text-gray-600">
+                                    <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                                    <span className="line-clamp-2">
+                                      {mainAddress.logradouro}, {mainAddress.numero}
+                                      {mainAddress.complemento && ` - ${mainAddress.complemento}`}
+                                      {' - '}{mainAddress.bairro}, {mainAddress.cidade}/{mainAddress.estado}
+                                    </span>
+                                  </div>
+                                )
+                              })()}
                             </div>
                           )}
 

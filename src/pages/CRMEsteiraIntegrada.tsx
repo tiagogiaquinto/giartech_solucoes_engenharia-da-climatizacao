@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Target, Users, Plus, Clock, DollarSign, Phone, Mail, MessageSquare,
   ArrowRight, Search, Eye, GripVertical, Bell, AlertTriangle,
-  Heart, Star, Activity, Zap, TrendingUp, Award, User, Send, X, Edit3, Calendar
+  Heart, Star, Activity, Zap, TrendingUp, Award, User, Send, X, Edit3, Calendar, MapPin
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { formatDateSafe, formatCurrency } from '../utils/format'
@@ -43,7 +43,12 @@ interface Opportunity {
   customer_name: string
   customer_whatsapp?: string
   customer_celular?: string
+  customer_telefone?: string
   customer_email?: string
+  customer_endereco?: string
+  customer_cidade?: string
+  customer_estado?: string
+  customer_tipo_pessoa?: string
   owner_name?: string
   num_interacoes: number
   dias_no_pipeline: number
@@ -563,10 +568,48 @@ const CRMEsteiraIntegrada = () => {
                                 <h4 className="font-bold text-gray-900 text-base">
                                   {opp.customer_name || 'Sem cliente'}
                                 </h4>
+                                {opp.customer_tipo_pessoa && (
+                                  <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                                    {opp.customer_tipo_pessoa === 'fisica' ? 'PF' : 'PJ'}
+                                  </span>
+                                )}
                               </div>
-                              <p className="text-sm text-gray-600 line-clamp-2">
+                              <p className="text-sm text-gray-600 line-clamp-2 mb-2">
                                 {opp.titulo}
                               </p>
+
+                              {/* Informações de Contato */}
+                              <div className="space-y-1 text-xs text-gray-600">
+                                {/* Telefone */}
+                                {(opp.customer_whatsapp || opp.customer_celular || opp.customer_telefone) && (
+                                  <div className="flex items-center gap-1.5">
+                                    <Phone className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">
+                                      {opp.customer_whatsapp || opp.customer_celular || opp.customer_telefone}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Email */}
+                                {opp.customer_email && (
+                                  <div className="flex items-center gap-1.5">
+                                    <Mail className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">{opp.customer_email}</span>
+                                  </div>
+                                )}
+
+                                {/* Endereço */}
+                                {opp.customer_endereco && (
+                                  <div className="flex items-start gap-1.5">
+                                    <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                                    <span className="line-clamp-1">
+                                      {opp.customer_endereco}
+                                      {opp.customer_cidade && `, ${opp.customer_cidade}`}
+                                      {opp.customer_estado && `/${opp.customer_estado}`}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <GripVertical className="w-5 h-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                           </div>
