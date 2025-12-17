@@ -38,6 +38,21 @@ const CRMLeads = () => {
 
   useEffect(() => {
     loadLeads()
+
+    const leadsChannel = supabase
+      .channel('crm-leads-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'crm_leads' },
+        () => {
+          loadLeads()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(leadsChannel)
+    }
   }, [])
 
   const loadLeads = async () => {

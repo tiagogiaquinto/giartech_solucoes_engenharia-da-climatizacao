@@ -90,6 +90,21 @@ const CRMProfessional = () => {
 
   useEffect(() => {
     loadCRMData()
+
+    const opportunitiesChannel = supabase
+      .channel('crm-professional-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'crm_opportunities' },
+        () => {
+          loadCRMData()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(opportunitiesChannel)
+    }
   }, [selectedPipeline])
 
   const loadCRMData = async () => {
@@ -769,8 +784,8 @@ const CRMProfessional = () => {
           setIsModalOpen(false)
           setSelectedOpportunity(null)
         }}
-        onSave={() => {
-          loadCRMData()
+        onSave={async () => {
+          await loadCRMData()
           setIsModalOpen(false)
           setSelectedOpportunity(null)
           showToast(

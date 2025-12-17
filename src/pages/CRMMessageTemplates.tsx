@@ -39,6 +39,21 @@ const CRMMessageTemplates = () => {
 
   useEffect(() => {
     loadTemplates()
+
+    const templatesChannel = supabase
+      .channel('crm-templates-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'crm_message_templates' },
+        () => {
+          loadTemplates()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(templatesChannel)
+    }
   }, [])
 
   const loadTemplates = async () => {
@@ -90,7 +105,7 @@ const CRMMessageTemplates = () => {
         showToast('Template criado com sucesso!', 'success')
       }
 
-      loadTemplates()
+      await loadTemplates()
       handleCloseModal()
     } catch (error: any) {
       console.error('Erro ao salvar template:', error)
@@ -109,7 +124,7 @@ const CRMMessageTemplates = () => {
 
       if (error) throw error
       showToast('Template excluído com sucesso!', 'success')
-      loadTemplates()
+      await loadTemplates()
     } catch (error: any) {
       console.error('Erro ao excluir template:', error)
       showToast('Erro ao excluir template', 'error')

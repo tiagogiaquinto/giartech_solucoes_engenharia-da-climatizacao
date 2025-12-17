@@ -78,6 +78,28 @@ const CRMEsteiraIntegrada = () => {
 
   useEffect(() => {
     loadEsteiraCompleta()
+
+    const opportunitiesChannel = supabase
+      .channel('crm-opportunities-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'crm_opportunities' },
+        () => {
+          loadEsteiraCompleta()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'crm_interactions' },
+        () => {
+          loadEsteiraCompleta()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(opportunitiesChannel)
+    }
   }, [])
 
   const loadEsteiraCompleta = async () => {
@@ -961,8 +983,8 @@ const CRMEsteiraIntegrada = () => {
               setSelectedOpportunity(null)
             }}
             opportunity={selectedOpportunity}
-            onSave={() => {
-              loadEsteiraCompleta()
+            onSave={async () => {
+              await loadEsteiraCompleta()
               setIsModalOpen(false)
               setSelectedOpportunity(null)
             }}
