@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X, Save, DollarSign, Calendar, FileText, CreditCard, User, TrendingUp, TrendingDown } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { maskCurrency, parseCurrencyToFloat, formatCurrency } from '../utils/masks'
 
 interface FinanceEntryModalProps {
   isOpen: boolean
@@ -50,7 +51,7 @@ const FinanceEntryModal = ({ isOpen, onClose, onSave, entryId }: FinanceEntryMod
 
   const [formData, setFormData] = useState({
     descricao: '',
-    valor: 0,
+    valor: '',
     tipo: 'receita' as 'receita' | 'despesa',
     status: 'a_receber' as 'recebido' | 'pago' | 'a_receber' | 'a_pagar',
     data: new Date().toISOString().split('T')[0],
@@ -180,7 +181,7 @@ const FinanceEntryModal = ({ isOpen, onClose, onSave, entryId }: FinanceEntryMod
       if (data) {
         setFormData({
           descricao: data.descricao || '',
-          valor: data.valor || 0,
+          valor: data.valor ? formatCurrency(data.valor) : '',
           tipo: data.tipo || 'receita',
           status: data.status || 'a_receber',
           data: data.data?.split('T')[0] || '',
@@ -205,7 +206,9 @@ const FinanceEntryModal = ({ isOpen, onClose, onSave, entryId }: FinanceEntryMod
 
   const handleSave = async () => {
     try {
-      if (!formData.descricao || formData.valor <= 0) {
+      const valorNumerico = parseCurrencyToFloat(formData.valor)
+
+      if (!formData.descricao || valorNumerico <= 0) {
         alert('Preencha a descrição e o valor!')
         return
       }
@@ -214,7 +217,7 @@ const FinanceEntryModal = ({ isOpen, onClose, onSave, entryId }: FinanceEntryMod
 
       const dataToSave: any = {
         descricao: formData.descricao,
-        valor: Number(formData.valor),
+        valor: valorNumerico,
         tipo: formData.tipo,
         status: formData.status,
         data: formData.data,
@@ -371,13 +374,14 @@ const FinanceEntryModal = ({ isOpen, onClose, onSave, entryId }: FinanceEntryMod
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
-                  type="number"
+                  type="text"
                   value={formData.valor}
-                  onChange={(e) => setFormData({ ...formData, valor: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => {
+                    const masked = maskCurrency(e.target.value)
+                    setFormData({ ...formData, valor: masked })
+                  }}
                   className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="0,00"
-                  step="0.01"
-                  min="0"
                 />
               </div>
             </div>

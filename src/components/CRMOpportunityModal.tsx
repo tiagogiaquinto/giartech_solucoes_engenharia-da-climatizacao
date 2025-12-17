@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, Calendar, DollarSign, Target, Users, FileText, Clock, MapPin, Phone, Mail, MessageCircle, Plus, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../hooks/useToast'
+import { maskCurrency, parseCurrencyToFloat, formatCurrency } from '../utils/masks'
 import CustomerModal from './CustomerModal'
 
 interface CRMOpportunityModalProps {
@@ -54,7 +55,7 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
           pipeline_id: opportunity.pipeline_id || '',
           stage_id: opportunity.stage_id || '',
           owner_id: opportunity.owner_id || '',
-          valor: opportunity.valor?.toString() || '',
+          valor: opportunity.valor ? formatCurrency(opportunity.valor) : '',
           data_fechamento_esperada: opportunity.data_fechamento_esperada || '',
           temperatura: opportunity.temperatura || 'morno',
           lead_score: opportunity.lead_score?.toString() || '50',
@@ -197,7 +198,7 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
         pipeline_id: formData.pipeline_id,
         stage_id: formData.stage_id,
         owner_id: formData.owner_id || null,
-        valor: parseFloat(formData.valor) || 0,
+        valor: parseCurrencyToFloat(formData.valor),
         data_fechamento_esperada: formData.data_fechamento_esperada || null,
         temperatura: formData.temperatura,
         lead_score: parseInt(formData.lead_score) || 50,
@@ -257,7 +258,7 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
         const orcamentoData = {
           customer_id: formData.customer_id,
           descricao: formData.descricao_orcamento || formData.titulo,
-          valor_total: parseFloat(formData.valor) || 0,
+          valor_total: parseCurrencyToFloat(formData.valor),
           status: 'pendente',
           validade_dias: parseInt(formData.validade_orcamento) || 30,
           observacoes: `Orçamento gerado a partir da oportunidade: ${formData.titulo}`
@@ -466,10 +467,12 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
                   Valor Estimado (R$)
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
+                  type="text"
                   value={formData.valor}
-                  onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+                  onChange={(e) => {
+                    const masked = maskCurrency(e.target.value)
+                    setFormData({ ...formData, valor: masked })
+                  }}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="0,00"
                 />
