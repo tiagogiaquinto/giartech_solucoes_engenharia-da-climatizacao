@@ -187,6 +187,37 @@ const CRMProfessional = () => {
       return
     }
 
+    const oldStageId = draggedOpportunity.stage_id
+    const oppToMove = { ...draggedOpportunity }
+
+    setPipelines(prevPipelines => {
+      const updatedPipelines = prevPipelines.map(pipeline => ({
+        ...pipeline,
+        stages: pipeline.stages.map(stage => {
+          if (stage.id === oldStageId) {
+            return {
+              ...stage,
+              opportunities: stage.opportunities.filter(opp => opp.id !== oppToMove.id)
+            }
+          }
+          if (stage.id === newStageId) {
+            return {
+              ...stage,
+              opportunities: [...stage.opportunities, { ...oppToMove, stage_id: newStageId }]
+            }
+          }
+          return stage
+        })
+      }))
+
+      const currentPipeline = updatedPipelines.find(p => p.id === selectedPipeline)
+      if (currentPipeline) {
+        calculateStats(currentPipeline.stages)
+      }
+
+      return updatedPipelines
+    })
+
     try {
       const { error } = await supabase
         .from('crm_opportunities')
@@ -196,10 +227,10 @@ const CRMProfessional = () => {
       if (error) throw error
 
       showToast('Oportunidade movida com sucesso!', 'success')
-      loadCRMData()
     } catch (error: any) {
       console.error('Erro ao mover oportunidade:', error)
       showToast('Erro ao mover oportunidade', 'error')
+      loadCRMData()
     }
   }
 
