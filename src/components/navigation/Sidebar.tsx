@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ChartPie as PieChart,
   MessageCircle,
+  MessageSquare,
   Wrench,
   FolderKanban,
   Library,
