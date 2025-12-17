@@ -4,7 +4,7 @@ import {
   Target, TrendingUp, Users, Plus, Filter, Calendar,
   Clock, DollarSign, Phone, Mail, Video, MessageSquare,
   FileText, Tag, Award, Zap, BarChart3, Settings,
-  ArrowRight, ChevronRight, Search, Eye, Edit, Trash2
+  ArrowRight, ChevronRight, Search, Eye, Edit, Trash2, GripVertical
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { formatDateSafe, formatCurrency } from '../utils/format'
@@ -55,6 +55,8 @@ const CRMProfessional = () => {
   const [filterStatus, setFilterStatus] = useState('todos')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedOpportunity, setSelectedOpportunity] = useState<any>(null)
+  const [draggedOpportunity, setDraggedOpportunity] = useState<any>(null)
+  const [draggedOverStage, setDraggedOverStage] = useState<string | null>(null)
   const { showToast } = useToast()
 
   const [stats, setStats] = useState({
@@ -149,6 +151,56 @@ const CRMProfessional = () => {
       meta_mensal: 100000,
       realizacao: 45
     })
+  }
+
+  const handleDragStart = (e: React.DragEvent, opportunity: any) => {
+    setDraggedOpportunity(opportunity)
+    e.dataTransfer.effectAllowed = 'move'
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5'
+    }
+  }
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1'
+    }
+    setDraggedOpportunity(null)
+    setDraggedOverStage(null)
+  }
+
+  const handleDragOver = (e: React.DragEvent, stageId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDraggedOverStage(stageId)
+  }
+
+  const handleDragLeave = () => {
+    setDraggedOverStage(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, newStageId: string) => {
+    e.preventDefault()
+    setDraggedOverStage(null)
+
+    if (!draggedOpportunity || draggedOpportunity.stage_id === newStageId) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('crm_opportunities')
+        .update({ stage_id: newStageId })
+        .eq('id', draggedOpportunity.id)
+
+      if (error) throw error
+
+      showToast('Oportunidade movida com sucesso!', 'success')
+      loadCRMData()
+    } catch (error: any) {
+      console.error('Erro ao mover oportunidade:', error)
+      showToast('Erro ao mover oportunidade', 'error')
+    }
   }
 
   const getTemperaturaColor = (temp: string) => {
@@ -359,7 +411,16 @@ const CRMProfessional = () => {
                   </div>
 
                   {/* Opportunities Cards */}
-                  <div className="space-y-3 p-4 bg-gray-50 rounded-b-xl min-h-[500px]">
+                  <div
+                    className={`space-y-3 p-4 rounded-b-xl min-h-[500px] transition-colors ${
+                      draggedOverStage === stage.id
+                        ? 'bg-blue-100 border-2 border-blue-400 border-dashed'
+                        : 'bg-gray-50'
+                    }`}
+                    onDragOver={(e) => handleDragOver(e, stage.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, stage.id)}
+                  >
                     <AnimatePresence>
                       {stage.opportunities.map((opp) => (
                         <motion.div
@@ -367,12 +428,22 @@ const CRMProfessional = () => {
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.9 }}
-                          onClick={() => {
-                            setSelectedOpportunity(opp)
-                            setIsModalOpen(true)
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, opp)}
+                          onDragEnd={handleDragEnd}
+                          onClick={(e) => {
+                            if (!draggedOpportunity) {
+                              setSelectedOpportunity(opp)
+                              setIsModalOpen(true)
+                            }
                           }}
-                          className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-gray-200 hover:border-blue-400"
+                          className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-all cursor-move border border-gray-200 hover:border-blue-400 relative group"
                         >
+                          {/* Drag Handle */}
+                          <div className="absolute left-2 top-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <GripVertical className="w-4 h-4" />
+                          </div>
+
                           {/* Temperatura Badge */}
                           <div className="flex items-center justify-between mb-2">
                             <span className={`text-xs px-2 py-1 rounded-full font-medium ${getTemperaturaColor(opp.temperatura)}`}>
