@@ -62,6 +62,7 @@ import AuditLogs from './pages/AuditLogs'
 import CRMLeads from './pages/CRMLeads'
 import CRMProfessional from './pages/CRMProfessional'
 import PosVenda from './pages/PosVenda'
+import CRMEsteiraIntegrada from './pages/CRMEsteiraIntegrada'
 import Contracts from './pages/Contracts'
 import ContractTemplates from './pages/ContractTemplates'
 import DocumentTemplates from './pages/DocumentTemplates'
@@ -754,10 +755,18 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/crm-esteira" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <CRMEsteiraIntegrada />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/crm-professional" element={
             <ProtectedRoute>
               <WebLayout>
-                <CRMProfessional />
+                <CRMEsteiraIntegrada />
               </WebLayout>
             </ProtectedRoute>
           } />
@@ -765,7 +774,7 @@ function App() {
           <Route path="/pos-venda" element={
             <ProtectedRoute>
               <WebLayout>
-                <PosVenda />
+                <CRMEsteiraIntegrada />
               </WebLayout>
             </ProtectedRoute>
           } />
