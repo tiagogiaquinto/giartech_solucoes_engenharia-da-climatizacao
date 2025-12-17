@@ -4,7 +4,8 @@ import {
   Target, TrendingUp, Users, Plus, Filter, Calendar,
   Clock, DollarSign, Phone, Mail, Video, MessageSquare,
   FileText, Tag, Award, Zap, BarChart3, Settings,
-  ArrowRight, ChevronRight, Search, Eye, Edit, Trash2, GripVertical
+  ArrowRight, ChevronRight, Search, Eye, Edit, Trash2, GripVertical,
+  Bell, AlertTriangle
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { formatDateSafe, formatCurrency } from '../utils/format'
@@ -34,9 +35,12 @@ interface Opportunity {
   lead_score: number
   temperatura: string
   data_fechamento_esperada: string
+  data_proximo_contato?: string
   stage_id: string
   customer?: {
     nome_razao: string
+    whatsapp?: string
+    celular?: string
   }
   owner?: {
     name: string
@@ -45,6 +49,8 @@ interface Opportunity {
   }
   num_interacoes: number
   dias_no_pipeline: number
+  is_rotting?: boolean
+  dias_sem_atividade?: number
 }
 
 const CRMProfessional = () => {
@@ -107,7 +113,7 @@ const CRMProfessional = () => {
               .from('crm_opportunities')
               .select(`
                 *,
-                customer:customers(nome_razao),
+                customer:customers(nome_razao, whatsapp, celular),
                 owner:employees(name, role, department)
               `)
               .eq('stage_id', stage.id)
@@ -251,6 +257,34 @@ const CRMProfessional = () => {
       case 'frio': return '❄️'
       default: return '⚪'
     }
+  }
+
+  const handleWhatsAppClick = (opportunity: Opportunity) => {
+    const whatsapp = opportunity.customer?.whatsapp || opportunity.customer?.celular
+    if (!whatsapp) {
+      showToast('Cliente não possui WhatsApp cadastrado', 'error')
+      return
+    }
+
+    const phoneNumber = whatsapp.replace(/\D/g, '')
+    const message = encodeURIComponent(
+      `Olá! Estou entrando em contato sobre: ${opportunity.titulo}`
+    )
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`
+    window.open(whatsappUrl, '_blank')
+  }
+
+  const isFollowUpOverdue = (opportunity: Opportunity) => {
+    if (!opportunity.data_proximo_contato) return false
+    return new Date(opportunity.data_proximo_contato) < new Date()
+  }
+
+  const getDaysUntilFollowUp = (opportunity: Opportunity) => {
+    if (!opportunity.data_proximo_contato) return null
+    const days = Math.ceil(
+      (new Date(opportunity.data_proximo_contato).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+    )
+    return days
   }
 
   const handleEdit = (opportunity: Opportunity) => {
@@ -518,8 +552,39 @@ const CRMProfessional = () => {
                             <GripVertical className="w-4 h-4" />
                           </div>
 
+                          {/* Follow-up Alert */}
+                          {isFollowUpOverdue(opp) && (
+                            <div className="absolute left-2 top-2 bg-red-500 text-white rounded-full p-1 animate-pulse" title="Follow-up vencido!">
+                              <AlertTriangle className="w-4 h-4" />
+                            </div>
+                          )}
+                          {!isFollowUpOverdue(opp) && getDaysUntilFollowUp(opp) !== null && getDaysUntilFollowUp(opp)! <= 2 && (
+                            <div className="absolute left-2 top-2 bg-orange-500 text-white rounded-full p-1" title={`Follow-up em ${getDaysUntilFollowUp(opp)} dias`}>
+                              <Bell className="w-4 h-4" />
+                            </div>
+                          )}
+
+                          {/* Rotting Indicator */}
+                          {opp.is_rotting && (
+                            <div className="absolute left-2 top-10 bg-yellow-500 text-white rounded-full p-1" title={`Sem atividade há ${opp.dias_sem_atividade} dias`}>
+                              <Clock className="w-4 h-4" />
+                            </div>
+                          )}
+
                           {/* Action Buttons */}
                           <div className="absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {(opp.customer?.whatsapp || opp.customer?.celular) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleWhatsAppClick(opp)
+                                }}
+                                className="p-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                                title="Abrir WhatsApp"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -582,6 +647,27 @@ const CRMProfessional = () => {
                               {opp.num_interacoes}
                             </div>
                           </div>
+
+                          {/* Follow-up Date */}
+                          {opp.data_proximo_contato && (
+                            <div className={`mt-2 text-xs px-2 py-1 rounded ${
+                              isFollowUpOverdue(opp)
+                                ? 'bg-red-100 text-red-700 font-semibold'
+                                : getDaysUntilFollowUp(opp)! <= 2
+                                ? 'bg-orange-100 text-orange-700'
+                                : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              <div className="flex items-center gap-1">
+                                <Bell className="w-3 h-3" />
+                                <span>
+                                  {isFollowUpOverdue(opp)
+                                    ? 'Follow-up vencido!'
+                                    : `Follow-up: ${formatDateSafe(opp.data_proximo_contato)}`
+                                  }
+                                </span>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Responsável */}
                           {opp.owner && (
