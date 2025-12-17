@@ -34,6 +34,7 @@ import { getEmployees, createEmployee, updateEmployee, deleteEmployee, type Empl
 import { EmployeeDocumentUpload } from '../components/EmployeeDocumentUpload'
 import { maskCPF, maskPhone, maskCEP, validateCPF, validateEmail, unmask } from '../utils/masks'
 import { useUser } from '../contexts/UserContext'
+import UserInvitations from './UserInvitations'
 
 interface UserAccess {
   id: string
@@ -65,7 +66,7 @@ interface Permission {
 
 const PeopleManagement = () => {
   const { isAdmin } = useUser()
-  const [activeMainTab, setActiveMainTab] = useState<'employees' | 'users' | 'access'>('employees')
+  const [activeMainTab, setActiveMainTab] = useState<'employees' | 'users' | 'access' | 'invitations'>('employees')
   const [activeSubTab, setActiveSubTab] = useState<'personal' | 'address' | 'bank' | 'license' | 'emergency' | 'documents'>('personal')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRole, setSelectedRole] = useState('all')
@@ -498,6 +499,23 @@ const PeopleManagement = () => {
               {roles.length}
             </span>
           </button>
+
+          <button
+            onClick={() => {
+              setActiveMainTab('invitations')
+              setSearchTerm('')
+              setSelectedRole('all')
+              setSelectedStatus('all')
+            }}
+            className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+              activeMainTab === 'invitations'
+                ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md'
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <UserPlus className="h-5 w-5" />
+            Convites de Usuários
+          </button>
         </div>
       </div>
 
@@ -902,6 +920,19 @@ const PeopleManagement = () => {
                 ))}
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {/* INVITATIONS TAB */}
+        {activeMainTab === 'invitations' && (
+          <motion.div
+            key="invitations"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-6"
+          >
+            <UserInvitations />
           </motion.div>
         )}
       </AnimatePresence>
