@@ -48,11 +48,28 @@ const CRMOpportunityModal = ({ isOpen, onClose, onSave, opportunity }: CRMOpport
       loadInitialData()
       if (opportunity) {
         setFormData({
-          ...formData,
-          ...opportunity,
+          titulo: opportunity.titulo || '',
+          descricao: opportunity.descricao || '',
+          customer_id: opportunity.customer_id || '',
+          pipeline_id: opportunity.pipeline_id || '',
+          stage_id: opportunity.stage_id || '',
+          owner_id: opportunity.owner_id || '',
           valor: opportunity.valor?.toString() || '',
-          lead_score: opportunity.lead_score?.toString() || '50'
+          data_fechamento_esperada: opportunity.data_fechamento_esperada || '',
+          temperatura: opportunity.temperatura || 'morno',
+          lead_score: opportunity.lead_score?.toString() || '50',
+          criar_visita: false,
+          data_visita: '',
+          hora_visita: '',
+          local_visita: '',
+          observacoes_visita: '',
+          criar_orcamento: false,
+          descricao_orcamento: '',
+          validade_orcamento: '30'
         })
+        if (opportunity.pipeline_id) {
+          loadStages(opportunity.pipeline_id)
+        }
       }
     }
   }, [isOpen, opportunity])

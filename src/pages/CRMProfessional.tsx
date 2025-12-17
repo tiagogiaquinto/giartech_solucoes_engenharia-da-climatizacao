@@ -367,7 +367,11 @@ const CRMProfessional = () => {
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.9 }}
-                          className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-gray-200"
+                          onClick={() => {
+                            setSelectedOpportunity(opp)
+                            setIsModalOpen(true)
+                          }}
+                          className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-gray-200 hover:border-blue-400"
                         >
                           {/* Temperatura Badge */}
                           <div className="flex items-center justify-between mb-2">
