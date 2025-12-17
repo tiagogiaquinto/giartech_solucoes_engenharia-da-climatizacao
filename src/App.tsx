@@ -63,6 +63,7 @@ import CRMLeads from './pages/CRMLeads'
 import CRMProfessional from './pages/CRMProfessional'
 import PosVenda from './pages/PosVenda'
 import CRMEsteiraIntegrada from './pages/CRMEsteiraIntegrada'
+import CRMMessageTemplates from './pages/CRMMessageTemplates'
 import Contracts from './pages/Contracts'
 import ContractTemplates from './pages/ContractTemplates'
 import DocumentTemplates from './pages/DocumentTemplates'
@@ -767,6 +768,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <CRMEsteiraIntegrada />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/crm-templates" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <CRMMessageTemplates />
               </WebLayout>
             </ProtectedRoute>
           } />
