@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Plus, Search, ListFilter as Filter, CreditCard as Edit, Trash2, Save, X, Phone, Mail, MapPin, Building, User, Calendar, FileText, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Clock, Shield, DollarSign, Eye, ChevronDown, ChevronUp, ClipboardList, Package, ArrowRight } from 'lucide-react'
+import { Users, Plus, Search, ListFilter as Filter, CreditCard as Edit, Trash2, Save, X, Phone, Mail, MapPin, Building, User, Calendar, FileText, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Clock, Shield, DollarSign, Eye, ChevronDown, ChevronUp, ClipboardList, Package, ArrowRight, MessageSquare, Copy } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -40,6 +40,9 @@ const ClientManagement = () => {
   const [expandedClients, setExpandedClients] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  const [clientStats, setClientStats] = useState<Record<string, { os_total: number, os_abertas: number, contratos: number, equipamentos: number }>>({})
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
 
   const [newClient, setNewClient] = useState({
     name: '',
@@ -69,6 +72,13 @@ const ClientManagement = () => {
   useEffect(() => {
     loadClients()
   }, [])
+
+  // Load client statistics
+  useEffect(() => {
+    if (clients.length > 0) {
+      loadAllClientStats()
+    }
+  }, [clients])
 
   const loadClients = async () => {
     try {
@@ -245,6 +255,58 @@ const ClientManagement = () => {
       console.error('Error deleting client:', error)
       alert('Erro ao excluir cliente')
     }
+  }
+
+  const loadAllClientStats = async () => {
+    const stats: Record<string, any> = {}
+
+    for (const client of clients) {
+      try {
+        const { data: osData } = await supabase
+          .from('service_orders')
+          .select('id, status')
+          .eq('customer_id', client.id)
+
+        const { data: contractsData } = await supabase
+          .from('contracts')
+          .select('id')
+          .eq('customer_id', client.id)
+          .eq('status', 'ativo')
+
+        const { data: equipmentsData } = await supabase
+          .from('customer_equipment')
+          .select('id')
+          .eq('customer_id', client.id)
+
+        stats[client.id] = {
+          os_total: osData?.length || 0,
+          os_abertas: osData?.filter((os: any) => ['aberto', 'em_andamento'].includes(os.status)).length || 0,
+          contratos: contractsData?.length || 0,
+          equipamentos: equipmentsData?.length || 0
+        }
+      } catch (error) {
+        console.error(`Error loading stats for client ${client.id}:`, error)
+        stats[client.id] = { os_total: 0, os_abertas: 0, contratos: 0, equipamentos: 0 }
+      }
+    }
+
+    setClientStats(stats)
+  }
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text)
+    setToastMessage(`${label} copiado!`)
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 2000)
+  }
+
+  const openWhatsApp = (phone: string) => {
+    const cleanPhone = phone.replace(/\D/g, '')
+    window.open(`https://wa.me/55${cleanPhone}`, '_blank')
+  }
+
+  const sendEmail = (email: string) => {
+    window.location.href = `mailto:${email}`
   }
 
   const handleCreateContract = async () => {
@@ -600,22 +662,129 @@ const ClientManagement = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-700">{client.phone}</span>
-                  </div>
-                  {client.email && (
-                    <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-700">{client.email}</span>
+                {/* Informações de Contato Expandidas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                  {/* Telefone Fixo */}
+                  {(client as any).phone && (
+                    <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                      <div className="flex items-center space-x-2 flex-1">
+                        <Phone className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm text-gray-700 font-medium">{(client as any).phone}</span>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard((client as any).phone, 'Telefone')}
+                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        title="Copiar telefone"
+                      >
+                        <Copy className="h-3.5 w-3.5 text-gray-600" />
+                      </button>
                     </div>
                   )}
-                  <div className="flex items-center space-x-2 md:col-span-2">
-                    <MapPin className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-700">{client.address}</span>
-                  </div>
+
+                  {/* Celular/WhatsApp */}
+                  {((client as any).celular || (client as any).whatsapp) && (
+                    <div className="flex items-center justify-between bg-green-50 rounded-lg p-2">
+                      <div className="flex items-center space-x-2 flex-1">
+                        <MessageSquare className="h-4 w-4 text-green-600" />
+                        <span className="text-sm text-gray-700 font-medium">{(client as any).whatsapp || (client as any).celular}</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => openWhatsApp((client as any).whatsapp || (client as any).celular)}
+                          className="p-1 hover:bg-green-200 rounded transition-colors"
+                          title="Abrir WhatsApp"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5 text-green-600" />
+                        </button>
+                        <button
+                          onClick={() => copyToClipboard((client as any).whatsapp || (client as any).celular, 'WhatsApp')}
+                          className="p-1 hover:bg-green-200 rounded transition-colors"
+                          title="Copiar WhatsApp"
+                        >
+                          <Copy className="h-3.5 w-3.5 text-green-600" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Email */}
+                  {client.email && (
+                    <div className="flex items-center justify-between bg-blue-50 rounded-lg p-2">
+                      <div className="flex items-center space-x-2 flex-1 overflow-hidden">
+                        <Mail className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 font-medium truncate">{client.email}</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => sendEmail(client.email)}
+                          className="p-1 hover:bg-blue-200 rounded transition-colors"
+                          title="Enviar email"
+                        >
+                          <Mail className="h-3.5 w-3.5 text-blue-600" />
+                        </button>
+                        <button
+                          onClick={() => copyToClipboard(client.email, 'Email')}
+                          className="p-1 hover:bg-blue-200 rounded transition-colors"
+                          title="Copiar email"
+                        >
+                          <Copy className="h-3.5 w-3.5 text-blue-600" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Endereço */}
+                  {client.address && (
+                    <div className="flex items-start space-x-2 bg-purple-50 rounded-lg p-2 md:col-span-2">
+                      <MapPin className="h-4 w-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-gray-700 font-medium">{client.address}</span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Estatísticas do Cliente */}
+                {clientStats[client.id] && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ClipboardList className="h-4 w-4 text-blue-600" />
+                        <span className="text-xs text-blue-600 font-medium">OS Total</span>
+                      </div>
+                      <p className="text-2xl font-bold text-blue-700">{clientStats[client.id].os_total}</p>
+                      {clientStats[client.id].os_abertas > 0 && (
+                        <p className="text-xs text-blue-600 mt-1">{clientStats[client.id].os_abertas} abertas</p>
+                      )}
+                    </div>
+
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border border-green-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <FileText className="h-4 w-4 text-green-600" />
+                        <span className="text-xs text-green-600 font-medium">Contratos</span>
+                      </div>
+                      <p className="text-2xl font-bold text-green-700">{clientStats[client.id].contratos}</p>
+                      <p className="text-xs text-green-600 mt-1">ativos</p>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-3 border border-orange-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Package className="h-4 w-4 text-orange-600" />
+                        <span className="text-xs text-orange-600 font-medium">Equipamentos</span>
+                      </div>
+                      <p className="text-2xl font-bold text-orange-700">{clientStats[client.id].equipamentos}</p>
+                      <p className="text-xs text-orange-600 mt-1">cadastrados</p>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3 border border-purple-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="h-4 w-4 text-purple-600" />
+                        <span className="text-xs text-purple-600 font-medium">Cliente desde</span>
+                      </div>
+                      <p className="text-sm font-bold text-purple-700">
+                        {formatDateSafe(client.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex space-x-2">
                   <button
@@ -1685,6 +1854,21 @@ const ClientManagement = () => {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast de Feedback */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 z-50"
+          >
+            <CheckCircle className="h-5 w-5" />
+            <span>{toastMessage}</span>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

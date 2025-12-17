@@ -646,26 +646,43 @@ export const createServiceCatalogItem = async (item: any) => { const { data } = 
 export const updateServiceCatalogItem = async (id: string, updates: any) => { const { data } = await supabase.from('service_catalog').update(updates).eq('id', id).select().single(); return data }
 export const deleteServiceCatalogItem = async (id: string) => { await supabase.from('service_catalog').update({ active: false }).eq('id', id) }
 export const getClients = async () => {
-  const { data, error } = await supabase.from('customers').select('*')
+  const { data, error } = await supabase
+    .from('customers')
+    .select(`
+      *,
+      addresses:customer_addresses(*)
+    `)
+
   if (error) {
     console.error('Error fetching clients:', error)
     throw error
   }
-  return (data || []).map(customer => ({
-    id: customer.id,
-    name: customer.nome_razao || '',
-    email: customer.email || '',
-    phone: customer.telefone || customer.celular || '',
-    address: '',
-    client_type: customer.tipo_pessoa === 'juridica' ? 'PJ' as const : 'PF' as const,
-    document: customer.tipo_pessoa === 'juridica' ? customer.cnpj : customer.cpf,
-    company_name: customer.nome_razao || '',
-    trade_name: customer.nome_fantasia || '',
-    state_registration: customer.inscricao_estadual || '',
-    municipal_registration: customer.inscricao_municipal || '',
-    created_at: customer.created_at,
-    updated_at: customer.updated_at
-  }))
+
+  return (data || []).map(customer => {
+    const mainAddress = customer.addresses?.find((addr: any) => addr.principal) || customer.addresses?.[0]
+    const addressString = mainAddress
+      ? `${mainAddress.logradouro}, ${mainAddress.numero}${mainAddress.complemento ? ' - ' + mainAddress.complemento : ''} - ${mainAddress.bairro}, ${mainAddress.cidade}/${mainAddress.estado}`
+      : ''
+
+    return {
+      id: customer.id,
+      name: customer.nome_razao || '',
+      email: customer.email || '',
+      phone: customer.telefone || '',
+      celular: customer.celular || '',
+      whatsapp: customer.whatsapp || '',
+      address: addressString,
+      addresses: customer.addresses || [],
+      client_type: customer.tipo_pessoa === 'juridica' ? 'PJ' as const : 'PF' as const,
+      document: customer.tipo_pessoa === 'juridica' ? customer.cnpj : customer.cpf,
+      company_name: customer.nome_razao || '',
+      trade_name: customer.nome_fantasia || '',
+      state_registration: customer.inscricao_estadual || '',
+      municipal_registration: customer.inscricao_municipal || '',
+      created_at: customer.created_at,
+      updated_at: customer.updated_at
+    }
+  })
 }
 export const createDbClient = async (client: any) => { const { data } = await supabase.from('customers').insert([client]).select().single(); return data }
 export const updateClient = async (id: string, updates: any) => { const { data } = await supabase.from('customers').update(updates).eq('id', id).select().single(); return data }
