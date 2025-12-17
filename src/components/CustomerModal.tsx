@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Plus, Trash2, User, Building, MapPin, Phone, Mail, Users, Briefcase, Package, Calendar, CircleAlert as AlertCircle, Check, FileText, Edit, Eye } from 'lucide-react'
+import { X, Save, Plus, Trash2, User, Building, MapPin, Phone, Mail, Users, Briefcase, Package, Calendar, CircleAlert as AlertCircle, Check, FileText, Edit, Eye, MessageCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { CnpjSearchField } from './CnpjSearchField'
 import ContractDetailedModal from './ContractDetailedModal'
