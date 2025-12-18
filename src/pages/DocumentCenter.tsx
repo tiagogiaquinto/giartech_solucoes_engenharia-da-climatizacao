@@ -45,8 +45,20 @@ interface DocumentTemplate {
   department: string
   category: string
   content_template: string
+  contract_text?: string
   fields: any[]
   is_active: boolean
+  logo_url?: string
+  header_text?: string
+  footer_text?: string
+  layout_config?: any
+  show_header?: boolean
+  show_footer?: boolean
+  show_logo?: boolean
+  custom_css?: string
+  custom_js?: string
+  preview_data?: any
+  custom_styles?: any
 }
 
 interface GeneratedDocument {
@@ -165,12 +177,50 @@ export default function DocumentCenter() {
   const loadTemplates = async () => {
     const { data, error } = await supabase
       .from('document_templates')
-      .select('*')
+      .select(`
+        id,
+        name,
+        description,
+        department,
+        category,
+        content_template,
+        contract_text,
+        fields,
+        is_active,
+        logo_url,
+        header_text,
+        footer_text,
+        layout_config,
+        show_header,
+        show_footer,
+        show_logo,
+        custom_css,
+        custom_js,
+        preview_data,
+        created_at,
+        updated_at
+      `)
       .eq('is_active', true)
       .order('category', { ascending: true })
       .order('name', { ascending: true })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error loading templates:', error)
+      throw error
+    }
+
+    console.log('✅ Loaded templates:', data?.length || 0)
+    if (data && data.length > 0) {
+      console.log('📄 First template sample:', {
+        name: data[0].name,
+        has_content: !!data[0].content_template,
+        content_length: data[0].content_template?.length || 0,
+        has_header: !!data[0].header_text,
+        has_footer: !!data[0].footer_text,
+        has_logo: !!data[0].logo_url
+      })
+    }
+
     setTemplates(data || [])
   }
 
@@ -206,12 +256,24 @@ export default function DocumentCenter() {
   }
 
   const handleCreateDocument = (template: DocumentTemplate, useVisual = false) => {
+    console.log('🎯 handleCreateDocument called:', {
+      template_name: template.name,
+      useVisual,
+      has_content: !!template.content_template,
+      content_length: template.content_template?.length || 0,
+      has_header: !!template.header_text,
+      has_footer: !!template.footer_text
+    })
+
     setSelectedTemplate(template)
     setSelectedDocument(null)
     setEditorMode('create')
+
     if (useVisual) {
+      console.log('✨ Opening Visual Editor with template:', template.name)
       setShowVisualEditor(true)
     } else {
+      console.log('📝 Opening Simple Editor')
       setShowEditor(true)
     }
   }
@@ -859,9 +921,9 @@ export default function DocumentCenter() {
         />
       )}
 
-      {showVisualEditor && (
+      {showVisualEditor && selectedTemplate && (
         <VisualDocumentEditor
-          document={selectedDocument}
+          template={selectedTemplate}
           onClose={() => {
             setShowVisualEditor(false)
             setSelectedDocument(null)
@@ -869,6 +931,7 @@ export default function DocumentCenter() {
           }}
           onSave={() => {
             loadDocuments()
+            loadTemplates()
           }}
         />
       )}
