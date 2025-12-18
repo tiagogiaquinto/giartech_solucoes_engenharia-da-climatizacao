@@ -110,6 +110,7 @@ import SalaryManagement from './pages/SalaryManagement'
 import MobileLogin from './pages/mobile/MobileLogin'
 import OSDistribution from './pages/OSDistribution'
 import GoalsAndRankings from './pages/GoalsAndRankings'
+import BudgetManagement from './pages/BudgetManagement'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -560,6 +561,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <GoalsAndRankings />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/budgets" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <BudgetManagement />
               </WebLayout>
             </ProtectedRoute>
           } />
