@@ -111,6 +111,7 @@ import MobileLogin from './pages/mobile/MobileLogin'
 import OSDistribution from './pages/OSDistribution'
 import GoalsAndRankings from './pages/GoalsAndRankings'
 import BudgetManagement from './pages/BudgetManagement'
+import DocumentCenter from './pages/DocumentCenter'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -569,6 +570,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <BudgetManagement />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/documents" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <DocumentCenter />
               </WebLayout>
             </ProtectedRoute>
           } />
