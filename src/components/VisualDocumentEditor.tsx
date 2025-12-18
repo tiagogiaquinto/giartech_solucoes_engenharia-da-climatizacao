@@ -168,12 +168,23 @@ export default function VisualDocumentEditor({ template, onClose, onSave }: Visu
   const parseTemplateToElements = () => {
     const elementsArray: CanvasElement[] = []
     let yPos = 80
+    let elementCounter = 0
 
-    if (!template) return elementsArray
+    if (!template) {
+      console.error('❌ Template is undefined or null')
+      return elementsArray
+    }
 
-    if (template.logo_url) {
+    console.log('🔍 Parsing template:', template.name)
+    console.log('📊 Has content_template:', !!template.content_template, 'length:', template.content_template?.length || 0)
+    console.log('📊 Has header_text:', !!template.header_text)
+    console.log('📊 Has footer_text:', !!template.footer_text)
+    console.log('📊 Has logo_url:', !!template.logo_url)
+
+    if (template.logo_url && template.show_logo !== false) {
+      console.log('➕ Adding logo element')
       elementsArray.push({
-        id: `elem-logo-${Date.now()}`,
+        id: `elem-logo-${elementCounter++}`,
         element_type: 'logo',
         x: 60,
         y: 40,
@@ -189,9 +200,10 @@ export default function VisualDocumentEditor({ template, onClose, onSave }: Visu
       yPos = 140
     }
 
-    if (template.header_text) {
+    if (template.header_text && template.show_header !== false) {
+      console.log('➕ Adding header element:', template.header_text.substring(0, 30))
       elementsArray.push({
-        id: `elem-header-${Date.now()}`,
+        id: `elem-header-${elementCounter++}`,
         element_type: 'header',
         content: template.header_text,
         x: 60,
@@ -217,12 +229,21 @@ export default function VisualDocumentEditor({ template, onClose, onSave }: Visu
     }
 
     const contentTemplate = template.content_template || template.contract_text || ''
-    const lines = contentTemplate.split('\n').filter((l: string) => l.trim())
+    console.log('📄 Content template length:', contentTemplate.length)
 
+    if (contentTemplate.length === 0) {
+      console.warn('⚠️ Content template is empty!')
+    }
+
+    const lines = contentTemplate.split('\n')
+    console.log('📝 Total lines:', lines.length)
+
+    let processedLines = 0
     lines.forEach((line: string, index: number) => {
       const trimmed = line.trim()
       if (!trimmed) return
 
+      processedLines++
       let elementType: 'text' | 'field' = 'text'
       let content = trimmed
       let fontSize = 14
@@ -245,10 +266,17 @@ export default function VisualDocumentEditor({ template, onClose, onSave }: Visu
           fieldName = match[1]
           content = `[${match[1].replace(/_/g, ' ').toUpperCase()}]`
         }
+      } else if (trimmed.includes('[') && trimmed.includes(']')) {
+        elementType = 'field'
+        const match = trimmed.match(/\[([^\]]+)\]/)
+        if (match) {
+          fieldName = match[1]
+          content = `[${match[1].toUpperCase()}]`
+        }
       }
 
       elementsArray.push({
-        id: `elem-text-${Date.now()}-${index}`,
+        id: `elem-text-${elementCounter++}`,
         element_type: elementType,
         content: content,
         x: 60,
@@ -273,13 +301,16 @@ export default function VisualDocumentEditor({ template, onClose, onSave }: Visu
       yPos += height + 10
     })
 
-    if (template.footer_text) {
+    console.log('✅ Processed', processedLines, 'lines from content')
+
+    if (template.footer_text && template.show_footer !== false) {
+      console.log('➕ Adding footer element:', template.footer_text.substring(0, 30))
       elementsArray.push({
-        id: `elem-footer-${Date.now()}`,
+        id: `elem-footer-${elementCounter++}`,
         element_type: 'footer',
         content: template.footer_text,
         x: 60,
-        y: 1000,
+        y: Math.max(yPos + 40, 1000),
         width: 674,
         height: 60,
         rotation: 0,
@@ -333,17 +364,25 @@ export default function VisualDocumentEditor({ template, onClose, onSave }: Visu
       }
     }
 
+    console.log('✨ Created', elementsArray.length, 'total elements')
+    console.log('📋 Element types:', elementsArray.reduce((acc, el) => {
+      acc[el.element_type] = (acc[el.element_type] || 0) + 1
+      return acc
+    }, {} as Record<string, number>))
+
     return elementsArray
   }
 
   const loadTemplateAsElements = async () => {
     try {
       setLoading(true)
+      console.log('📋 Loading template as elements...')
       const parsedElements = parseTemplateToElements()
+      console.log(`✅ Parsed ${parsedElements.length} elements from template`)
       setElements(parsedElements)
       addToHistory()
     } catch (error) {
-      console.error('Error loading template:', error)
+      console.error('❌ Error loading template:', error)
     } finally {
       setLoading(false)
     }
