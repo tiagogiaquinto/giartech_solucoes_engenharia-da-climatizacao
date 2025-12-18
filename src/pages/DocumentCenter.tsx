@@ -25,13 +25,17 @@ import {
   FileCheck,
   ClipboardList,
   Shield,
-  Printer
+  Printer,
+  Share2,
+  MessageSquare,
+  History,
+  Star,
+  Users
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import DocumentEditor from '../components/DocumentEditor'
 
 interface DocumentTemplate {
   id: string
@@ -52,9 +56,13 @@ interface GeneratedDocument {
   title: string
   customer_name: string
   data: any
+  html_content: string
   status: 'draft' | 'sent' | 'signed' | 'cancelled'
+  version: number
+  is_editable: boolean
   created_at: string
   updated_at: string
+  last_edited_at: string
 }
 
 interface CompanyConfig {
@@ -80,6 +88,7 @@ interface CompanyConfig {
 }
 
 type ViewMode = 'documents' | 'templates' | 'config'
+type EditorMode = 'create' | 'edit' | 'view'
 
 const categoryIcons: Record<string, any> = {
   'PMOC': Shield,
@@ -101,6 +110,20 @@ const categoryColors: Record<string, string> = {
   'Orçamento': 'from-indigo-500 to-indigo-600'
 }
 
+const statusColors: Record<string, string> = {
+  'draft': 'bg-yellow-100 text-yellow-800',
+  'sent': 'bg-blue-100 text-blue-800',
+  'signed': 'bg-green-100 text-green-800',
+  'cancelled': 'bg-red-100 text-red-800'
+}
+
+const statusLabels: Record<string, string> = {
+  'draft': 'Rascunho',
+  'sent': 'Enviado',
+  'signed': 'Assinado',
+  'cancelled': 'Cancelado'
+}
+
 export default function DocumentCenter() {
   const [viewMode, setViewMode] = useState<ViewMode>('documents')
   const [templates, setTemplates] = useState<DocumentTemplate[]>([])
@@ -109,9 +132,11 @@ export default function DocumentCenter() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [showGenerator, setShowGenerator] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [showEditor, setShowEditor] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null)
-  const [formData, setFormData] = useState<Record<string, any>>({})
+  const [selectedDocument, setSelectedDocument] = useState<GeneratedDocument | null>(null)
+  const [editorMode, setEditorMode] = useState<EditorMode>('create')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -178,136 +203,43 @@ export default function DocumentCenter() {
     })
   }
 
-  const handleGenerateDocument = (template: DocumentTemplate) => {
+  const handleCreateDocument = (template: DocumentTemplate) => {
     setSelectedTemplate(template)
-    const initialData: Record<string, any> = {}
-    template.fields.forEach((field: any) => {
-      initialData[field.name] = field.type === 'date' ? format(new Date(), 'yyyy-MM-dd') : ''
-    })
-    setFormData(initialData)
-    setShowGenerator(true)
+    setSelectedDocument(null)
+    setEditorMode('create')
+    setShowEditor(true)
   }
 
-  const replaceTemplateVariables = (template: string, data: Record<string, any>) => {
-    let result = template
-    Object.keys(data).forEach(key => {
-      const regex = new RegExp(`{{${key}}}`, 'g')
-      result = result.replace(regex, data[key] || '')
-    })
-    return result
+  const handleViewDocument = (document: GeneratedDocument) => {
+    setSelectedDocument(document)
+    setSelectedTemplate(null)
+    setEditorMode('view')
+    setShowEditor(true)
   }
 
-  const generatePDF = async () => {
-    if (!selectedTemplate || !companyConfig) return
+  const handleEditDocument = (document: GeneratedDocument) => {
+    setSelectedDocument(document)
+    setSelectedTemplate(null)
+    setEditorMode('edit')
+    setShowEditor(true)
+  }
 
-    setSaving(true)
+  const handleDeleteDocument = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este documento?')) return
+
     try {
-      const doc = new jsPDF()
-      const pageWidth = doc.internal.pageSize.getWidth()
-      const pageHeight = doc.internal.pageSize.getHeight()
-      const margin = 20
-
-      doc.setFillColor(companyConfig.primary_color || '#2563eb')
-      doc.rect(0, 0, pageWidth, 40, 'F')
-
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(20)
-      doc.setFont('helvetica', 'bold')
-      doc.text(companyConfig.company_name, margin, 25)
-
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
-      doc.text(`${companyConfig.company_phone} | ${companyConfig.company_email}`, margin, 32)
-
-      let yPosition = 55
-
-      const content = replaceTemplateVariables(selectedTemplate.content_template, formData)
-      const lines = content.split('\n')
-
-      doc.setTextColor(0, 0, 0)
-
-      lines.forEach((line) => {
-        if (yPosition > pageHeight - 30) {
-          doc.addPage()
-          yPosition = 20
-        }
-
-        if (line.startsWith('# ')) {
-          doc.setFontSize(16)
-          doc.setFont('helvetica', 'bold')
-          doc.text(line.replace('# ', ''), margin, yPosition)
-          yPosition += 10
-        } else if (line.startsWith('## ')) {
-          doc.setFontSize(14)
-          doc.setFont('helvetica', 'bold')
-          doc.text(line.replace('## ', ''), margin, yPosition)
-          yPosition += 8
-        } else if (line.startsWith('### ')) {
-          doc.setFontSize(12)
-          doc.setFont('helvetica', 'bold')
-          doc.text(line.replace('### ', ''), margin, yPosition)
-          yPosition += 7
-        } else if (line.startsWith('**') && line.endsWith('**')) {
-          doc.setFontSize(10)
-          doc.setFont('helvetica', 'bold')
-          doc.text(line.replace(/\*\*/g, ''), margin, yPosition)
-          yPosition += 6
-        } else if (line.trim() === '---') {
-          doc.setDrawColor(200, 200, 200)
-          doc.line(margin, yPosition, pageWidth - margin, yPosition)
-          yPosition += 5
-        } else if (line.trim() !== '') {
-          doc.setFontSize(10)
-          doc.setFont('helvetica', 'normal')
-          const splitText = doc.splitTextToSize(line, pageWidth - (margin * 2))
-          doc.text(splitText, margin, yPosition)
-          yPosition += 5 * splitText.length
-        } else {
-          yPosition += 3
-        }
-      })
-
-      if (companyConfig.default_footer) {
-        doc.setFontSize(8)
-        doc.setTextColor(128, 128, 128)
-        doc.text(companyConfig.default_footer, pageWidth / 2, pageHeight - 10, { align: 'center' })
-      }
-
-      const { data: docNumberData } = await supabase.rpc('generate_document_number', {
-        doc_type: selectedTemplate.category
-      })
-
-      const documentData = {
-        template_id: selectedTemplate.id,
-        document_number: docNumberData,
-        document_type: selectedTemplate.category,
-        title: selectedTemplate.name,
-        customer_name: formData.cliente_nome || formData.contratante_nome || 'N/A',
-        data: formData,
-        status: 'draft'
-      }
-
-      const { data: savedDoc, error: saveError } = await supabase
+      const { error } = await supabase
         .from('generated_documents')
-        .insert([documentData])
-        .select()
-        .single()
+        .delete()
+        .eq('id', id)
 
-      if (saveError) throw saveError
+      if (error) throw error
 
-      doc.save(`${documentData.document_number}.pdf`)
-
+      alert('Documento excluído com sucesso!')
       await loadDocuments()
-      setShowGenerator(false)
-      setSelectedTemplate(null)
-      setFormData({})
-
-      alert('Documento gerado com sucesso!')
     } catch (error) {
-      console.error('Error generating PDF:', error)
-      alert('Erro ao gerar documento')
-    } finally {
-      setSaving(false)
+      console.error('Error deleting document:', error)
+      alert('Erro ao excluir documento')
     }
   }
 
@@ -351,9 +283,11 @@ export default function DocumentCenter() {
   )
 
   const filteredDocuments = documents.filter(d =>
-    searchTerm === '' ||
-    d.document_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.customer_name.toLowerCase().includes(searchTerm.toLowerCase())
+    (statusFilter === 'all' || d.status === statusFilter) &&
+    (searchTerm === '' ||
+     d.document_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     d.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     d.title.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   const categories = Array.from(new Set(templates.map(t => t.category)))
@@ -370,10 +304,10 @@ export default function DocumentCenter() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Centro de Documentos
+            Centro de Documentos Empresarial
           </h1>
           <p className="text-gray-600">
-            Gerencie templates e crie documentos profissionais
+            Crie, edite e gerencie todos os documentos da empresa com editor visual
           </p>
         </div>
       </div>
@@ -388,7 +322,7 @@ export default function DocumentCenter() {
           }`}
         >
           <FileText className="inline w-5 h-5 mr-2" />
-          Documentos Gerados
+          Documentos ({documents.length})
         </button>
         <button
           onClick={() => setViewMode('templates')}
@@ -399,7 +333,7 @@ export default function DocumentCenter() {
           }`}
         >
           <Edit className="inline w-5 h-5 mr-2" />
-          Templates
+          Templates ({templates.length})
         </button>
         <button
           onClick={() => setViewMode('config')}
@@ -471,6 +405,17 @@ export default function DocumentCenter() {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="all">Todos Status</option>
+                  <option value="draft">Rascunhos</option>
+                  <option value="sent">Enviados</option>
+                  <option value="signed">Assinados</option>
+                  <option value="cancelled">Cancelados</option>
+                </select>
               </div>
             </div>
 
@@ -482,13 +427,19 @@ export default function DocumentCenter() {
                       Número
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tipo
+                      Título
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Cliente
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tipo
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Versão
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Data
@@ -504,40 +455,64 @@ export default function DocumentCenter() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {doc.document_number}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {doc.document_type}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {doc.title}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {doc.customer_name}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {doc.document_type}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          doc.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                          doc.status === 'sent' ? 'bg-blue-100 text-blue-800' :
-                          doc.status === 'signed' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {doc.status === 'draft' ? 'Rascunho' :
-                           doc.status === 'sent' ? 'Enviado' :
-                           doc.status === 'signed' ? 'Assinado' : 'Cancelado'}
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[doc.status]}`}>
+                          {statusLabels[doc.status]}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        v{doc.version}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {format(new Date(doc.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">
-                          <Eye className="w-5 h-5" />
-                        </button>
-                        <button className="text-green-600 hover:text-green-900 mr-3">
-                          <Download className="w-5 h-5" />
-                        </button>
-                        <button className="text-red-600 hover:text-red-900">
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => handleViewDocument(doc)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Visualizar"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </button>
+                          {doc.is_editable && (
+                            <button
+                              onClick={() => handleEditDocument(doc)}
+                              className="text-green-600 hover:text-green-900"
+                              title="Editar"
+                            >
+                              <Edit className="w-5 h-5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
+                  {filteredDocuments.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                        <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                        <p className="text-lg font-medium">Nenhum documento encontrado</p>
+                        <p className="text-sm mt-2">Crie seu primeiro documento a partir de um template</p>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -588,8 +563,7 @@ export default function DocumentCenter() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   whileHover={{ scale: 1.02 }}
-                  className="bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer"
-                  onClick={() => handleGenerateDocument(template)}
+                  className="bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer group"
                 >
                   <div className={`h-32 bg-gradient-to-br ${colorClass} p-6 flex items-center justify-center`}>
                     <Icon className="w-16 h-16 text-white" />
@@ -598,7 +572,7 @@ export default function DocumentCenter() {
                     <h3 className="text-lg font-bold text-gray-900 mb-2">
                       {template.name}
                     </h3>
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
                       {template.description}
                     </p>
                     <div className="flex items-center justify-between">
@@ -606,13 +580,11 @@ export default function DocumentCenter() {
                         {template.category}
                       </span>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleGenerateDocument(template)
-                        }}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center"
+                        onClick={() => handleCreateDocument(template)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        Gerar <Plus className="w-4 h-4 ml-1" />
+                        <Plus className="w-4 h-4 mr-1" />
+                        Criar
                       </button>
                     </div>
                   </div>
@@ -850,100 +822,21 @@ export default function DocumentCenter() {
         </motion.div>
       )}
 
-      <AnimatePresence>
-        {showGenerator && selectedTemplate && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowGenerator(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold">{selectedTemplate.name}</h2>
-                    <p className="text-blue-100 mt-1">{selectedTemplate.description}</p>
-                  </div>
-                  <button
-                    onClick={() => setShowGenerator(false)}
-                    className="text-white hover:text-gray-200"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedTemplate.fields.map((field: any) => (
-                    <div key={field.name} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {field.label}
-                      </label>
-                      {field.type === 'textarea' ? (
-                        <textarea
-                          value={formData[field.name] || ''}
-                          onChange={(e) => setFormData({...formData, [field.name]: e.target.value})}
-                          rows={4}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      ) : field.type === 'date' ? (
-                        <input
-                          type="date"
-                          value={formData[field.name] || ''}
-                          onChange={(e) => setFormData({...formData, [field.name]: e.target.value})}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      ) : (
-                        <input
-                          type="text"
-                          value={formData[field.name] || ''}
-                          onChange={(e) => setFormData({...formData, [field.name]: e.target.value})}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowGenerator(false)}
-                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={generatePDF}
-                  disabled={saving}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center"
-                >
-                  {saving ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Gerando...
-                    </>
-                  ) : (
-                    <>
-                      <Printer className="w-5 h-5 mr-2" />
-                      Gerar PDF
-                    </>
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {showEditor && (
+        <DocumentEditor
+          document={selectedDocument}
+          template={selectedTemplate}
+          mode={editorMode}
+          onClose={() => {
+            setShowEditor(false)
+            setSelectedDocument(null)
+            setSelectedTemplate(null)
+          }}
+          onSave={() => {
+            loadDocuments()
+          }}
+        />
+      )}
     </div>
   )
 }
