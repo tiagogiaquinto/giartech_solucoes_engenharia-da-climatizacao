@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Type,
   Image as ImageIcon,
@@ -32,14 +32,18 @@ import {
   Grid3x3,
   RotateCw,
   Move,
-  X
+  X,
+  Upload,
+  FileText,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import jsPDF from 'jspdf'
 
 interface CanvasElement {
   id: string
-  element_type: 'text' | 'image' | 'shape' | 'icon' | 'line'
+  element_type: 'text' | 'image' | 'shape' | 'logo' | 'header' | 'footer' | 'field'
   content?: string
   x: number
   y: number
@@ -70,6 +74,11 @@ interface CanvasElement {
   shadow_color?: string
   image_url?: string
   shape_type?: string
+  padding?: number
+  field_name?: string
+  is_header?: boolean
+  is_footer?: boolean
+  background_color?: string
 }
 
 interface CanvasDesign {
@@ -91,12 +100,12 @@ interface CanvasDesign {
 }
 
 interface VisualDocumentEditorProps {
-  document?: any
+  template?: any
   onClose: () => void
   onSave: () => void
 }
 
-export default function VisualDocumentEditor({ document, onClose, onSave }: VisualDocumentEditorProps) {
+export default function VisualDocumentEditor({ template, onClose, onSave }: VisualDocumentEditorProps) {
   const [canvasDesign, setCanvasDesign] = useState<CanvasDesign>({
     canvas_width: 794,
     canvas_height: 1123,
@@ -115,26 +124,28 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
   const [elements, setElements] = useState<CanvasElement[]>([])
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
   const [tool, setTool] = useState<'select' | 'text' | 'shape' | 'image'>('select')
-  const [zoom, setZoom] = useState(1)
+  const [zoom, setZoom] = useState(0.8)
   const [isDragging, setIsDragging] = useState(false)
-  const [isResizing, setIsResizing] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [history, setHistory] = useState<any[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [showBackgroundPanel, setShowBackgroundPanel] = useState(false)
-  const [showElementPanel, setShowElementPanel] = useState(false)
+  const [showLayersPanel, setShowLayersPanel] = useState(false)
   const [fonts, setFonts] = useState<any[]>([])
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const canvasRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadFonts()
-    if (document) {
-      loadDesign()
+    if (template) {
+      loadTemplateAsElements()
     } else {
+      setLoading(false)
       addToHistory()
     }
-  }, [document])
+  }, [template])
 
   const loadFonts = async () => {
     const { data } = await supabase
@@ -142,28 +153,199 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
       .select('*')
       .eq('is_active', true)
       .order('name')
-    setFonts(data || [])
+
+    const defaultFonts = [
+      { id: '1', name: 'Inter', font_family: 'Inter, sans-serif' },
+      { id: '2', name: 'Roboto', font_family: 'Roboto, sans-serif' },
+      { id: '3', name: 'Montserrat', font_family: 'Montserrat, sans-serif' },
+      { id: '4', name: 'Open Sans', font_family: 'Open Sans, sans-serif' },
+      { id: '5', name: 'Lato', font_family: 'Lato, sans-serif' }
+    ]
+
+    setFonts(data && data.length > 0 ? data : defaultFonts)
   }
 
-  const loadDesign = async () => {
-    if (!document) return
+  const parseTemplateToElements = () => {
+    const elementsArray: CanvasElement[] = []
+    let yPos = 80
 
-    const { data: design } = await supabase
-      .from('document_canvas_designs')
-      .select('*')
-      .eq('document_id', document.id)
-      .single()
+    if (!template) return elementsArray
 
-    if (design) {
-      setCanvasDesign(design)
+    if (template.logo_url) {
+      elementsArray.push({
+        id: `elem-logo-${Date.now()}`,
+        element_type: 'logo',
+        x: 60,
+        y: 40,
+        width: 150,
+        height: 80,
+        rotation: 0,
+        z_index: elementsArray.length,
+        locked: false,
+        visible: true,
+        opacity: 1,
+        image_url: template.logo_url
+      })
+      yPos = 140
+    }
 
-      const { data: elementsData } = await supabase
-        .from('document_canvas_elements')
-        .select('*')
-        .eq('design_id', design.id)
-        .order('z_index')
+    if (template.header_text) {
+      elementsArray.push({
+        id: `elem-header-${Date.now()}`,
+        element_type: 'header',
+        content: template.header_text,
+        x: 60,
+        y: yPos,
+        width: 674,
+        height: 60,
+        rotation: 0,
+        z_index: elementsArray.length,
+        locked: false,
+        visible: true,
+        opacity: 1,
+        font_family: 'Montserrat',
+        font_size: 24,
+        font_weight: 'bold',
+        text_align: 'center',
+        fill_color: '#1f2937',
+        is_header: true,
+        background_color: '#f3f4f6',
+        padding: 16,
+        border_radius: 8
+      })
+      yPos += 80
+    }
 
-      setElements(elementsData || [])
+    const contentTemplate = template.content_template || template.contract_text || ''
+    const lines = contentTemplate.split('\n').filter((l: string) => l.trim())
+
+    lines.forEach((line: string, index: number) => {
+      const trimmed = line.trim()
+      if (!trimmed) return
+
+      let elementType: 'text' | 'field' = 'text'
+      let content = trimmed
+      let fontSize = 14
+      let fontWeight = 'normal'
+      let height = 40
+      let fieldName = ''
+
+      if (trimmed.startsWith('#')) {
+        fontSize = trimmed.startsWith('##') ? 20 : 28
+        fontWeight = 'bold'
+        content = trimmed.replace(/^#+\s*/, '')
+        height = fontSize === 28 ? 50 : 40
+      } else if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+        fontWeight = 'bold'
+        content = trimmed.replace(/\*\*/g, '')
+      } else if (trimmed.includes('{{') && trimmed.includes('}}')) {
+        elementType = 'field'
+        const match = trimmed.match(/\{\{([^}]+)\}\}/)
+        if (match) {
+          fieldName = match[1]
+          content = `[${match[1].replace(/_/g, ' ').toUpperCase()}]`
+        }
+      }
+
+      elementsArray.push({
+        id: `elem-text-${Date.now()}-${index}`,
+        element_type: elementType,
+        content: content,
+        x: 60,
+        y: yPos,
+        width: 674,
+        height: height,
+        rotation: 0,
+        z_index: elementsArray.length,
+        locked: false,
+        visible: true,
+        opacity: 1,
+        font_family: 'Inter',
+        font_size: fontSize,
+        font_weight: fontWeight,
+        text_align: 'left',
+        line_height: 1.6,
+        fill_color: '#374151',
+        field_name: fieldName,
+        padding: 8
+      })
+
+      yPos += height + 10
+    })
+
+    if (template.footer_text) {
+      elementsArray.push({
+        id: `elem-footer-${Date.now()}`,
+        element_type: 'footer',
+        content: template.footer_text,
+        x: 60,
+        y: 1000,
+        width: 674,
+        height: 60,
+        rotation: 0,
+        z_index: elementsArray.length,
+        locked: false,
+        visible: true,
+        opacity: 1,
+        font_family: 'Inter',
+        font_size: 10,
+        font_weight: 'normal',
+        text_align: 'center',
+        fill_color: '#6b7280',
+        is_footer: true,
+        background_color: '#f9fafb',
+        padding: 12,
+        border_radius: 4
+      })
+    }
+
+    if (template.custom_styles) {
+      try {
+        const styles = typeof template.custom_styles === 'string'
+          ? JSON.parse(template.custom_styles)
+          : template.custom_styles
+
+        if (styles.header) {
+          const headerEl = elementsArray.find(el => el.is_header)
+          if (headerEl) {
+            Object.assign(headerEl, styles.header)
+          }
+        }
+
+        if (styles.footer) {
+          const footerEl = elementsArray.find(el => el.is_footer)
+          if (footerEl) {
+            Object.assign(footerEl, styles.footer)
+          }
+        }
+
+        if (styles.body) {
+          elementsArray
+            .filter(el => el.element_type === 'text' && !el.is_header && !el.is_footer)
+            .forEach(el => {
+              if (styles.body.font_family) el.font_family = styles.body.font_family
+              if (styles.body.font_size) el.font_size = styles.body.font_size
+              if (styles.body.fill_color) el.fill_color = styles.body.fill_color
+            })
+        }
+      } catch (e) {
+        console.error('Error parsing custom styles:', e)
+      }
+    }
+
+    return elementsArray
+  }
+
+  const loadTemplateAsElements = async () => {
+    try {
+      setLoading(true)
+      const parsedElements = parseTemplateToElements()
+      setElements(parsedElements)
+      addToHistory()
+    } catch (error) {
+      console.error('Error loading template:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -183,6 +365,7 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
       setCanvasDesign(prevState.canvasDesign)
       setElements(prevState.elements)
       setHistoryIndex(historyIndex - 1)
+      setSelectedElement(null)
     }
   }
 
@@ -192,6 +375,7 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
       setCanvasDesign(nextState.canvasDesign)
       setElements(nextState.elements)
       setHistoryIndex(historyIndex + 1)
+      setSelectedElement(null)
     }
   }
 
@@ -199,8 +383,8 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
     const newElement: CanvasElement = {
       id: `elem-${Date.now()}`,
       element_type: type,
-      x: 100,
-      y: 100,
+      x: 150,
+      y: 150,
       width: type === 'text' ? 300 : 200,
       height: type === 'text' ? 60 : 200,
       rotation: 0,
@@ -212,22 +396,30 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
       font_family: 'Inter',
       font_size: 18,
       font_weight: 'normal',
+      font_style: 'normal',
       text_align: 'left',
+      line_height: 1.5,
       fill_color: type === 'text' ? '#000000' : '#2563eb',
-      border_radius: 0,
-      shape_type: type === 'shape' ? 'rectangle' : undefined
+      border_radius: type === 'shape' ? 8 : 0,
+      shape_type: type === 'shape' ? 'rectangle' : undefined,
+      shadow_enabled: false,
+      padding: 8
     }
 
-    setElements([...elements, newElement])
+    const newElements = [...elements, newElement]
+    setElements(newElements)
     setSelectedElement(newElement.id)
-    addToHistory()
+    setTimeout(() => addToHistory(), 50)
   }
 
   const updateElement = (id: string, updates: Partial<CanvasElement>) => {
     setElements(elements.map(el =>
       el.id === id ? { ...el, ...updates } : el
     ))
-    addToHistory()
+  }
+
+  const commitUpdate = () => {
+    setTimeout(() => addToHistory(), 50)
   }
 
   const deleteElement = (id: string) => {
@@ -252,31 +444,58 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
     }
   }
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (tool !== 'select' && canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect()
-      const x = (e.clientX - rect.left) / zoom
-      const y = (e.clientY - rect.top) / zoom
+  const moveLayerUp = (id: string) => {
+    const index = elements.findIndex(el => el.id === id)
+    if (index < elements.length - 1) {
+      const newElements = [...elements]
+      const temp = newElements[index + 1]
+      newElements[index + 1] = newElements[index]
+      newElements[index] = temp
+      newElements.forEach((el, i) => el.z_index = i)
+      setElements(newElements)
+      addToHistory()
+    }
+  }
 
-      if (tool === 'text') {
-        addElement('text')
-      } else if (tool === 'shape') {
-        addElement('shape')
+  const moveLayerDown = (id: string) => {
+    const index = elements.findIndex(el => el.id === id)
+    if (index > 0) {
+      const newElements = [...elements]
+      const temp = newElements[index - 1]
+      newElements[index - 1] = newElements[index]
+      newElements[index] = temp
+      newElements.forEach((el, i) => el.z_index = i)
+      setElements(newElements)
+      addToHistory()
+    }
+  }
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === canvasRef.current) {
+      if (tool !== 'select') {
+        if (tool === 'text') {
+          addElement('text')
+        } else if (tool === 'shape') {
+          addElement('shape')
+        }
+        setTool('select')
+      } else {
+        setSelectedElement(null)
       }
-      setTool('select')
-    } else {
-      setSelectedElement(null)
     }
   }
 
   const handleElementMouseDown = (e: React.MouseEvent, elementId: string) => {
     e.stopPropagation()
-    setSelectedElement(elementId)
-    setIsDragging(true)
-    setDragStart({
-      x: e.clientX,
-      y: e.clientY
-    })
+    const element = elements.find(el => el.id === elementId)
+    if (element && !element.locked) {
+      setSelectedElement(elementId)
+      setIsDragging(true)
+      setDragStart({
+        x: e.clientX,
+        y: e.clientY
+      })
+    }
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -301,8 +520,10 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
   }
 
   const handleMouseUp = () => {
-    setIsDragging(false)
-    setIsResizing(false)
+    if (isDragging) {
+      setIsDragging(false)
+      commitUpdate()
+    }
   }
 
   const renderBackground = () => {
@@ -329,7 +550,9 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
   const renderElement = (element: CanvasElement) => {
     if (!element.visible) return null
 
-    const style: React.CSSProperties = {
+    const isSelected = selectedElement === element.id
+
+    const baseStyle: React.CSSProperties = {
       position: 'absolute',
       left: element.x,
       top: element.y,
@@ -337,40 +560,61 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
       height: element.height,
       transform: `rotate(${element.rotation}deg)`,
       opacity: element.opacity,
-      zIndex: element.z_index,
+      zIndex: element.z_index + 1000,
       cursor: element.locked ? 'not-allowed' : 'move',
-      border: selectedElement === element.id ? '2px solid #2563eb' : 'none',
+      border: isSelected ? '2px solid #3b82f6' : '1px dashed transparent',
+      boxShadow: isSelected ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
       boxSizing: 'border-box'
     }
 
-    if (element.element_type === 'text') {
+    if (element.element_type === 'text' || element.element_type === 'field' ||
+        element.element_type === 'header' || element.element_type === 'footer') {
+      const textStyle: React.CSSProperties = {
+        ...baseStyle,
+        fontFamily: element.font_family,
+        fontSize: element.font_size,
+        fontWeight: element.font_weight,
+        fontStyle: element.font_style,
+        textAlign: element.text_align as any,
+        lineHeight: element.line_height,
+        color: element.fill_color,
+        padding: element.padding || 8,
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+        backgroundColor: element.background_color || 'transparent',
+        borderRadius: element.border_radius || 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: element.text_align === 'center' ? 'center' : element.text_align === 'right' ? 'flex-end' : 'flex-start'
+      }
+
+      if (element.shadow_enabled) {
+        textStyle.boxShadow = `${element.shadow_x}px ${element.shadow_y}px ${element.shadow_blur}px ${element.shadow_color}`
+      }
+
       return (
         <div
           key={element.id}
-          style={{
-            ...style,
-            fontFamily: element.font_family,
-            fontSize: element.font_size,
-            fontWeight: element.font_weight,
-            fontStyle: element.font_style,
-            textAlign: element.text_align as any,
-            lineHeight: element.line_height,
-            color: element.fill_color,
-            padding: '8px',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word'
-          }}
+          style={textStyle}
           onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-          contentEditable={selectedElement === element.id && !element.locked}
+          contentEditable={isSelected && !element.locked}
           suppressContentEditableWarning
-          onBlur={(e) => updateElement(element.id, { content: e.currentTarget.textContent || '' })}
+          onBlur={(e) => {
+            updateElement(element.id, { content: e.currentTarget.textContent || '' })
+            commitUpdate()
+          }}
+          onClick={(e) => {
+            if (isSelected) {
+              e.stopPropagation()
+            }
+          }}
         >
           {element.content}
         </div>
       )
     } else if (element.element_type === 'shape') {
       const shapeStyle: React.CSSProperties = {
-        ...style,
+        ...baseStyle,
         backgroundColor: element.fill_color,
         borderRadius: element.border_radius,
         border: element.border_width ? `${element.border_width}px solid ${element.border_color}` : 'none'
@@ -380,18 +624,26 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
         shapeStyle.boxShadow = `${element.shadow_x}px ${element.shadow_y}px ${element.shadow_blur}px ${element.shadow_color}`
       }
 
-      if (element.fill_gradient) {
-        const grad = element.fill_gradient
-        if (grad.type === 'linear') {
-          const stops = grad.stops.map((s: any) => `${s.color} ${s.position}%`).join(', ')
-          shapeStyle.background = `linear-gradient(${grad.angle}deg, ${stops})`
-        }
+      return (
+        <div
+          key={element.id}
+          style={shapeStyle}
+          onMouseDown={(e) => handleElementMouseDown(e, element.id)}
+        />
+      )
+    } else if (element.element_type === 'logo' && element.image_url) {
+      const imageStyle: React.CSSProperties = {
+        ...baseStyle,
+        backgroundImage: `url(${element.image_url})`,
+        backgroundSize: 'contain',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center'
       }
 
       return (
         <div
           key={element.id}
-          style={shapeStyle}
+          style={imageStyle}
           onMouseDown={(e) => handleElementMouseDown(e, element.id)}
         />
       )
@@ -402,88 +654,82 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
 
   const handleSave = async () => {
     try {
-      let designId = canvasDesign.id
+      setSaving(true)
 
-      if (!designId) {
-        const { data: newDesign, error: designError } = await supabase
-          .from('document_canvas_designs')
-          .insert([{
-            document_id: document?.id,
-            ...canvasDesign
-          }])
-          .select()
-          .single()
-
-        if (designError) throw designError
-        designId = newDesign.id
-        setCanvasDesign({ ...canvasDesign, id: designId })
-      } else {
-        await supabase
-          .from('document_canvas_designs')
-          .update(canvasDesign)
-          .eq('id', designId)
+      const updatedTemplate = {
+        ...template,
+        custom_styles: JSON.stringify({
+          header: elements.find(el => el.is_header),
+          footer: elements.find(el => el.is_footer),
+          body: {
+            font_family: elements.find(el => el.element_type === 'text')?.font_family,
+            font_size: elements.find(el => el.element_type === 'text')?.font_size,
+            fill_color: elements.find(el => el.element_type === 'text')?.fill_color
+          }
+        }),
+        layout_config: JSON.stringify({
+          canvas: canvasDesign,
+          elements: elements
+        })
       }
 
-      await supabase
-        .from('document_canvas_elements')
-        .delete()
-        .eq('design_id', designId)
+      const { error } = await supabase
+        .from('document_templates')
+        .update(updatedTemplate)
+        .eq('id', template.id)
 
-      if (elements.length > 0) {
-        await supabase
-          .from('document_canvas_elements')
-          .insert(elements.map(el => ({
-            ...el,
-            design_id: designId,
-            id: undefined
-          })))
-      }
+      if (error) throw error
 
-      alert('Design salvo com sucesso!')
+      alert('Template salvo com sucesso!')
       onSave()
     } catch (error) {
-      console.error('Error saving design:', error)
-      alert('Erro ao salvar design')
+      console.error('Error saving template:', error)
+      alert('Erro ao salvar template')
+    } finally {
+      setSaving(false)
     }
   }
 
-  const handleExportPDF = () => {
-    const doc = new jsPDF({
-      unit: 'pt',
-      format: [canvasDesign.canvas_width, canvasDesign.canvas_height],
-      orientation: canvasDesign.page_orientation
-    })
-
-    alert('Exportação de PDF em desenvolvimento')
-  }
-
   const selectedEl = elements.find(el => el.id === selectedElement)
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-gray-900 flex items-center justify-center z-50">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-lg">Carregando template...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-gray-900 flex flex-col z-50">
       {/* Top Toolbar */}
       <div className="bg-gray-800 border-b border-gray-700 p-3 flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button onClick={onClose} className="text-white hover:text-gray-300">
+          <button onClick={onClose} className="text-white hover:text-gray-300 transition-colors">
             <X className="w-6 h-6" />
           </button>
-          <h2 className="text-white font-bold text-lg">Editor Visual</h2>
+          <h2 className="text-white font-bold text-lg">
+            Editor Visual Pro - {template?.name || 'Novo Documento'}
+          </h2>
         </div>
 
         <div className="flex items-center space-x-2">
           <button
             onClick={undo}
             disabled={historyIndex <= 0}
-            className="p-2 text-white hover:bg-gray-700 rounded disabled:opacity-50"
-            title="Desfazer"
+            className="p-2 text-white hover:bg-gray-700 rounded disabled:opacity-30 transition-all"
+            title="Desfazer (Ctrl+Z)"
           >
             <Undo className="w-5 h-5" />
           </button>
           <button
             onClick={redo}
             disabled={historyIndex >= history.length - 1}
-            className="p-2 text-white hover:bg-gray-700 rounded disabled:opacity-50"
-            title="Refazer"
+            className="p-2 text-white hover:bg-gray-700 rounded disabled:opacity-30 transition-all"
+            title="Refazer (Ctrl+Y)"
           >
             <Redo className="w-5 h-5" />
           </button>
@@ -491,16 +737,18 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
           <div className="w-px h-8 bg-gray-700 mx-2"></div>
 
           <button
-            onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}
-            className="p-2 text-white hover:bg-gray-700 rounded"
+            onClick={() => setZoom(Math.max(0.25, zoom - 0.1))}
+            className="p-2 text-white hover:bg-gray-700 rounded transition-all"
             title="Diminuir zoom"
           >
             <ZoomOut className="w-5 h-5" />
           </button>
-          <span className="text-white text-sm px-2">{Math.round(zoom * 100)}%</span>
+          <span className="text-white text-sm px-3 font-medium min-w-[60px] text-center">
+            {Math.round(zoom * 100)}%
+          </span>
           <button
-            onClick={() => setZoom(Math.min(2, zoom + 0.25))}
-            className="p-2 text-white hover:bg-gray-700 rounded"
+            onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+            className="p-2 text-white hover:bg-gray-700 rounded transition-all"
             title="Aumentar zoom"
           >
             <ZoomIn className="w-5 h-5" />
@@ -510,17 +758,11 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
 
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
+            disabled={saving}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-all disabled:opacity-50"
           >
             <Save className="w-5 h-5 mr-2" />
-            Salvar
-          </button>
-          <button
-            onClick={handleExportPDF}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
-          >
-            <Download className="w-5 h-5 mr-2" />
-            PDF
+            {saving ? 'Salvando...' : 'Salvar'}
           </button>
         </div>
       </div>
@@ -530,53 +772,80 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
         <div className="w-20 bg-gray-800 border-r border-gray-700 flex flex-col items-center py-4 space-y-2">
           <button
             onClick={() => setTool('select')}
-            className={`p-3 rounded-lg ${tool === 'select' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
-            title="Selecionar"
+            className={`p-3 rounded-lg transition-all ${
+              tool === 'select'
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+            }`}
+            title="Selecionar e Mover (V)"
           >
             <Move className="w-6 h-6" />
           </button>
+
           <button
-            onClick={() => setTool('text')}
-            className={`p-3 rounded-lg ${tool === 'text' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
-            title="Adicionar Texto"
+            onClick={() => {
+              setTool('text')
+              addElement('text')
+            }}
+            className={`p-3 rounded-lg transition-all ${
+              tool === 'text'
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+            }`}
+            title="Adicionar Texto (T)"
           >
             <Type className="w-6 h-6" />
           </button>
+
           <button
-            onClick={() => setTool('shape')}
-            className={`p-3 rounded-lg ${tool === 'shape' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
-            title="Adicionar Forma"
+            onClick={() => {
+              setTool('shape')
+              addElement('shape')
+            }}
+            className={`p-3 rounded-lg transition-all ${
+              tool === 'shape'
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+            }`}
+            title="Adicionar Forma (R)"
           >
             <Square className="w-6 h-6" />
-          </button>
-          <button
-            onClick={() => setTool('image')}
-            className={`p-3 rounded-lg ${tool === 'image' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
-            title="Adicionar Imagem"
-          >
-            <ImageIcon className="w-6 h-6" />
           </button>
 
           <div className="h-px w-12 bg-gray-700 my-2"></div>
 
           <button
             onClick={() => setShowBackgroundPanel(!showBackgroundPanel)}
-            className="p-3 rounded-lg text-gray-400 hover:bg-gray-700"
-            title="Fundo"
+            className={`p-3 rounded-lg transition-all ${
+              showBackgroundPanel
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+            }`}
+            title="Configurar Fundo"
           >
             <Palette className="w-6 h-6" />
           </button>
+
           <button
             onClick={() => setCanvasDesign({ ...canvasDesign, grid_enabled: !canvasDesign.grid_enabled })}
-            className={`p-3 rounded-lg ${canvasDesign.grid_enabled ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
-            title="Grade"
+            className={`p-3 rounded-lg transition-all ${
+              canvasDesign.grid_enabled
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+            }`}
+            title="Grade de Alinhamento"
           >
             <Grid3x3 className="w-6 h-6" />
           </button>
+
           <button
-            onClick={() => setShowElementPanel(!showElementPanel)}
-            className="p-3 rounded-lg text-gray-400 hover:bg-gray-700"
-            title="Camadas"
+            onClick={() => setShowLayersPanel(!showLayersPanel)}
+            className={`p-3 rounded-lg transition-all ${
+              showLayersPanel
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+            }`}
+            title="Gerenciar Camadas"
           >
             <Layers className="w-6 h-6" />
           </button>
@@ -588,8 +857,8 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
             ref={canvasRef}
             className="shadow-2xl relative"
             style={{
-              width: canvasDesign.canvas_width * zoom,
-              height: canvasDesign.canvas_height * zoom,
+              width: canvasDesign.canvas_width,
+              height: canvasDesign.canvas_height,
               transform: `scale(${zoom})`,
               transformOrigin: 'center',
               ...renderBackground()
@@ -604,14 +873,24 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
                 className="absolute inset-0 pointer-events-none"
                 style={{
                   backgroundImage: `
-                    repeating-linear-gradient(0deg, transparent, transparent ${canvasDesign.grid_size - 1}px, rgba(0,0,0,0.1) ${canvasDesign.grid_size - 1}px, rgba(0,0,0,0.1) ${canvasDesign.grid_size}px),
-                    repeating-linear-gradient(90deg, transparent, transparent ${canvasDesign.grid_size - 1}px, rgba(0,0,0,0.1) ${canvasDesign.grid_size - 1}px, rgba(0,0,0,0.1) ${canvasDesign.grid_size}px)
+                    repeating-linear-gradient(0deg, transparent, transparent ${canvasDesign.grid_size - 1}px, rgba(100,116,139,0.2) ${canvasDesign.grid_size - 1}px, rgba(100,116,139,0.2) ${canvasDesign.grid_size}px),
+                    repeating-linear-gradient(90deg, transparent, transparent ${canvasDesign.grid_size - 1}px, rgba(100,116,139,0.2) ${canvasDesign.grid_size - 1}px, rgba(100,116,139,0.2) ${canvasDesign.grid_size}px)
                   `
                 }}
               />
             )}
 
             {elements.map(renderElement)}
+
+            {elements.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center text-gray-400">
+                  <FileText className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                  <p className="text-lg font-medium">Template carregado</p>
+                  <p className="text-sm mt-2">Clique nos elementos para editar</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -619,60 +898,85 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
         <div className="w-80 bg-gray-800 border-l border-gray-700 overflow-y-auto">
           {selectedEl ? (
             <div className="p-4 space-y-4">
-              <h3 className="text-white font-bold text-lg mb-4">Propriedades</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white font-bold text-lg">Propriedades</h3>
+                <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">
+                  {selectedEl.element_type === 'header' ? 'Cabeçalho' :
+                   selectedEl.element_type === 'footer' ? 'Rodapé' :
+                   selectedEl.element_type === 'logo' ? 'Logo' :
+                   selectedEl.element_type === 'field' ? 'Campo' :
+                   selectedEl.element_type === 'text' ? 'Texto' : 'Forma'}
+                </span>
+              </div>
 
               {/* Position & Size */}
-              <div className="space-y-2">
+              <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
                 <label className="text-gray-300 text-sm font-medium block">Posição e Tamanho</label>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-gray-400 text-xs">X</label>
+                    <label className="text-gray-400 text-xs mb-1 block">X</label>
                     <input
                       type="number"
-                      value={selectedEl.x}
-                      onChange={(e) => updateElement(selectedEl.id, { x: parseInt(e.target.value) })}
-                      className="w-full px-2 py-1 bg-gray-700 text-white rounded border border-gray-600"
+                      value={Math.round(selectedEl.x)}
+                      onChange={(e) => {
+                        updateElement(selectedEl.id, { x: parseInt(e.target.value) || 0 })
+                        commitUpdate()
+                      }}
+                      className="w-full px-2 py-1.5 bg-gray-600 text-white rounded border border-gray-500 focus:border-blue-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs">Y</label>
+                    <label className="text-gray-400 text-xs mb-1 block">Y</label>
                     <input
                       type="number"
-                      value={selectedEl.y}
-                      onChange={(e) => updateElement(selectedEl.id, { y: parseInt(e.target.value) })}
-                      className="w-full px-2 py-1 bg-gray-700 text-white rounded border border-gray-600"
+                      value={Math.round(selectedEl.y)}
+                      onChange={(e) => {
+                        updateElement(selectedEl.id, { y: parseInt(e.target.value) || 0 })
+                        commitUpdate()
+                      }}
+                      className="w-full px-2 py-1.5 bg-gray-600 text-white rounded border border-gray-500 focus:border-blue-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs">Largura</label>
+                    <label className="text-gray-400 text-xs mb-1 block">Largura</label>
                     <input
                       type="number"
-                      value={selectedEl.width}
-                      onChange={(e) => updateElement(selectedEl.id, { width: parseInt(e.target.value) })}
-                      className="w-full px-2 py-1 bg-gray-700 text-white rounded border border-gray-600"
+                      value={Math.round(selectedEl.width)}
+                      onChange={(e) => {
+                        updateElement(selectedEl.id, { width: parseInt(e.target.value) || 10 })
+                        commitUpdate()
+                      }}
+                      className="w-full px-2 py-1.5 bg-gray-600 text-white rounded border border-gray-500 focus:border-blue-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs">Altura</label>
+                    <label className="text-gray-400 text-xs mb-1 block">Altura</label>
                     <input
                       type="number"
-                      value={selectedEl.height}
-                      onChange={(e) => updateElement(selectedEl.id, { height: parseInt(e.target.value) })}
-                      className="w-full px-2 py-1 bg-gray-700 text-white rounded border border-gray-600"
+                      value={Math.round(selectedEl.height)}
+                      onChange={(e) => {
+                        updateElement(selectedEl.id, { height: parseInt(e.target.value) || 10 })
+                        commitUpdate()
+                      }}
+                      className="w-full px-2 py-1.5 bg-gray-600 text-white rounded border border-gray-500 focus:border-blue-500 focus:outline-none"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Text Properties */}
-              {selectedEl.element_type === 'text' && (
+              {/* Text/Header/Footer/Field Properties */}
+              {(selectedEl.element_type === 'text' || selectedEl.element_type === 'field' ||
+                selectedEl.element_type === 'header' || selectedEl.element_type === 'footer') && (
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
                     <label className="text-gray-300 text-sm font-medium block">Fonte</label>
                     <select
                       value={selectedEl.font_family}
-                      onChange={(e) => updateElement(selectedEl.id, { font_family: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600"
+                      onChange={(e) => {
+                        updateElement(selectedEl.id, { font_family: e.target.value })
+                        commitUpdate()
+                      }}
+                      className="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:border-blue-500 focus:outline-none"
                     >
                       {fonts.map(font => (
                         <option key={font.id} value={font.font_family}>{font.name}</option>
@@ -680,73 +984,215 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
                     </select>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-gray-300 text-sm font-medium block">Tamanho</label>
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <label className="text-gray-300 text-sm font-medium">Tamanho</label>
+                      <span className="text-blue-400 font-bold">{selectedEl.font_size}px</span>
+                    </div>
                     <input
                       type="range"
                       min="8"
-                      max="120"
+                      max="72"
                       value={selectedEl.font_size}
-                      onChange={(e) => updateElement(selectedEl.id, { font_size: parseInt(e.target.value) })}
-                      className="w-full"
+                      onChange={(e) => {
+                        updateElement(selectedEl.id, { font_size: parseInt(e.target.value) })
+                      }}
+                      onMouseUp={commitUpdate}
+                      className="w-full accent-blue-600"
                     />
-                    <div className="text-gray-400 text-xs text-center">{selectedEl.font_size}px</div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
                     <label className="text-gray-300 text-sm font-medium block">Estilo</label>
-                    <div className="flex space-x-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={() => updateElement(selectedEl.id, {
-                          font_weight: selectedEl.font_weight === 'bold' ? 'normal' : 'bold'
-                        })}
-                        className={`flex-1 p-2 rounded ${selectedEl.font_weight === 'bold' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+                        onClick={() => {
+                          updateElement(selectedEl.id, {
+                            font_weight: selectedEl.font_weight === 'bold' ? 'normal' : 'bold'
+                          })
+                          commitUpdate()
+                        }}
+                        className={`p-2 rounded transition-all ${
+                          selectedEl.font_weight === 'bold'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                        }`}
                       >
                         <Bold className="w-4 h-4 mx-auto" />
                       </button>
                       <button
-                        onClick={() => updateElement(selectedEl.id, {
-                          font_style: selectedEl.font_style === 'italic' ? 'normal' : 'italic'
-                        })}
-                        className={`flex-1 p-2 rounded ${selectedEl.font_style === 'italic' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+                        onClick={() => {
+                          updateElement(selectedEl.id, {
+                            font_style: selectedEl.font_style === 'italic' ? 'normal' : 'italic'
+                          })
+                          commitUpdate()
+                        }}
+                        className={`p-2 rounded transition-all ${
+                          selectedEl.font_style === 'italic'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                        }`}
                       >
                         <Italic className="w-4 h-4 mx-auto" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
                     <label className="text-gray-300 text-sm font-medium block">Alinhamento</label>
-                    <div className="flex space-x-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
-                        onClick={() => updateElement(selectedEl.id, { text_align: 'left' })}
-                        className={`flex-1 p-2 rounded ${selectedEl.text_align === 'left' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+                        onClick={() => {
+                          updateElement(selectedEl.id, { text_align: 'left' })
+                          commitUpdate()
+                        }}
+                        className={`p-2 rounded transition-all ${
+                          selectedEl.text_align === 'left'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                        }`}
                       >
                         <AlignLeft className="w-4 h-4 mx-auto" />
                       </button>
                       <button
-                        onClick={() => updateElement(selectedEl.id, { text_align: 'center' })}
-                        className={`flex-1 p-2 rounded ${selectedEl.text_align === 'center' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+                        onClick={() => {
+                          updateElement(selectedEl.id, { text_align: 'center' })
+                          commitUpdate()
+                        }}
+                        className={`p-2 rounded transition-all ${
+                          selectedEl.text_align === 'center'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                        }`}
                       >
                         <AlignCenter className="w-4 h-4 mx-auto" />
                       </button>
                       <button
-                        onClick={() => updateElement(selectedEl.id, { text_align: 'right' })}
-                        className={`flex-1 p-2 rounded ${selectedEl.text_align === 'right' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+                        onClick={() => {
+                          updateElement(selectedEl.id, { text_align: 'right' })
+                          commitUpdate()
+                        }}
+                        className={`p-2 rounded transition-all ${
+                          selectedEl.text_align === 'right'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                        }`}
                       >
                         <AlignRight className="w-4 h-4 mx-auto" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
                     <label className="text-gray-300 text-sm font-medium block">Cor do Texto</label>
                     <input
                       type="color"
                       value={selectedEl.fill_color}
                       onChange={(e) => updateElement(selectedEl.id, { fill_color: e.target.value })}
-                      className="w-full h-10 rounded cursor-pointer"
+                      onBlur={commitUpdate}
+                      className="w-full h-12 rounded cursor-pointer"
                     />
+                  </div>
+
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
+                    <label className="text-gray-300 text-sm font-medium block">Cor de Fundo</label>
+                    <input
+                      type="color"
+                      value={selectedEl.background_color || '#ffffff'}
+                      onChange={(e) => updateElement(selectedEl.id, { background_color: e.target.value })}
+                      onBlur={commitUpdate}
+                      className="w-full h-12 rounded cursor-pointer"
+                    />
+                    <button
+                      onClick={() => {
+                        updateElement(selectedEl.id, { background_color: 'transparent' })
+                        commitUpdate()
+                      }}
+                      className="w-full px-3 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-500"
+                    >
+                      Transparente
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <label className="text-gray-300 text-sm font-medium">Padding</label>
+                      <span className="text-blue-400 font-bold">{selectedEl.padding || 8}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="40"
+                      value={selectedEl.padding || 8}
+                      onChange={(e) => updateElement(selectedEl.id, { padding: parseInt(e.target.value) })}
+                      onMouseUp={commitUpdate}
+                      className="w-full accent-blue-600"
+                    />
+                  </div>
+
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <label className="text-gray-300 text-sm font-medium">Raio da Borda</label>
+                      <span className="text-blue-400 font-bold">{selectedEl.border_radius || 0}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="30"
+                      value={selectedEl.border_radius || 0}
+                      onChange={(e) => updateElement(selectedEl.id, { border_radius: parseInt(e.target.value) })}
+                      onMouseUp={commitUpdate}
+                      className="w-full accent-blue-600"
+                    />
+                  </div>
+
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
+                    <label className="flex items-center text-gray-300 text-sm font-medium cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedEl.shadow_enabled || false}
+                        onChange={(e) => {
+                          updateElement(selectedEl.id, {
+                            shadow_enabled: e.target.checked,
+                            shadow_x: 0,
+                            shadow_y: 4,
+                            shadow_blur: 8,
+                            shadow_color: 'rgba(0,0,0,0.1)'
+                          })
+                          commitUpdate()
+                        }}
+                        className="mr-2 w-4 h-4 accent-blue-600"
+                      />
+                      Sombra
+                    </label>
+                    {selectedEl.shadow_enabled && (
+                      <div className="space-y-2 mt-2">
+                        <div>
+                          <label className="text-gray-400 text-xs block mb-1">Distância Y</label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="20"
+                            value={selectedEl.shadow_y || 4}
+                            onChange={(e) => updateElement(selectedEl.id, { shadow_y: parseInt(e.target.value) })}
+                            onMouseUp={commitUpdate}
+                            className="w-full accent-blue-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-400 text-xs block mb-1">Desfoque</label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="30"
+                            value={selectedEl.shadow_blur || 8}
+                            onChange={(e) => updateElement(selectedEl.id, { shadow_blur: parseInt(e.target.value) })}
+                            onMouseUp={commitUpdate}
+                            className="w-full accent-blue-600"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -754,36 +1200,43 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
               {/* Shape Properties */}
               {selectedEl.element_type === 'shape' && (
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
                     <label className="text-gray-300 text-sm font-medium block">Cor de Preenchimento</label>
                     <input
                       type="color"
                       value={selectedEl.fill_color}
                       onChange={(e) => updateElement(selectedEl.id, { fill_color: e.target.value })}
-                      className="w-full h-10 rounded cursor-pointer"
+                      onBlur={commitUpdate}
+                      className="w-full h-12 rounded cursor-pointer"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-gray-300 text-sm font-medium block">Raio da Borda</label>
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <label className="text-gray-300 text-sm font-medium">Raio da Borda</label>
+                      <span className="text-blue-400 font-bold">{selectedEl.border_radius}px</span>
+                    </div>
                     <input
                       type="range"
                       min="0"
                       max="100"
                       value={selectedEl.border_radius}
                       onChange={(e) => updateElement(selectedEl.id, { border_radius: parseInt(e.target.value) })}
-                      className="w-full"
+                      onMouseUp={commitUpdate}
+                      className="w-full accent-blue-600"
                     />
-                    <div className="text-gray-400 text-xs text-center">{selectedEl.border_radius}px</div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="flex items-center text-gray-300 text-sm font-medium">
+                  <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
+                    <label className="flex items-center text-gray-300 text-sm font-medium cursor-pointer">
                       <input
                         type="checkbox"
                         checked={selectedEl.shadow_enabled}
-                        onChange={(e) => updateElement(selectedEl.id, { shadow_enabled: e.target.checked })}
-                        className="mr-2"
+                        onChange={(e) => {
+                          updateElement(selectedEl.id, { shadow_enabled: e.target.checked })
+                          commitUpdate()
+                        }}
+                        className="mr-2 w-4 h-4 accent-blue-600"
                       />
                       Sombra
                     </label>
@@ -792,21 +1245,11 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
               )}
 
               {/* Common Properties */}
-              <div className="space-y-2">
-                <label className="text-gray-300 text-sm font-medium block">Rotação</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="360"
-                  value={selectedEl.rotation}
-                  onChange={(e) => updateElement(selectedEl.id, { rotation: parseInt(e.target.value) })}
-                  className="w-full"
-                />
-                <div className="text-gray-400 text-xs text-center">{selectedEl.rotation}°</div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-gray-300 text-sm font-medium block">Opacidade</label>
+              <div className="space-y-3 p-3 bg-gray-700 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <label className="text-gray-300 text-sm font-medium">Opacidade</label>
+                  <span className="text-blue-400 font-bold">{Math.round(selectedEl.opacity * 100)}%</span>
+                </div>
                 <input
                   type="range"
                   min="0"
@@ -814,30 +1257,54 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
                   step="0.1"
                   value={selectedEl.opacity}
                   onChange={(e) => updateElement(selectedEl.id, { opacity: parseFloat(e.target.value) })}
-                  className="w-full"
+                  onMouseUp={commitUpdate}
+                  className="w-full accent-blue-600"
                 />
-                <div className="text-gray-400 text-xs text-center">{Math.round(selectedEl.opacity * 100)}%</div>
+              </div>
+
+              {/* Layers */}
+              <div className="space-y-2 p-3 bg-gray-700 rounded-lg">
+                <label className="text-gray-300 text-sm font-medium block">Ordem (Camadas)</label>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => moveLayerUp(selectedEl.id)}
+                    className="flex-1 px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-500 flex items-center justify-center transition-all"
+                  >
+                    <ChevronUp className="w-4 h-4 mr-1" />
+                    Frente
+                  </button>
+                  <button
+                    onClick={() => moveLayerDown(selectedEl.id)}
+                    className="flex-1 px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-500 flex items-center justify-center transition-all"
+                  >
+                    <ChevronDown className="w-4 h-4 mr-1" />
+                    Trás
+                  </button>
+                </div>
               </div>
 
               {/* Actions */}
               <div className="pt-4 border-t border-gray-700 space-y-2">
                 <button
                   onClick={() => duplicateElement(selectedEl.id)}
-                  className="w-full px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 flex items-center justify-center"
+                  className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center transition-all"
                 >
                   <Copy className="w-4 h-4 mr-2" />
                   Duplicar
                 </button>
                 <button
-                  onClick={() => updateElement(selectedEl.id, { locked: !selectedEl.locked })}
-                  className="w-full px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 flex items-center justify-center"
+                  onClick={() => {
+                    updateElement(selectedEl.id, { locked: !selectedEl.locked })
+                    commitUpdate()
+                  }}
+                  className="w-full px-4 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-500 flex items-center justify-center transition-all"
                 >
                   {selectedEl.locked ? <Unlock className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
                   {selectedEl.locked ? 'Desbloquear' : 'Bloquear'}
                 </button>
                 <button
                   onClick={() => deleteElement(selectedEl.id)}
-                  className="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center justify-center"
+                  className="w-full px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center transition-all"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Excluir
@@ -845,109 +1312,184 @@ export default function VisualDocumentEditor({ document, onClose, onSave }: Visu
               </div>
             </div>
           ) : (
-            <div className="p-4 text-center text-gray-400">
-              <p className="mb-4">Selecione um elemento para editar</p>
-              <p className="text-sm">ou</p>
-              <p className="text-sm mt-2">Clique em uma ferramenta e no canvas para adicionar</p>
+            <div className="p-8 text-center text-gray-400 flex flex-col items-center justify-center h-full">
+              <FileText className="w-16 h-16 mb-4 opacity-30" />
+              <p className="text-lg font-medium mb-2">Selecione um elemento</p>
+              <p className="text-sm text-gray-500">
+                Clique em qualquer elemento para editá-lo
+              </p>
+              <div className="mt-6 text-left text-xs text-gray-500 space-y-1 bg-gray-700 p-4 rounded-lg">
+                <p className="font-bold text-gray-300 mb-2">Elementos disponíveis:</p>
+                <p>📝 {elements.filter(e => e.element_type === 'text').length} Textos</p>
+                <p>📋 {elements.filter(e => e.element_type === 'field').length} Campos</p>
+                <p>📊 {elements.filter(e => e.is_header).length} Cabeçalhos</p>
+                <p>🦶 {elements.filter(e => e.is_footer).length} Rodapés</p>
+                <p>🖼️ {elements.filter(e => e.element_type === 'logo').length} Logos</p>
+                <p>📐 {elements.filter(e => e.element_type === 'shape').length} Formas</p>
+              </div>
             </div>
           )}
         </div>
       </div>
 
       {/* Background Panel */}
-      {showBackgroundPanel && (
-        <div className="absolute top-16 left-24 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl p-4 z-50">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white font-bold">Fundo do Canvas</h3>
-            <button onClick={() => setShowBackgroundPanel(false)} className="text-gray-400 hover:text-white">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-gray-300 text-sm font-medium block mb-2">Tipo de Fundo</label>
-              <select
-                value={canvasDesign.background_type}
-                onChange={(e) => setCanvasDesign({ ...canvasDesign, background_type: e.target.value as any })}
-                className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600"
+      <AnimatePresence>
+        {showBackgroundPanel && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="absolute top-16 left-24 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl p-4 z-50"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-bold">Fundo do Canvas</h3>
+              <button
+                onClick={() => setShowBackgroundPanel(false)}
+                className="text-gray-400 hover:text-white transition-colors"
               >
-                <option value="solid">Cor Sólida</option>
-                <option value="gradient">Degradê</option>
-                <option value="image">Imagem</option>
-              </select>
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {canvasDesign.background_type === 'solid' && (
+            <div className="space-y-4">
               <div>
-                <label className="text-gray-300 text-sm font-medium block mb-2">Cor</label>
-                <input
-                  type="color"
-                  value={canvasDesign.background_color}
-                  onChange={(e) => setCanvasDesign({ ...canvasDesign, background_color: e.target.value })}
-                  className="w-full h-12 rounded cursor-pointer"
-                />
+                <label className="text-gray-300 text-sm font-medium block mb-2">Tipo de Fundo</label>
+                <select
+                  value={canvasDesign.background_type}
+                  onChange={(e) => setCanvasDesign({ ...canvasDesign, background_type: e.target.value as any })}
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="solid">Cor Sólida</option>
+                  <option value="gradient">Degradê</option>
+                </select>
               </div>
-            )}
 
-            {canvasDesign.background_type === 'gradient' && (
-              <div>
-                <label className="text-gray-300 text-sm font-medium block mb-2">Degradê</label>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setCanvasDesign({
-                      ...canvasDesign,
-                      background_gradient: {
-                        type: 'linear',
-                        angle: 135,
-                        stops: [
-                          { color: '#ffffff', position: 0 },
-                          { color: '#f3f4f6', position: 100 }
-                        ]
-                      }
-                    })}
-                    className="w-full px-4 py-2 bg-gradient-to-br from-white to-gray-100 text-gray-800 rounded border border-gray-300"
-                  >
-                    Branco → Cinza
-                  </button>
-                  <button
-                    onClick={() => setCanvasDesign({
-                      ...canvasDesign,
-                      background_gradient: {
-                        type: 'linear',
-                        angle: 135,
-                        stops: [
-                          { color: '#2563eb', position: 0 },
-                          { color: '#1e40af', position: 100 }
-                        ]
-                      }
-                    })}
-                    className="w-full px-4 py-2 bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded"
-                  >
-                    Azul
-                  </button>
-                  <button
-                    onClick={() => setCanvasDesign({
-                      ...canvasDesign,
-                      background_gradient: {
-                        type: 'linear',
-                        angle: 135,
-                        stops: [
-                          { color: '#10b981', position: 0 },
-                          { color: '#059669', position: 100 }
-                        ]
-                      }
-                    })}
-                    className="w-full px-4 py-2 bg-gradient-to-br from-green-500 to-green-600 text-white rounded"
-                  >
-                    Verde
-                  </button>
+              {canvasDesign.background_type === 'solid' && (
+                <div>
+                  <label className="text-gray-300 text-sm font-medium block mb-2">Cor</label>
+                  <input
+                    type="color"
+                    value={canvasDesign.background_color}
+                    onChange={(e) => setCanvasDesign({ ...canvasDesign, background_color: e.target.value })}
+                    className="w-full h-12 rounded cursor-pointer"
+                  />
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              )}
+
+              {canvasDesign.background_type === 'gradient' && (
+                <div>
+                  <label className="text-gray-300 text-sm font-medium block mb-2">Degradê</label>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setCanvasDesign({
+                        ...canvasDesign,
+                        background_gradient: {
+                          type: 'linear',
+                          angle: 135,
+                          stops: [
+                            { color: '#ffffff', position: 0 },
+                            { color: '#f3f4f6', position: 100 }
+                          ]
+                        }
+                      })}
+                      className="w-full px-4 py-3 bg-gradient-to-br from-white to-gray-100 text-gray-800 rounded border border-gray-300 hover:shadow-lg transition-all font-medium"
+                    >
+                      Branco → Cinza
+                    </button>
+                    <button
+                      onClick={() => setCanvasDesign({
+                        ...canvasDesign,
+                        background_gradient: {
+                          type: 'linear',
+                          angle: 135,
+                          stops: [
+                            { color: '#2563eb', position: 0 },
+                            { color: '#1e40af', position: 100 }
+                          ]
+                        }
+                      })}
+                      className="w-full px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded hover:shadow-lg transition-all font-medium"
+                    >
+                      Azul Corporativo
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Layers Panel */}
+      <AnimatePresence>
+        {showLayersPanel && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="absolute top-16 left-24 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl p-4 z-50 max-h-96 overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-bold">Camadas ({elements.length})</h3>
+              <button
+                onClick={() => setShowLayersPanel(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {elements.length === 0 ? (
+                <p className="text-gray-400 text-sm text-center py-4">Nenhum elemento</p>
+              ) : (
+                [...elements].reverse().map((el) => {
+                  const getIcon = () => {
+                    if (el.element_type === 'header') return '📊'
+                    if (el.element_type === 'footer') return '🦶'
+                    if (el.element_type === 'logo') return '🖼️'
+                    if (el.element_type === 'field') return '📋'
+                    if (el.element_type === 'text') return '📝'
+                    if (el.element_type === 'shape') return '📐'
+                    return '❓'
+                  }
+
+                  const getLabel = () => {
+                    if (el.is_header) return 'Cabeçalho'
+                    if (el.is_footer) return 'Rodapé'
+                    if (el.element_type === 'logo') return 'Logo'
+                    if (el.element_type === 'field') return `Campo: ${el.field_name}`
+                    if (el.content) return el.content.substring(0, 30)
+                    return el.element_type
+                  }
+
+                  return (
+                    <div
+                      key={el.id}
+                      onClick={() => setSelectedElement(el.id)}
+                      className={`p-3 rounded cursor-pointer transition-all ${
+                        selectedElement === el.id
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 flex-1 min-w-0">
+                          <span>{getIcon()}</span>
+                          <span className="text-sm font-medium truncate">
+                            {getLabel()}
+                          </span>
+                        </div>
+                        {el.locked && <Lock className="w-3 h-3 flex-shrink-0" />}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
