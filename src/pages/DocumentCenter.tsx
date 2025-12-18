@@ -36,6 +36,7 @@ import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import DocumentEditor from '../components/DocumentEditor'
+import VisualDocumentEditor from '../components/VisualDocumentEditor'
 
 interface DocumentTemplate {
   id: string
@@ -138,6 +139,7 @@ export default function DocumentCenter() {
   const [selectedDocument, setSelectedDocument] = useState<GeneratedDocument | null>(null)
   const [editorMode, setEditorMode] = useState<EditorMode>('create')
   const [saving, setSaving] = useState(false)
+  const [showVisualEditor, setShowVisualEditor] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -203,11 +205,19 @@ export default function DocumentCenter() {
     })
   }
 
-  const handleCreateDocument = (template: DocumentTemplate) => {
+  const handleCreateDocument = (template: DocumentTemplate, useVisual = false) => {
     setSelectedTemplate(template)
     setSelectedDocument(null)
     setEditorMode('create')
-    setShowEditor(true)
+    if (useVisual) {
+      setShowVisualEditor(true)
+    } else {
+      setShowEditor(true)
+    }
+  }
+
+  const handleCreateDocumentVisual = (template: DocumentTemplate) => {
+    handleCreateDocument(template, true)
   }
 
   const handleViewDocument = (document: GeneratedDocument) => {
@@ -579,13 +589,24 @@ export default function DocumentCenter() {
                       <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
                         {template.category}
                       </span>
-                      <button
-                        onClick={() => handleCreateDocument(template)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Criar
-                      </button>
+                      <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleCreateDocument(template)}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center"
+                          title="Editor Simples"
+                        >
+                          <FileText className="w-4 h-4 mr-1" />
+                          Simples
+                        </button>
+                        <button
+                          onClick={() => handleCreateDocumentVisual(template)}
+                          className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium flex items-center"
+                          title="Editor Visual (Canva)"
+                        >
+                          <Palette className="w-4 h-4 mr-1" />
+                          Visual
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -829,6 +850,20 @@ export default function DocumentCenter() {
           mode={editorMode}
           onClose={() => {
             setShowEditor(false)
+            setSelectedDocument(null)
+            setSelectedTemplate(null)
+          }}
+          onSave={() => {
+            loadDocuments()
+          }}
+        />
+      )}
+
+      {showVisualEditor && (
+        <VisualDocumentEditor
+          document={selectedDocument}
+          onClose={() => {
+            setShowVisualEditor(false)
             setSelectedDocument(null)
             setSelectedTemplate(null)
           }}
