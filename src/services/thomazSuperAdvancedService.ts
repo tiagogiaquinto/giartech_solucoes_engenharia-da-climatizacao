@@ -50,29 +50,34 @@ class ThomazSuperAdvancedService {
 
       const userContext = await this.buildUserContext(userId)
 
-      const analysisContext: AnalysisContext = {
-        query: message,
-        userId,
-        userRole: userContext.userRole || 'user',
-        companyId: userContext.companyId,
-        conversationHistory: await this.getConversationHistory(conversationId)
+      const detectedIntent = this.detectIntent(message)
+      console.log('🎯 Detected intent:', detectedIntent)
+
+      let enhancedResponse = ''
+      let dataVisualization = null
+
+      if (detectedIntent.requiresAnalysis) {
+        const analysisResult = await this.performDeepAnalysis(detectedIntent.type, message)
+        enhancedResponse = this.formatAnalysisResponse(analysisResult, detectedIntent.type)
+        dataVisualization = analysisResult
+      } else {
+        const analysisContext: AnalysisContext = {
+          query: message,
+          userId,
+          userRole: userContext.userRole || 'user',
+          companyId: userContext.companyId,
+          conversationHistory: await this.getConversationHistory(conversationId)
+        }
+
+        const reasoning = await this.reasoningEngine.reason(message, analysisContext)
+        enhancedResponse = reasoning.result
       }
 
-      const reasoning = await this.reasoningEngine.reason(message, analysisContext)
+      const suggestedActions = this.generateContextualActions(detectedIntent.type, message)
 
-      console.log('📊 Reasoning complete:', {
-        confidence: reasoning.confidence,
-        steps: reasoning.steps.length,
-        recommendations: reasoning.recommendations.length
-      })
-
-      const suggestedActions = this.extractActionableItems(reasoning)
-
-      await this.saveConversation(userId, message, reasoning.result, conversationId)
+      await this.saveConversation(userId, message, enhancedResponse, conversationId)
 
       const proactiveInsights = await this.generateProactiveInsights(userContext)
-
-      let enhancedResponse = reasoning.result
 
       if (proactiveInsights.length > 0) {
         enhancedResponse += '\n\n**🔔 Insights Proativos:**\n'
@@ -84,9 +89,9 @@ class ThomazSuperAdvancedService {
 
       return {
         response: enhancedResponse,
-        reasoning,
         suggestedActions,
-        confidence: reasoning.confidence,
+        dataVisualization,
+        confidence: detectedIntent.confidence,
         conversationId
       }
     } catch (error) {
@@ -97,6 +102,361 @@ class ThomazSuperAdvancedService {
         conversationId
       }
     }
+  }
+
+  private detectIntent(message: string): { type: string; requiresAnalysis: boolean; confidence: number } {
+    const lowerMessage = message.toLowerCase()
+
+    const intents = [
+      {
+        keywords: ['estoque', 'inventario', 'materiais', 'produtos', 'quantidade', 'repor'],
+        type: 'inventory',
+        requiresAnalysis: true
+      },
+      {
+        keywords: ['financeiro', 'financeira', 'receita', 'despesa', 'pagamento', 'saldo', 'fluxo de caixa'],
+        type: 'financial',
+        requiresAnalysis: true
+      },
+      {
+        keywords: ['ordem', 'os', 'serviço', 'servico', 'atendimento', 'tecnico'],
+        type: 'service_orders',
+        requiresAnalysis: true
+      },
+      {
+        keywords: ['cliente', 'customer', 'consumidor', 'comprador'],
+        type: 'customers',
+        requiresAnalysis: true
+      },
+      {
+        keywords: ['sistema', 'geral', 'tudo', 'overview', 'resumo', 'dashboard'],
+        type: 'system',
+        requiresAnalysis: true
+      }
+    ]
+
+    for (const intent of intents) {
+      const matchCount = intent.keywords.filter(kw => lowerMessage.includes(kw)).length
+      if (matchCount > 0) {
+        return {
+          type: intent.type,
+          requiresAnalysis: intent.requiresAnalysis,
+          confidence: Math.min(0.9, matchCount * 0.3)
+        }
+      }
+    }
+
+    return { type: 'general', requiresAnalysis: false, confidence: 0.5 }
+  }
+
+  private async performDeepAnalysis(type: string, query: string): Promise<any> {
+    console.log(`🔍 Performing deep analysis for: ${type}`)
+
+    try {
+      switch (type) {
+        case 'inventory':
+          return await this.analyzeInventoryAdvanced()
+
+        case 'financial':
+          return await this.analyzeFinancialAdvanced()
+
+        case 'service_orders':
+          return await this.analyzeServiceOrdersAdvanced()
+
+        case 'customers':
+          return await this.analyzeCustomersAdvanced()
+
+        case 'system':
+          return await this.analyzeSystemComplete()
+
+        default:
+          return null
+      }
+    } catch (error) {
+      console.error('Error in deep analysis:', error)
+      return null
+    }
+  }
+
+  private async analyzeInventoryAdvanced(): Promise<any> {
+    const { data, error } = await supabase.rpc('thomaz_analyze_inventory')
+    if (error) {
+      console.error('Error analyzing inventory:', error)
+      return null
+    }
+    return data
+  }
+
+  private async analyzeFinancialAdvanced(): Promise<any> {
+    const { data, error } = await supabase.rpc('thomaz_analyze_financials', { periodo_dias: 30 })
+    if (error) {
+      console.error('Error analyzing financials:', error)
+      return null
+    }
+    return data
+  }
+
+  private async analyzeServiceOrdersAdvanced(): Promise<any> {
+    const { data, error } = await supabase.rpc('thomaz_analyze_service_orders', { periodo_dias: 30 })
+    if (error) {
+      console.error('Error analyzing service orders:', error)
+      return null
+    }
+    return data
+  }
+
+  private async analyzeCustomersAdvanced(): Promise<any> {
+    const { data, error } = await supabase.rpc('thomaz_analyze_customers')
+    if (error) {
+      console.error('Error analyzing customers:', error)
+      return null
+    }
+    return data
+  }
+
+  private async analyzeSystemComplete(): Promise<any> {
+    const { data, error } = await supabase.rpc('thomaz_analyze_system')
+    if (error) {
+      console.error('Error analyzing system:', error)
+      return null
+    }
+    return data
+  }
+
+  private formatAnalysisResponse(data: any, type: string): string {
+    if (!data) {
+      return 'Desculpe, não consegui obter os dados necessários para esta análise.'
+    }
+
+    switch (type) {
+      case 'inventory':
+        return this.formatInventoryAnalysis(data)
+
+      case 'financial':
+        return this.formatFinancialAnalysis(data)
+
+      case 'service_orders':
+        return this.formatServiceOrdersAnalysis(data)
+
+      case 'customers':
+        return this.formatCustomersAnalysis(data)
+
+      case 'system':
+        return this.formatSystemAnalysis(data)
+
+      default:
+        return JSON.stringify(data, null, 2)
+    }
+  }
+
+  private formatInventoryAnalysis(data: any): string {
+    const { resumo, itens_criticos, por_categoria, analise } = data
+
+    let response = `## 📊 Análise Completa do Estoque\n\n`
+    response += `### **Resumo Geral**\n`
+    response += `- **Total de itens:** ${resumo.total_itens}\n`
+    response += `- **Valor total:** R$ ${parseFloat(resumo.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Custo total:** R$ ${parseFloat(resumo.custo_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Quantidade média por item:** ${resumo.quantidade_media}\n\n`
+
+    response += `### 🚨 **Status do Estoque**\n`
+    response += `- ❌ **${resumo.itens_zerados} itens ZERADOS** (sem estoque)\n`
+    response += `- 🔴 **${resumo.itens_criticos} itens CRÍTICOS** (abaixo do mínimo)\n`
+    response += `- 🟡 **${resumo.itens_baixos} itens BAIXOS** (próximo do mínimo)\n`
+    response += `- ✅ **${resumo.itens_ok} itens OK** (estoque saudável)\n\n`
+
+    response += `### 📈 **Análise**\n`
+    response += `**Situação:** ${analise.situacao_geral}\n`
+    response += `**Saúde do estoque:** ${analise.saude_percentual}%\n\n`
+
+    if (itens_criticos && itens_criticos.length > 0) {
+      response += `### ⚠️ **Itens que precisam atenção imediata:**\n\n`
+      itens_criticos.slice(0, 10).forEach((item: any, idx: number) => {
+        response += `${idx + 1}. **${item.name}**\n`
+        response += `   - Status: ${item.status}\n`
+        response += `   - Quantidade: ${item.quantity} (Mínimo: ${item.min_quantity})\n`
+        response += `   - Valor: R$ ${parseFloat(item.unit_price).toFixed(2)}\n`
+        response += `   - Categoria: ${item.category || 'N/A'}\n\n`
+      })
+    }
+
+    if (analise.acoes_recomendadas && analise.acoes_recomendadas.length > 0) {
+      response += `### 💡 **Ações Recomendadas:**\n\n`
+      analise.acoes_recomendadas.forEach((acao: string, idx: number) => {
+        response += `${idx + 1}. ${acao}\n`
+      })
+    }
+
+    return response
+  }
+
+  private formatFinancialAnalysis(data: any): string {
+    const { periodo, resumo, indicadores, alertas } = data
+
+    let response = `## 💰 Análise Financeira Completa\n\n`
+    response += `**Período:** ${periodo.inicio} até ${periodo.fim} (${periodo.dias} dias)\n\n`
+
+    response += `### **Resumo Geral**\n`
+    response += `- **Total de lançamentos:** ${resumo.total_lancamentos}\n`
+    response += `- **Receitas:** ${resumo.total_receitas} lançamentos - R$ ${parseFloat(resumo.total_receitas_valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Despesas:** ${resumo.total_despesas} lançamentos - R$ ${parseFloat(resumo.total_despesas_valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Saldo do período:** R$ ${indicadores.saldo_periodo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`
+
+    response += `### 📊 **Indicadores**\n`
+    response += `- **Margem:** ${indicadores.margem_percentual}%\n`
+    response += `- **Saldo realizado:** R$ ${indicadores.saldo_realizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Taxa de inadimplência:** ${indicadores.taxa_inadimplencia}%\n\n`
+
+    response += `### 💵 **Situação de Pagamentos**\n`
+    response += `- **Receitas pagas:** R$ ${parseFloat(resumo.receitas_pagas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Despesas pagas:** R$ ${parseFloat(resumo.despesas_pagas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Receitas pendentes:** R$ ${parseFloat(resumo.receitas_pendentes).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Despesas pendentes:** R$ ${parseFloat(resumo.despesas_pendentes).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`
+
+    if (resumo.lancamentos_vencidos > 0) {
+      response += `### 🚨 **Atenção**\n`
+      response += `- **${resumo.lancamentos_vencidos} lançamentos vencidos** no valor de R$ ${parseFloat(resumo.valor_vencido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`
+    }
+
+    if (alertas && alertas.length > 0) {
+      response += `### ⚠️ **Alertas**\n\n`
+      alertas.forEach((alerta: any, idx: number) => {
+        const icon = alerta.tipo === 'CRÍTICO' ? '🚨' : alerta.tipo === 'ATENÇÃO' ? '⚠️' : 'ℹ️'
+        response += `${icon} ${alerta.mensagem}\n`
+      })
+    }
+
+    return response
+  }
+
+  private formatServiceOrdersAnalysis(data: any): string {
+    const { periodo, resumo, indicadores, alertas } = data
+
+    let response = `## 🔧 Análise de Ordens de Serviço\n\n`
+    response += `**Período:** ${periodo.inicio} até ${periodo.fim} (${periodo.dias} dias)\n\n`
+
+    response += `### **Resumo Geral**\n`
+    response += `- **Total de OS:** ${resumo.total_os}\n`
+    response += `- **Pendentes:** ${resumo.pendentes}\n`
+    response += `- **Em andamento:** ${resumo.em_andamento}\n`
+    response += `- **Concluídas:** ${resumo.concluidas}\n`
+    response += `- **Canceladas:** ${resumo.canceladas}\n\n`
+
+    response += `### 💰 **Valores**\n`
+    response += `- **Valor médio por OS:** R$ ${parseFloat(resumo.valor_medio).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Valor total:** R$ ${parseFloat(resumo.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Faturamento (OS concluídas):** R$ ${parseFloat(resumo.faturamento).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`
+
+    response += `### 📊 **Indicadores de Performance**\n`
+    response += `- **Taxa de conclusão:** ${indicadores.taxa_conclusao}%\n`
+    response += `- **Ticket médio:** R$ ${parseFloat(indicadores.ticket_medio).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Margem média:** ${indicadores.margem_media}%\n\n`
+
+    if (alertas && alertas.length > 0) {
+      response += `### ⚠️ **Alertas**\n\n`
+      alertas.forEach((alerta: any) => {
+        const icon = alerta.tipo === 'ATENÇÃO' ? '⚠️' : 'ℹ️'
+        response += `${icon} ${alerta.mensagem}\n`
+      })
+    }
+
+    return response
+  }
+
+  private formatCustomersAnalysis(data: any): string {
+    const { resumo, top_clientes, indicadores, alertas } = data
+
+    let response = `## 👥 Análise de Clientes\n\n`
+
+    response += `### **Resumo Geral**\n`
+    response += `- **Total de clientes:** ${resumo.total_clientes}\n`
+    response += `- **Pessoas Físicas:** ${resumo.pessoas_fisicas}\n`
+    response += `- **Pessoas Jurídicas:** ${resumo.pessoas_juridicas}\n`
+    response += `- **Ativos:** ${resumo.ativos}\n`
+    response += `- **Inativos:** ${resumo.inativos}\n\n`
+
+    response += `### 📊 **Indicadores**\n`
+    response += `- **Clientes ativos:** ${indicadores.clientes_ativos_percentual}%\n`
+    response += `- **Ticket médio por cliente:** R$ ${parseFloat(indicadores.ticket_medio_cliente || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    response += `- **Clientes inativos (>90 dias):** ${indicadores.clientes_inativos_90dias}\n\n`
+
+    if (top_clientes && top_clientes.length > 0) {
+      response += `### 🏆 **Top 10 Clientes**\n\n`
+      top_clientes.slice(0, 10).forEach((cliente: any, idx: number) => {
+        response += `${idx + 1}. **${cliente.name}**\n`
+        response += `   - Total de OS: ${cliente.total_os}\n`
+        response += `   - Valor total: R$ ${parseFloat(cliente.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+        if (cliente.ultima_compra) {
+          response += `   - Última compra: ${new Date(cliente.ultima_compra).toLocaleDateString('pt-BR')}\n`
+        }
+        response += `\n`
+      })
+    }
+
+    if (alertas && alertas.length > 0) {
+      response += `### ⚠️ **Alertas**\n\n`
+      alertas.forEach((alerta: any) => {
+        response += `⚠️ ${alerta.mensagem}\n`
+      })
+    }
+
+    return response
+  }
+
+  private formatSystemAnalysis(data: any): string {
+    let response = `## 🎯 Análise Completa do Sistema\n\n`
+
+    response += `### 📦 **Estoque**\n`
+    response += this.formatInventoryAnalysis(data.estoque)
+
+    response += `\n---\n\n### 💰 **Financeiro**\n`
+    response += this.formatFinancialAnalysis(data.financeiro)
+
+    response += `\n---\n\n### 🔧 **Ordens de Serviço**\n`
+    response += this.formatServiceOrdersAnalysis(data.ordens_servico)
+
+    response += `\n---\n\n### 👥 **Clientes**\n`
+    response += this.formatCustomersAnalysis(data.clientes)
+
+    return response
+  }
+
+  private generateContextualActions(type: string, query: string): SuggestedAction[] {
+    const actions: SuggestedAction[] = []
+
+    switch (type) {
+      case 'inventory':
+        actions.push({
+          id: 'create-purchase-order',
+          title: 'Gerar ordem de compra',
+          description: 'Criar ordem de compra para itens críticos',
+          priority: 'high',
+          category: 'inventory'
+        })
+        break
+
+      case 'financial':
+        actions.push({
+          id: 'send-payment-reminders',
+          title: 'Enviar lembretes de pagamento',
+          description: 'Enviar lembretes para lançamentos vencidos',
+          priority: 'high',
+          category: 'financial'
+        })
+        break
+
+      case 'service_orders':
+        actions.push({
+          id: 'review-pending-os',
+          title: 'Revisar OS pendentes',
+          description: 'Analisar e priorizar ordens de serviço pendentes',
+          priority: 'medium',
+          category: 'operations'
+        })
+        break
+    }
+
+    return actions
   }
 
   async analyzeBusinessHealth(userId?: string): Promise<any> {
