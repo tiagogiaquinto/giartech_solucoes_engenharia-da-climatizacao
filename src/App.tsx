@@ -112,6 +112,7 @@ import OSDistribution from './pages/OSDistribution'
 import GoalsAndRankings from './pages/GoalsAndRankings'
 import BudgetManagement from './pages/BudgetManagement'
 import DocumentCenter from './pages/DocumentCenter'
+import ThomazDashboard from './pages/ThomazDashboard'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -532,6 +533,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <ThomazMetrics />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/thomaz-ultra" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <ThomazDashboard />
               </WebLayout>
             </ProtectedRoute>
           } />
