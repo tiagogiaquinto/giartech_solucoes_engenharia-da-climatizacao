@@ -20,7 +20,7 @@ import {
   Home,
   RotateCcw
 } from 'lucide-react'
-import { ThomazSuperAdvancedService } from '../services/thomazSuperAdvancedService'
+import { thomazUltraService } from '../services/thomazUltraService'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -30,6 +30,8 @@ interface Message {
   content: string
   timestamp: Date
   typing?: boolean
+  confidence?: number
+  suggestions?: string[]
 }
 
 interface QuickAction {
@@ -45,14 +47,12 @@ export function ThomazSuperChat() {
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
-  const [thomazService, setThomazService] = useState<ThomazSuperAdvancedService | null>(null)
+  const [isInitialized, setIsInitialized] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Removido: quickActions - conversação totalmente natural
-
   useEffect(() => {
-    if (isOpen && !thomazService) {
+    if (isOpen && !isInitialized) {
       initializeThomazService()
     }
   }, [isOpen])
@@ -68,26 +68,39 @@ export function ThomazSuperChat() {
   }, [isOpen])
 
   const initializeThomazService = async () => {
-    // Usar novo serviço super avançado com RAG completo
-    const service = new ThomazSuperAdvancedService(
-      undefined, // userId (TODO: pegar do context)
-      'user',    // userRole (TODO: pegar do context)
-      undefined  // companyId (TODO: pegar do context)
-    )
-    setThomazService(service)
+    try {
+      setIsLoading(true)
 
-    // Saudação inicial
-    const hour = new Date().getHours()
-    const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
+      await thomazUltraService.initialize()
+      setIsInitialized(true)
 
-    setMessages([
-      {
-        id: `msg_${Date.now()}`,
-        role: 'assistant',
-        content: `${greeting}! Sou o Thomaz, seu consultor empresarial.\n\nPosso ajudar com análises financeiras, procedimentos operacionais, consultoria estratégica e muito mais.\n\nSobre o que precisa conversar?`,
-        timestamp: new Date()
-      }
-    ])
+      const hour = new Date().getHours()
+      const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
+
+      const welcomeResponse = await thomazUltraService.processQuery(greeting)
+
+      setMessages([
+        {
+          id: `msg_${Date.now()}`,
+          role: 'assistant',
+          content: welcomeResponse.message,
+          timestamp: new Date(),
+          suggestions: welcomeResponse.suggestions
+        }
+      ])
+    } catch (error) {
+      console.error('Erro ao inicializar Thomaz:', error)
+      setMessages([
+        {
+          id: `msg_${Date.now()}`,
+          role: 'assistant',
+          content: 'Olá! Sou o Thomaz. Como posso ajudar?',
+          timestamp: new Date()
+        }
+      ])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const scrollToBottom = () => {
@@ -112,18 +125,19 @@ export function ThomazSuperChat() {
     setIsLoading(true)
 
     try {
-      // Reinicializar com novo serviço
-      const service = new ThomazSuperAdvancedService()
-      setThomazService(service)
+      await thomazUltraService.refreshContext()
 
       const hour = new Date().getHours()
       const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
 
+      const welcomeResponse = await thomazUltraService.processQuery(greeting)
+
       const welcomeMessage: Message = {
         id: `msg_${Date.now()}_welcome`,
         role: 'assistant',
-        content: `${greeting}! Nova conversa iniciada. Como posso ajudar?`,
-        timestamp: new Date()
+        content: welcomeResponse.message,
+        timestamp: new Date(),
+        suggestions: welcomeResponse.suggestions
       }
       setMessages([welcomeMessage])
     } catch (error) {
@@ -136,11 +150,10 @@ export function ThomazSuperChat() {
   const handleSendMessage = async (messageText?: string) => {
     const textToSend = messageText || inputMessage.trim()
 
-    if (!textToSend || !thomazService) return
+    if (!textToSend || !isInitialized) return
 
     setInputMessage('')
 
-    // Adicionar mensagem do usuário
     const userMessage: Message = {
       id: `msg_${Date.now()}_user`,
       role: 'user',
@@ -152,18 +165,17 @@ export function ThomazSuperChat() {
     setIsLoading(true)
 
     try {
-      // Simular digitação
       await simulateTyping(textToSend)
 
-      // Processar com o Thomaz Super Advanced Service (RAG completo)
-      const result = await thomazService.processMessage(textToSend)
+      const result = await thomazUltraService.processQuery(textToSend)
 
-      // Adicionar resposta do Thomaz
       const assistantMessage: Message = {
         id: `msg_${Date.now()}_assistant`,
         role: 'assistant',
-        content: result.response,
-        timestamp: new Date()
+        content: result.message,
+        timestamp: new Date(),
+        confidence: result.confidence,
+        suggestions: result.suggestions
       }
 
       setMessages(prev => [...prev, assistantMessage])
@@ -174,7 +186,7 @@ export function ThomazSuperChat() {
       const errorMessage: Message = {
         id: `msg_${Date.now()}_error`,
         role: 'assistant',
-        content: 'Desculpe, tive um problema ao processar sua solicitação. 😅\n\nPode tentar novamente?',
+        content: 'Desculpe, tive um problema ao processar sua solicitação.\n\nPode tentar novamente?',
         timestamp: new Date()
       }
 
@@ -356,6 +368,20 @@ export function ThomazSuperChat() {
                     </div>
                   )}
                 </div>
+
+                {message.role === 'assistant' && message.suggestions && message.suggestions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {message.suggestions.map((suggestion, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSendMessage(suggestion)}
+                        className="text-xs px-3 py-1.5 bg-white border border-purple-200 text-purple-600 rounded-full hover:bg-purple-50 hover:border-purple-300 transition-all"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}
