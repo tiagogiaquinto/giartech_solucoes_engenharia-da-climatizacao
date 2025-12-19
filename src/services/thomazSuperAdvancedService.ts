@@ -46,33 +46,73 @@ class ThomazSuperAdvancedService {
     userId?: string,
     conversationId?: string
   ): Promise<ThomazConversationResult> {
+    return this.processMessage(message, userId, conversationId)
+  }
+
+  async processMessage(
+    message: string,
+    userId?: string,
+    conversationId?: string
+  ): Promise<ThomazConversationResult> {
     try {
       console.log('🧠 Thomaz Ultra: Processing message:', message)
 
       const sessionId = conversationId || `session-${Date.now()}`
 
-      const conversationalResponse = await thomazConversationalService.chat(
-        message,
-        sessionId,
-        userId
-      )
+      const { data, error } = await supabase.functions.invoke('thomaz-chat', {
+        body: {
+          message,
+          sessionId,
+          userId
+        }
+      })
 
-      console.log('💬 Conversational response generated:', conversationalResponse.tone)
+      if (error) {
+        console.error('Error calling thomaz-chat function:', error)
 
-      const suggestedActions = conversationalResponse.suggestedQuestions?.map((q, idx) => ({
+        const fallbackResponse = await thomazConversationalService.chat(
+          message,
+          sessionId,
+          userId
+        )
+
+        const suggestedActions = fallbackResponse.suggestedQuestions?.map((q, idx) => ({
+          id: `suggestion-${idx}`,
+          title: q,
+          description: q,
+          priority: 'medium' as const,
+          category: 'suggestion'
+        })) || []
+
+        await this.saveConversation(userId, message, fallbackResponse.message, sessionId)
+
+        return {
+          response: fallbackResponse.message,
+          suggestedActions,
+          confidence: fallbackResponse.needsClarification ? 0.7 : 0.9,
+          conversationId: sessionId
+        }
+      }
+
+      console.log('✅ Response received from AI')
+
+      const aiResponse = data.response
+      const suggestedQuestions = data.suggestedQuestions || []
+
+      const suggestedActions = suggestedQuestions.map((q: string, idx: number) => ({
         id: `suggestion-${idx}`,
         title: q,
         description: q,
         priority: 'medium' as const,
         category: 'suggestion'
-      })) || []
+      }))
 
-      await this.saveConversation(userId, message, conversationalResponse.message, sessionId)
+      await this.saveConversation(userId, message, aiResponse, sessionId)
 
       return {
-        response: conversationalResponse.message,
+        response: aiResponse,
         suggestedActions,
-        confidence: conversationalResponse.needsClarification ? 0.7 : 0.9,
+        confidence: data.confidence || 0.9,
         conversationId: sessionId
       }
     } catch (error) {
