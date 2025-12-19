@@ -85,7 +85,6 @@ import EmailInbox from './pages/EmailInbox'
 import EmailCompose from './pages/EmailCompose'
 import { AIChatbot } from './components/AIChatbot'
 import ThomazSuperChat from './components/ThomazSuperChat'
-import { GiartechAssistant } from './components/GiartechAssistant'
 import ThomazChat from './pages/ThomazChat'
 import ReportsAdvanced from './pages/ReportsAdvanced'
 import Automations from './pages/Automations'
@@ -982,11 +981,8 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* Thomaz Super Chat - Assistente Inteligente */}
+      {/* Thomaz Super Chat - Assistente Inteligente Único */}
       <ThomazSuperChat />
-
-      {/* Assistente Giartech - Inteligência Corporativa */}
-      <GiartechAssistant />
 
       {/* Busca Global (Cmd+K) */}
       <GlobalSearch isOpen={isSearchOpen} onClose={closeSearch} />

@@ -82,6 +82,9 @@ export class ThomazReasoningEngine {
   }
 
   private classifyQuery(query: string): string {
+    if (!query || typeof query !== 'string') {
+      return 'general'
+    }
     const lowerQuery = query.toLowerCase()
 
     if (lowerQuery.includes('financeiro') || lowerQuery.includes('receita') ||
