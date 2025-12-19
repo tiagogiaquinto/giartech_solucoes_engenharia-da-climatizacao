@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase'
 import { ThomazReasoningEngine, AnalysisContext, ReasoningResult } from './thomazReasoningEngine'
 import { buildSystemPrompt, ThomazContext } from '../config/thomazSystemPrompt'
+import thomazConversationalService from './thomazConversationalService'
 
 export interface ThomazConversationResult {
   response: string
@@ -48,51 +49,31 @@ class ThomazSuperAdvancedService {
     try {
       console.log('🧠 Thomaz Ultra: Processing message:', message)
 
-      const userContext = await this.buildUserContext(userId)
+      const sessionId = conversationId || `session-${Date.now()}`
 
-      const detectedIntent = this.detectIntent(message)
-      console.log('🎯 Detected intent:', detectedIntent)
+      const conversationalResponse = await thomazConversationalService.chat(
+        message,
+        sessionId,
+        userId
+      )
 
-      let enhancedResponse = ''
-      let dataVisualization = null
+      console.log('💬 Conversational response generated:', conversationalResponse.tone)
 
-      if (detectedIntent.requiresAnalysis) {
-        const analysisResult = await this.performDeepAnalysis(detectedIntent.type, message)
-        enhancedResponse = this.formatAnalysisResponse(analysisResult, detectedIntent.type)
-        dataVisualization = analysisResult
-      } else {
-        const analysisContext: AnalysisContext = {
-          query: message,
-          userId,
-          userRole: userContext.userRole || 'user',
-          companyId: userContext.companyId,
-          conversationHistory: await this.getConversationHistory(conversationId)
-        }
+      const suggestedActions = conversationalResponse.suggestedQuestions?.map((q, idx) => ({
+        id: `suggestion-${idx}`,
+        title: q,
+        description: q,
+        priority: 'medium' as const,
+        category: 'suggestion'
+      })) || []
 
-        const reasoning = await this.reasoningEngine.reason(message, analysisContext)
-        enhancedResponse = reasoning.result
-      }
-
-      const suggestedActions = this.generateContextualActions(detectedIntent.type, message)
-
-      await this.saveConversation(userId, message, enhancedResponse, conversationId)
-
-      const proactiveInsights = await this.generateProactiveInsights(userContext)
-
-      if (proactiveInsights.length > 0) {
-        enhancedResponse += '\n\n**🔔 Insights Proativos:**\n'
-        proactiveInsights.slice(0, 3).forEach(insight => {
-          const icon = insight.type === 'alert' ? '🚨' : insight.type === 'opportunity' ? '💡' : '📊'
-          enhancedResponse += `${icon} ${insight.title}: ${insight.description}\n`
-        })
-      }
+      await this.saveConversation(userId, message, conversationalResponse.message, sessionId)
 
       return {
-        response: enhancedResponse,
+        response: conversationalResponse.message,
         suggestedActions,
-        dataVisualization,
-        confidence: detectedIntent.confidence,
-        conversationId
+        confidence: conversationalResponse.needsClarification ? 0.7 : 0.9,
+        conversationId: sessionId
       }
     } catch (error) {
       console.error('❌ Error in Thomaz Ultra:', error)
