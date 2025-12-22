@@ -37,7 +37,8 @@ import {
   Trophy,
   Star,
   Award,
-  Heart
+  Heart,
+  Megaphone
 } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { supabase } from '../../lib/supabase'
@@ -59,6 +60,8 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'agenda', path: '/calendar', icon: Calendar, label: 'Agenda', description: 'Compromissos e eventos' },
   { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes', description: 'Gestão de clientes PF/PJ' },
   { id: 'crm-professional', path: '/crm-professional', icon: Target, label: 'CRM Profissional', description: 'Pipeline de vendas e pós-venda completo com lead scoring, automação de follow-ups e gestão inteligente de clientes' },
+  { id: 'lead-capture-metrics', path: '/lead-capture-metrics', icon: TrendingUp, label: 'Captação de Leads', description: 'Métricas e análise de performance de captação automática de leads' },
+  { id: 'lead-capture-campaigns', path: '/lead-capture-campaigns', icon: Megaphone, label: 'Campanhas de Captação', description: 'Gerencie campanhas automáticas de captação via CNPJ, LinkedIn e Instagram' },
   { id: 'crm-templates', path: '/crm-templates', icon: MessageSquare, label: 'Mensagens do CRM', description: 'Configure mensagens personalizadas para WhatsApp, Email e SMS' },
   { id: 'customer-gamification', path: '/customer-gamification', icon: Star, label: 'Gamificação de Clientes', description: 'Sistema de pontos, níveis, badges e benefícios para fidelização de clientes' },
   { id: 'customer-gamification-manager', path: '/customer-gamification-manager', icon: Settings, label: 'Gerenciar Gamificação', description: 'Controle quais clientes participam e quais OSs geram pontos' },

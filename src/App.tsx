@@ -112,6 +112,8 @@ import GoalsAndRankings from './pages/GoalsAndRankings'
 import BudgetManagement from './pages/BudgetManagement'
 import DocumentCenter from './pages/DocumentCenter'
 import ThomazDashboard from './pages/ThomazDashboard'
+import LeadCaptureMetrics from './pages/LeadCaptureMetrics'
+import LeadCaptureCampaigns from './pages/LeadCaptureCampaigns'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -586,6 +588,22 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <DocumentCenter />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/lead-capture-metrics" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <LeadCaptureMetrics />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/lead-capture-campaigns" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <LeadCaptureCampaigns />
               </WebLayout>
             </ProtectedRoute>
           } />
