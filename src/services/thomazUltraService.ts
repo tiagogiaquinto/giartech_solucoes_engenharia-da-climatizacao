@@ -788,19 +788,32 @@ Pergunte qualquer coisa sobre o negócio!`
       return 'Não há contas bancárias cadastradas no sistema.'
     }
 
-    const totalBalance = data.reduce((sum, account) => sum + (account.balance || 0), 0)
-    const negativeAccounts = data.filter(acc => (acc.balance || 0) < 0)
-    const lowBalanceAccounts = data.filter(acc => (acc.balance || 0) > 0 && (acc.balance || 0) < 5000)
-    const healthyAccounts = data.filter(acc => (acc.balance || 0) >= 5000)
+    const totalBalance = data.reduce((sum, account) => sum + (account.saldo_calculado || 0), 0)
+    const totalRecebiveis = data.reduce((sum, account) => sum + (account.receitas_pendentes || 0), 0)
+    const totalPagar = data.reduce((sum, account) => sum + (account.despesas_pendentes || 0), 0)
+    const totalVencido = data.reduce((sum, account) => sum + (account.receitas_vencidas || 0), 0)
+    const totalAtrasado = data.reduce((sum, account) => sum + (account.despesas_vencidas || 0), 0)
+
+    const negativeAccounts = data.filter(acc => (acc.saldo_calculado || 0) < 0)
+    const lowBalanceAccounts = data.filter(acc => (acc.saldo_calculado || 0) > 0 && (acc.saldo_calculado || 0) < 5000)
+    const healthyAccounts = data.filter(acc => (acc.saldo_calculado || 0) >= 5000)
 
     let analysis = `**📋 Resumo Executivo:**\n`
-    analysis += `Posição total: R$ ${totalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
-    analysis += `${data.length} contas ativas no sistema\n\n`
+    analysis += `Posição total em caixa: R$ ${totalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    analysis += `${data.length} conta(s) ativa(s) no sistema\n`
+
+    if (totalRecebiveis > 0 || totalPagar > 0) {
+      const projecao = totalBalance + totalRecebiveis - totalPagar
+      analysis += `Projeção (com pendências): R$ ${projecao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    }
+    analysis += '\n'
 
     if (negativeAccounts.length > 0) {
       analysis += `🔴 **ATENÇÃO CRÍTICA:** ${negativeAccounts.length} conta(s) com saldo negativo:\n`
       negativeAccounts.forEach(acc => {
-        analysis += `   • ${acc.account_name}: R$ ${acc.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+        analysis += `   • ${acc.conta}: R$ ${acc.saldo_calculado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        if (acc.banco) analysis += ` [${acc.banco}]`
+        analysis += '\n'
       })
       analysis += '\n'
     }
@@ -808,7 +821,9 @@ Pergunte qualquer coisa sobre o negócio!`
     if (lowBalanceAccounts.length > 0) {
       analysis += `⚠️ **Saldo Baixo:** ${lowBalanceAccounts.length} conta(s) com saldo reduzido:\n`
       lowBalanceAccounts.forEach(acc => {
-        analysis += `   • ${acc.account_name}: R$ ${acc.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+        analysis += `   • ${acc.conta}: R$ ${acc.saldo_calculado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        if (acc.banco) analysis += ` [${acc.banco}]`
+        analysis += '\n'
       })
       analysis += '\n'
     }
@@ -816,22 +831,58 @@ Pergunte qualquer coisa sobre o negócio!`
     if (healthyAccounts.length > 0) {
       analysis += `✅ **Contas Saudáveis:** ${healthyAccounts.length} conta(s) com boa liquidez:\n`
       healthyAccounts.forEach(acc => {
-        analysis += `   • ${acc.account_name}: R$ ${acc.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+        analysis += `   • ${acc.conta}: R$ ${acc.saldo_calculado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        if (acc.banco) analysis += ` [${acc.banco}]`
+        analysis += '\n'
       })
+      analysis += '\n'
+    }
+
+    if (totalRecebiveis > 0) {
+      analysis += `📥 **A Receber:** R$ ${totalRecebiveis.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+      if (totalVencido > 0) {
+        analysis += ` (🔴 R$ ${totalVencido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} vencido - INADIMPLÊNCIA)`
+      }
+      analysis += '\n'
+    }
+
+    if (totalPagar > 0) {
+      analysis += `📤 **A Pagar:** R$ ${totalPagar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+      if (totalAtrasado > 0) {
+        analysis += ` (🔴 R$ ${totalAtrasado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} atrasado - AÇÃO URGENTE)`
+      }
+      analysis += '\n'
+    }
+
+    if (totalRecebiveis > 0 || totalPagar > 0) {
       analysis += '\n'
     }
 
     if (negativeAccounts.length > 0 && healthyAccounts.length > 0) {
       const bestSourceAccount = healthyAccounts.reduce((max, acc) =>
-        acc.balance > max.balance ? acc : max
+        acc.saldo_calculado > max.saldo_calculado ? acc : max
       )
       const worstAccount = negativeAccounts[0]
-      const transferAmount = Math.abs(worstAccount.balance) + 1000
+      const transferAmount = Math.abs(worstAccount.saldo_calculado) + 1000
 
       analysis += `💡 **Recomendação Estratégica:**\n`
       analysis += `Transferir R$ ${transferAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} `
-      analysis += `de "${bestSourceAccount.account_name}" para "${worstAccount.account_name}" `
-      analysis += `para cobrir o negativo e manter buffer de segurança.\n`
+      analysis += `de "${bestSourceAccount.conta}" para "${worstAccount.conta}" `
+      analysis += `para cobrir o negativo e manter buffer de segurança.\n\n`
+    }
+
+    if (totalVencido > 0) {
+      analysis += `⚡ **Ação Imediata - Inadimplência:**\n`
+      analysis += `1. Intensificar cobranças dos R$ ${totalVencido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} vencidos\n`
+      analysis += `2. Contatar clientes inadimplentes com urgência\n`
+      analysis += `3. Considerar desconto para pagamento imediato\n\n`
+    }
+
+    if (totalAtrasado > 0) {
+      analysis += `⚡ **Ação Imediata - Contas Atrasadas:**\n`
+      analysis += `1. Priorizar pagamento dos R$ ${totalAtrasado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} atrasados\n`
+      analysis += `2. Renegociar prazos se necessário\n`
+      analysis += `3. Evitar juros e multas adicionais\n`
     }
 
     return analysis
