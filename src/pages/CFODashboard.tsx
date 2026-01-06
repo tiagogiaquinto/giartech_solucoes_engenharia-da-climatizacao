@@ -117,26 +117,76 @@ const CFODashboard = () => {
   const [topCustomers, setTopCustomers] = useState<CustomerIntelligence[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter' | 'year'>('month')
+  const [availablePeriods, setAvailablePeriods] = useState<any[]>([])
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null)
+  const [useCustomPeriod, setUseCustomPeriod] = useState(false)
 
   useEffect(() => {
-    loadCFOData()
+    loadAvailablePeriods()
+  }, [])
+
+  useEffect(() => {
+    if (availablePeriods.length > 0 || !useCustomPeriod) {
+      loadCFOData()
+    }
 
     // Refresh automático a cada 5 minutos
     const interval = setInterval(loadCFOData, 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [selectedPeriod])
+  }, [selectedPeriod, selectedPeriodId, useCustomPeriod])
+
+  const loadAvailablePeriods = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('financial_periods')
+        .select('id, period_name, period_type, start_date, end_date, fiscal_year')
+        .order('start_date', { ascending: false })
+        .limit(24)
+
+      if (error) throw error
+      setAvailablePeriods(data || [])
+
+      // Selecionar o período mais recente por padrão
+      if (data && data.length > 0) {
+        setSelectedPeriodId(data[0].id)
+      }
+    } catch (error: any) {
+      console.error('Erro ao carregar períodos:', error)
+    }
+  }
 
   const loadCFOData = async () => {
     try {
       setLoading(true)
 
-      // Carregar KPIs do CFO
-      const { data: kpisData, error: kpisError } = await supabase
-        .from('v_cfo_kpis')
-        .select('*')
-        .maybeSingle()
+      let kpisData = null
 
-      if (kpisError) throw kpisError
+      if (useCustomPeriod && selectedPeriodId) {
+        // Usar período específico via RPC
+        const selectedPeriodData = availablePeriods.find(p => p.id === selectedPeriodId)
+        if (selectedPeriodData) {
+          const { data, error } = await supabase.rpc('get_cfo_kpis_by_period', {
+            p_start_date: selectedPeriodData.start_date,
+            p_end_date: selectedPeriodData.end_date
+          })
+
+          if (error) throw error
+          kpisData = data && data.length > 0 ? data[0] : null
+        }
+      } else {
+        // Usar view padrão (ano atual)
+        const { data, error } = await supabase
+          .from('v_cfo_kpis')
+          .select('*')
+          .maybeSingle()
+
+        if (error) throw error
+        kpisData = data
+      }
+
+      if (!kpisData) {
+        console.warn('Nenhum dado de KPI encontrado')
+      }
 
       // Carregar alertas ativos
       const { data: alertsData, error: alertsError } = await supabase
@@ -295,15 +345,44 @@ const CFODashboard = () => {
             <p className="text-gray-600">Inteligência Financeira Executiva</p>
           </div>
           <div className="flex items-center gap-3">
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="month">Último Mês</option>
-              <option value="quarter">Último Trimestre</option>
-              <option value="year">Último Ano</option>
-            </select>
+            <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2">
+              <input
+                type="checkbox"
+                id="useCustomPeriod"
+                checked={useCustomPeriod}
+                onChange={(e) => setUseCustomPeriod(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="useCustomPeriod" className="text-sm text-gray-700 cursor-pointer">
+                Período Específico
+              </label>
+            </div>
+
+            {useCustomPeriod ? (
+              <select
+                value={selectedPeriodId || ''}
+                onChange={(e) => setSelectedPeriodId(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 min-w-[180px]"
+              >
+                <option value="">Selecione o período</option>
+                {availablePeriods.map((period) => (
+                  <option key={period.id} value={period.id}>
+                    {period.period_name} ({period.fiscal_year})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value as any)}
+                className="px-4 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="month">Último Mês</option>
+                <option value="quarter">Último Trimestre</option>
+                <option value="year">Ano Atual</option>
+              </select>
+            )}
+
             <button
               onClick={loadCFOData}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
