@@ -622,6 +622,18 @@ Pergunte qualquer coisa sobre o negócio!`
 
   private async handleGeneralQuery(query: string): Promise<ThomazResponse> {
     try {
+      const capabilities = await this.getRelevantCapabilities(query)
+
+      if (capabilities && capabilities.length > 0) {
+        const mainCapability = capabilities[0]
+
+        const analysisResult = await this.executeAnalyticalCapability(mainCapability, query)
+
+        if (analysisResult.success) {
+          return analysisResult.response
+        }
+      }
+
       const reasoning = await reason(query, this.context)
 
       let message = reasoning.response || 'Entendi sua pergunta, mas preciso de mais contexto para responder adequadamente.'
@@ -647,6 +659,292 @@ Pergunte qualquer coisa sobre o negócio!`
         suggestions: ['Ver dashboard', 'Listar opções', 'Ajuda']
       }
     }
+  }
+
+  private async getRelevantCapabilities(query: string): Promise<any[]> {
+    try {
+      const { data, error } = await thomazDatabaseService.executeQuery(
+        'SELECT * FROM get_relevant_capabilities($1)',
+        [query]
+      )
+
+      if (error) {
+        console.error('Erro ao buscar capacidades:', error)
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      console.error('Erro ao buscar capacidades:', error)
+      return []
+    }
+  }
+
+  private async executeAnalyticalCapability(capability: any, query: string): Promise<{success: boolean, response?: ThomazResponse}> {
+    try {
+      const views = capability.suggested_views || []
+      const queryTemplate = capability.suggested_query
+
+      if (!queryTemplate || views.length === 0) {
+        return { success: false }
+      }
+
+      const { data, error } = await thomazDatabaseService.executeQuery(queryTemplate, [])
+
+      if (error || !data) {
+        return { success: false }
+      }
+
+      const insights = await this.generateProactiveInsights()
+
+      const message = this.buildAnalyticalResponse(
+        capability.capability_name,
+        data,
+        insights,
+        query
+      )
+
+      return {
+        success: true,
+        response: {
+          message,
+          data,
+          confidence: 0.95,
+          sources: views,
+          suggestions: this.getSuggestionsForCapability(capability.capability_name)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao executar capacidade analítica:', error)
+      return { success: false }
+    }
+  }
+
+  private async generateProactiveInsights(): Promise<any[]> {
+    try {
+      const { data, error } = await thomazDatabaseService.executeQuery(
+        'SELECT * FROM generate_proactive_insights()',
+        []
+      )
+
+      if (error) {
+        console.error('Erro ao gerar insights:', error)
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      console.error('Erro ao gerar insights:', error)
+      return []
+    }
+  }
+
+  private buildAnalyticalResponse(capabilityName: string, data: any[], insights: any[], query: string): string {
+    let response = `📊 **${capabilityName}**\n\n`
+
+    switch (capabilityName) {
+      case 'Análise de Posição de Caixa':
+        response += this.analyzeCashPosition(data, insights)
+        break
+
+      case 'Análise de Fluxo de Caixa':
+        response += this.analyzeCashFlow(data, insights)
+        break
+
+      case 'Dashboard Executivo':
+        response += this.analyzeExecutiveDashboard(data, insights)
+        break
+
+      case 'Análise de Clientes RFM':
+        response += this.analyzeCustomerRFM(data, insights)
+        break
+
+      default:
+        response += this.analyzeGenericData(data, insights)
+    }
+
+    if (insights.length > 0) {
+      response += '\n\n🚨 **Alertas e Oportunidades:**\n'
+      insights.forEach(insight => {
+        const icon = insight.severity === 'critical' ? '🔴' :
+                     insight.severity === 'warning' ? '⚠️' :
+                     insight.severity === 'success' ? '✅' : 'ℹ️'
+        response += `${icon} ${insight.insight_message}\n`
+
+        if (insight.recommendations && insight.recommendations.length > 0) {
+          response += '   **Ações recomendadas:**\n'
+          insight.recommendations.forEach((rec: string) => {
+            response += `   • ${rec}\n`
+          })
+        }
+      })
+    }
+
+    return response
+  }
+
+  private analyzeCashPosition(data: any[], insights: any[]): string {
+    if (!data || data.length === 0) {
+      return 'Não há contas bancárias cadastradas no sistema.'
+    }
+
+    const totalBalance = data.reduce((sum, account) => sum + (account.balance || 0), 0)
+    const negativeAccounts = data.filter(acc => (acc.balance || 0) < 0)
+    const lowBalanceAccounts = data.filter(acc => (acc.balance || 0) > 0 && (acc.balance || 0) < 5000)
+    const healthyAccounts = data.filter(acc => (acc.balance || 0) >= 5000)
+
+    let analysis = `**📋 Resumo Executivo:**\n`
+    analysis += `Posição total: R$ ${totalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    analysis += `${data.length} contas ativas no sistema\n\n`
+
+    if (negativeAccounts.length > 0) {
+      analysis += `🔴 **ATENÇÃO CRÍTICA:** ${negativeAccounts.length} conta(s) com saldo negativo:\n`
+      negativeAccounts.forEach(acc => {
+        analysis += `   • ${acc.account_name}: R$ ${acc.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+      })
+      analysis += '\n'
+    }
+
+    if (lowBalanceAccounts.length > 0) {
+      analysis += `⚠️ **Saldo Baixo:** ${lowBalanceAccounts.length} conta(s) com saldo reduzido:\n`
+      lowBalanceAccounts.forEach(acc => {
+        analysis += `   • ${acc.account_name}: R$ ${acc.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+      })
+      analysis += '\n'
+    }
+
+    if (healthyAccounts.length > 0) {
+      analysis += `✅ **Contas Saudáveis:** ${healthyAccounts.length} conta(s) com boa liquidez:\n`
+      healthyAccounts.forEach(acc => {
+        analysis += `   • ${acc.account_name}: R$ ${acc.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+      })
+      analysis += '\n'
+    }
+
+    if (negativeAccounts.length > 0 && healthyAccounts.length > 0) {
+      const bestSourceAccount = healthyAccounts.reduce((max, acc) =>
+        acc.balance > max.balance ? acc : max
+      )
+      const worstAccount = negativeAccounts[0]
+      const transferAmount = Math.abs(worstAccount.balance) + 1000
+
+      analysis += `💡 **Recomendação Estratégica:**\n`
+      analysis += `Transferir R$ ${transferAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} `
+      analysis += `de "${bestSourceAccount.account_name}" para "${worstAccount.account_name}" `
+      analysis += `para cobrir o negativo e manter buffer de segurança.\n`
+    }
+
+    return analysis
+  }
+
+  private analyzeCashFlow(data: any[], insights: any[]): string {
+    if (!data || data.length === 0) {
+      return 'Não há dados de fluxo de caixa no período analisado.'
+    }
+
+    const totalInflow = data.reduce((sum, entry) =>
+      sum + (entry.tipo === 'receita' ? (entry.valor || 0) : 0), 0
+    )
+    const totalOutflow = data.reduce((sum, entry) =>
+      sum + (entry.tipo === 'despesa' ? (entry.valor || 0) : 0), 0
+    )
+    const netFlow = totalInflow - totalOutflow
+
+    let analysis = `**📋 Resumo Executivo:**\n`
+    analysis += `Período: Últimos 30 dias\n`
+    analysis += `Entradas: R$ ${totalInflow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    analysis += `Saídas: R$ ${totalOutflow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    analysis += `Fluxo Líquido: R$ ${netFlow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`
+
+    if (netFlow < 0) {
+      analysis += `🔴 **ALERTA CRÍTICO:** Fluxo de caixa negativo!\n`
+      analysis += `Você está gastando mais do que recebendo. Isso é insustentável.\n\n`
+
+      analysis += `💡 **Ações Imediatas:**\n`
+      analysis += `1. Revisar e cortar despesas não essenciais\n`
+      analysis += `2. Intensificar cobranças de recebíveis\n`
+      analysis += `3. Buscar adiantamento de receitas futuras\n`
+      analysis += `4. Considerar linha de crédito para emergência\n\n`
+    } else if (netFlow < totalInflow * 0.1) {
+      analysis += `⚠️ **ATENÇÃO:** Margem de fluxo muito baixa (${(netFlow/totalInflow * 100).toFixed(1)}%).\n`
+      analysis += `Recomendado: manter margem acima de 20%.\n\n`
+    } else {
+      analysis += `✅ **Fluxo Saudável:** Margem de ${(netFlow/totalInflow * 100).toFixed(1)}%.\n\n`
+    }
+
+    return analysis
+  }
+
+  private analyzeExecutiveDashboard(data: any[], insights: any[]): string {
+    if (!data || data.length === 0) {
+      return 'Dashboard ainda sem dados para análise.'
+    }
+
+    const kpis = data[0]
+
+    let analysis = `**📋 Visão Geral do Negócio:**\n\n`
+
+    if (kpis.total_receita) {
+      analysis += `💰 Receita Total: R$ ${kpis.total_receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    }
+    if (kpis.total_despesa) {
+      analysis += `💸 Despesas: R$ ${kpis.total_despesa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    }
+    if (kpis.total_clientes) {
+      analysis += `👥 Clientes: ${kpis.total_clientes}\n`
+    }
+    if (kpis.total_os) {
+      analysis += `📋 Ordens de Serviço: ${kpis.total_os}\n`
+    }
+
+    analysis += '\n'
+
+    return analysis
+  }
+
+  private analyzeCustomerRFM(data: any[], insights: any[]): string {
+    if (!data || data.length === 0) {
+      return 'Não há dados de clientes para análise RFM.'
+    }
+
+    const champions = data.filter(c => c.rfm_segment === 'Champions')
+    const atRisk = data.filter(c => c.rfm_segment === 'At Risk')
+    const lost = data.filter(c => c.rfm_segment === 'Lost')
+
+    let analysis = `**📋 Análise de Segmentação RFM:**\n\n`
+    analysis += `Total de clientes analisados: ${data.length}\n\n`
+
+    if (champions.length > 0) {
+      analysis += `✅ **Champions** (${champions.length}): Seus melhores clientes!\n`
+      analysis += `   Ação: Manter relacionamento VIP, oferecer serviços premium\n\n`
+    }
+
+    if (atRisk.length > 0) {
+      analysis += `⚠️ **Em Risco** (${atRisk.length}): Clientes que estão esfriando\n`
+      analysis += `   Ação: Contato proativo, oferta especial de reengajamento\n\n`
+    }
+
+    if (lost.length > 0) {
+      analysis += `🔴 **Perdidos** (${lost.length}): Clientes inativos\n`
+      analysis += `   Ação: Campanha de reativação, entender motivo da saída\n\n`
+    }
+
+    return analysis
+  }
+
+  private analyzeGenericData(data: any[], insights: any[]): string {
+    return `Encontrei ${data.length} registros relacionados à sua consulta.\n\n`
+  }
+
+  private getSuggestionsForCapability(capabilityName: string): string[] {
+    const suggestions: Record<string, string[]> = {
+      'Análise de Posição de Caixa': ['Fluxo de caixa', 'Contas a pagar', 'Projeções'],
+      'Análise de Fluxo de Caixa': ['Posição de caixa', 'Análise de inadimplência', 'Projeções'],
+      'Dashboard Executivo': ['Análise financeira', 'Clientes', 'Ordens de serviço'],
+      'Análise de Clientes RFM': ['Oportunidades CRM', 'Análise de vendas', 'Gamificação']
+    }
+
+    return suggestions[capabilityName] || ['Ver dashboard', 'Ajuda']
   }
 
   private formatDataInsights(insights: any): string {
