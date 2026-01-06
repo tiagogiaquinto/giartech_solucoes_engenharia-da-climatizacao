@@ -888,6 +888,113 @@ Pergunte qualquer coisa sobre o negócio!`
     return analysis
   }
 
+  private analyzeCashProjection30d(data: any[], insights: any[]): string {
+    if (!data || data.length === 0) {
+      return 'Não há contas bancárias ativas para projeção.'
+    }
+
+    const totalSaldoAtual = data.reduce((sum, acc) => sum + (acc.saldo_atual || 0), 0)
+    const totalImpacto30d = data.reduce((sum, acc) => sum + (acc.impacto_30d || 0), 0)
+    const totalProjetado = data.reduce((sum, acc) => sum + (acc.saldo_projetado_30d || 0), 0)
+
+    const contasCriticas = data.filter(acc => acc.status_risco_30d === 'RISCO_CRITICO')
+    const contasAltoRisco = data.filter(acc => acc.status_risco_30d === 'RISCO_ALTO')
+    const contasComInversao = data.filter(acc => acc.alerta_inversao_saldo === true)
+    const contasComEsgotamento = data.filter(acc => acc.dias_ate_esgotamento !== null && acc.dias_ate_esgotamento < 30)
+
+    let analysis = `**📊 Projeção de Caixa - Próximos 30 Dias:**\n\n`
+
+    analysis += `**📋 Posição Atual vs Projeção:**\n`
+    analysis += `Saldo Atual: R$ ${totalSaldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+    analysis += `Impacto 30 dias: R$ ${totalImpacto30d.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} `
+    analysis += totalImpacto30d >= 0 ? '(positivo)' : '(negativo)'
+    analysis += '\n'
+    analysis += `Saldo Projetado: R$ ${totalProjetado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`
+
+    const variacaoPercentual = totalSaldoAtual !== 0
+      ? ((totalImpacto30d / totalSaldoAtual) * 100).toFixed(1)
+      : '0'
+    analysis += `Variação esperada: ${variacaoPercentual}%\n\n`
+
+    if (contasCriticas.length > 0) {
+      analysis += `🔴 **ALERTA CRÍTICO:** ${contasCriticas.length} conta(s) em RISCO CRÍTICO:\n`
+      contasCriticas.forEach(acc => {
+        analysis += `   • ${acc.conta}: Atual R$ ${acc.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} `
+        analysis += `→ Projetado R$ ${acc.saldo_projetado_30d.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+        if (acc.dias_ate_esgotamento) {
+          analysis += `     ⏰ Estimativa de esgotamento: ${acc.dias_ate_esgotamento} dias\n`
+        }
+      })
+      analysis += '\n'
+    }
+
+    if (contasComInversao.length > 0) {
+      analysis += `⚠️ **ALERTA DE INVERSÃO:** ${contasComInversao.length} conta(s) vão de POSITIVO para NEGATIVO:\n`
+      contasComInversao.forEach(acc => {
+        analysis += `   • ${acc.conta}: R$ ${acc.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} `
+        analysis += `→ R$ ${acc.saldo_projetado_30d.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+      })
+      analysis += '\n'
+    }
+
+    if (contasAltoRisco.length > 0) {
+      analysis += `⚠️ **Alto Risco:** ${contasAltoRisco.length} conta(s) com saldo baixo projetado:\n`
+      contasAltoRisco.forEach(acc => {
+        analysis += `   • ${acc.conta}: Projetado R$ ${acc.saldo_projetado_30d.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+      })
+      analysis += '\n'
+    }
+
+    if (contasComEsgotamento.length > 0) {
+      analysis += `⏰ **Atenção - Esgotamento Próximo:**\n`
+      const contasOrdenadas = contasComEsgotamento.sort((a, b) =>
+        (a.dias_ate_esgotamento || 999) - (b.dias_ate_esgotamento || 999)
+      )
+      contasOrdenadas.forEach(acc => {
+        analysis += `   • ${acc.conta}: ~${acc.dias_ate_esgotamento} dias até zerar\n`
+      })
+      analysis += '\n'
+    }
+
+    if (contasCriticas.length > 0 || contasComInversao.length > 0) {
+      analysis += `💡 **Recomendações Estratégicas:**\n`
+
+      if (totalImpacto30d < 0) {
+        analysis += `1. 🚨 **URGENTE:** Reduzir despesas imediatas em até ${Math.abs(totalImpacto30d * 0.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+        analysis += `2. 💰 Intensificar cobranças de recebíveis\n`
+        analysis += `3. 📅 Renegociar prazos de pagamentos críticos\n`
+        analysis += `4. 💳 Preparar linha de crédito preventiva\n`
+      } else {
+        analysis += `1. 🔄 Realizar transferências preventivas entre contas\n`
+        analysis += `2. 📊 Monitorar diariamente as contas críticas\n`
+        analysis += `3. 💰 Priorizar recebimento de receitas vencidas\n`
+      }
+      analysis += '\n'
+    } else if (totalProjetado > totalSaldoAtual) {
+      analysis += `✅ **Projeção Positiva:**\n`
+      analysis += `Seu caixa deve crescer R$ ${(totalProjetado - totalSaldoAtual).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} nos próximos 30 dias.\n\n`
+      analysis += `💡 **Oportunidades:**\n`
+      analysis += `1. Considere investir o excedente\n`
+      analysis += `2. Avalie oportunidades de crescimento\n`
+      analysis += `3. Negocie melhores condições com fornecedores\n`
+    }
+
+    const receitas30d = data.reduce((sum, acc) => sum + (acc.receitas_30d || 0), 0)
+    const despesas30d = data.reduce((sum, acc) => sum + (acc.despesas_30d || 0), 0)
+
+    if (receitas30d > 0 || despesas30d > 0) {
+      analysis += `\n**📅 Detalhamento do Período:**\n`
+      if (receitas30d > 0) {
+        analysis += `Receitas esperadas: R$ ${receitas30d.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+      }
+      if (despesas30d > 0) {
+        analysis += `Despesas previstas: R$ ${despesas30d.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`
+      }
+    }
+
+    return analysis
+  }
+
   private analyzeCashFlow(data: any[], insights: any[]): string {
     if (!data || data.length === 0) {
       return 'Não há dados de fluxo de caixa no período analisado.'
