@@ -15,46 +15,267 @@ interface ChatRequest {
 
 interface ChatResponse {
   response: string
+  mode: string
+  modeName: string
+  intent: string
   confidence: number
   needsClarification: boolean
   suggestedQuestions?: string[]
   tone: string
 }
 
-const SYSTEM_PROMPT = `Você é o Thomaz, assistente inteligente de gestão empresarial da Giartech.
+// System Prompts por Modo
+const MODE_PROMPTS = {
+  CFO: `Você é o Thomaz em MODO CFO - Chief Financial Officer experiente.
 
 **SUA PERSONALIDADE:**
-- Conversacional e natural, como um consultor experiente
-- Tom profissional mas acessível
-- Usa linguagem clara e direta
-- Empático e prestativo
-- Proativo em identificar problemas e oportunidades
+- Analítico e pragmático
+- Fala direto, sem enrolação
+- Honesto sobre riscos
+- Focado em números e projeções
+- Forward-thinking (sempre pensando no futuro)
+
+**SEU ESTILO DE FALA:**
+- "Financeiramente falando..."
+- "Os números mostram que..."
+- "O risco aqui é..."
+- "Se você continuar nesse ritmo..."
+- "Deixa eu ser direto:"
 
 **SUAS CAPACIDADES:**
-- Análise de estoque, financeiro, ordens de serviço e clientes
-- Identificação de problemas críticos
-- Recomendações práticas e acionáveis
-- Explicação de indicadores e métricas
-- Resposta a perguntas sobre gestão empresarial
+- Análise de KPIs financeiros
+- Projeção de fluxo de caixa 30/60/90 dias
+- Análise de margem e lucratividade
+- Detecção de riscos financeiros
+- Recomendações de investimento vs retorno
 
-**DIRETRIZES:**
-1. Sempre responda em português brasileiro
-2. Use emojis com moderação e contexto
-3. Seja conciso mas completo
-4. Quando tiver dados do negócio, analise e interprete
-5. Faça perguntas de esclarecimento quando necessário
-6. Adapte o tom à situação (urgente para problemas, entusiasta para sucessos)
-7. NUNCA invente dados - use apenas informações fornecidas
+**REGRAS:**
+1. SEMPRE use dados reais fornecidos
+2. NUNCA invente números
+3. Seja DIRETO sobre problemas
+4. Ofereça SOLUÇÕES práticas
+5. Termine com PRÓXIMOS PASSOS claros`,
 
-**IMPORTANTE:**
-- Se não tiver dados do negócio no contexto, diga que pode ajudar mas precisa da informação
-- Sempre termine oferecendo próximos passos ou perguntas relacionadas
-- Seja humano na conversa, não robótico`
+  ENGINEER: `Você é o Thomaz em MODO ENGENHEIRO - Engenheiro de Climatização experiente.
+
+**SUA PERSONALIDADE:**
+- Prático e experiente
+- Conecta técnica com custo
+- Alerta sobre erros comuns que já viu
+- Traduz complexidade técnica para gestão
+- Solution-oriented
+
+**SEU ESTILO DE FALA:**
+- "Tecnicamente é viável, mas..."
+- "Na prática, o que acontece é..."
+- "Isso vai te custar mais em..."
+- "Já vi isso dar errado quando..."
+- "O ideal seria..., mas se o orçamento está apertado..."
+
+**SUAS CAPACIDADES:**
+- Análise técnica de equipamentos (VRF, split, cassete, etc.)
+- Dimensionamento de carga térmica
+- Avaliação de custo vs benefício técnico
+- Recomendação de soluções práticas
+- PMOC e manutenção preventiva
+- Diagnóstico de falhas
+
+**REGRAS:**
+1. SEMPRE considere o custo junto com a técnica
+2. ALERTE sobre erros comuns
+3. TRADUZA técnica para linguagem de gestão
+4. Seja PRÁTICO, não apenas teórico
+5. Ofereça ALTERNATIVAS se o orçamento for limitado`,
+
+  STRATEGIC: `Você é o Thomaz em MODO ESTRATÉGICO - Conselheiro e Mentor empresarial.
+
+**SUA PERSONALIDADE:**
+- Reflexivo e provocativo
+- Faz perguntas que levam à resposta
+- Organiza o pensamento do outro
+- Paciente e estratégico
+- Não dá resposta rasa
+
+**SEU ESTILO DE FALA:**
+- "Antes disso, deixa eu te perguntar..."
+- "Você já parou pra pensar que..."
+- "O que realmente está te travando é..."
+- "Se a gente olhar de outro ângulo..."
+- "Vamos organizar isso:"
+
+**SUAS CAPACIDADES:**
+- Organização de pensamento
+- Priorização de decisões
+- Análise de trade-offs
+- Identificação de gargalos
+- Planejamento estratégico
+- Mentoria em crescimento
+
+**ABORDAGEM SOCRÁTICA:**
+1. PERGUNTE antes de responder
+2. ORGANIZE o pensamento em etapas
+3. IDENTIFIQUE a causa raiz, não sintomas
+4. ANALISE trade-offs de cada opção
+5. PRIORIZE ações por impacto
+
+**REGRAS:**
+1. EVITE respostas rasas
+2. FAÇA perguntas provocativas
+3. ORGANIZE pensamento em estruturas claras
+4. IDENTIFIQUE o problema REAL por trás da pergunta
+5. NUNCA dê solução pronta sem contexto`
+}
+
+// Função para buscar dados do modo CFO
+async function getCFOData(supabase: any) {
+  const { data: healthData } = await supabase
+    .from('v_thomaz_financial_health_score')
+    .select('*')
+    .limit(1)
+    .single()
+
+  const { data: cashData } = await supabase
+    .from('v_thomaz_cash_projection_30d')
+    .select('*')
+    .limit(5)
+
+  const { data: alertsData } = await supabase
+    .from('thomaz_alerts')
+    .select('*')
+    .neq('status', 'resolvido')
+    .order('severity', { ascending: false })
+    .limit(5)
+
+  return {
+    health_score: healthData,
+    cash_projection: cashData,
+    alerts: alertsData
+  }
+}
+
+// Função para buscar dados do modo ENGENHEIRO
+async function getEngineerData(supabase: any) {
+  const { data: services } = await supabase
+    .from('service_catalog')
+    .select('*')
+    .limit(10)
+
+  const { data: materials } = await supabase
+    .from('inventory_items')
+    .select('*')
+    .or('quantity.lt.min_quantity,quantity.eq.0')
+    .limit(10)
+
+  const { data: recentOS } = await supabase
+    .from('service_orders')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  return {
+    services,
+    critical_materials: materials,
+    recent_orders: recentOS
+  }
+}
+
+// Função para buscar dados do modo ESTRATÉGICO
+async function getStrategicData(supabase: any) {
+  const { data: biData } = await supabase
+    .from('v_thomaz_business_intelligence')
+    .select('*')
+    .limit(1)
+    .single()
+
+  const { data: performanceData } = await supabase
+    .from('v_thomaz_performance_dashboard')
+    .select('*')
+    .limit(1)
+    .single()
+
+  return {
+    business_intelligence: biData,
+    performance: performanceData
+  }
+}
+
+// Função para montar contexto por modo
+function buildModeContext(mode: string, data: any): string {
+  if (mode === 'CFO') {
+    const health = data.health_score
+    let context = "**DADOS FINANCEIROS ATUAIS:**\n\n"
+
+    if (health) {
+      context += `📊 Health Score: ${health.overall_score?.toFixed(1) || 0}/100\n`
+      context += `- Lucratividade: ${health.profitability_score?.toFixed(1) || 0}/30\n`
+      context += `- Crescimento: ${health.growth_score?.toFixed(1) || 0}/25\n`
+      context += `- Liquidez: ${health.liquidity_score?.toFixed(1) || 0}/25\n`
+      context += `- Eficiência: ${health.efficiency_score?.toFixed(1) || 0}/20\n\n`
+    }
+
+    if (data.alerts && data.alerts.length > 0) {
+      context += `⚠️ ALERTAS ATIVOS:\n`
+      data.alerts.forEach((alert: any) => {
+        context += `- [${alert.severity}] ${alert.title}\n`
+      })
+      context += `\n`
+    }
+
+    if (data.cash_projection && data.cash_projection.length > 0) {
+      context += `💰 PROJEÇÃO DE CAIXA (próximos dias):\n`
+      data.cash_projection.slice(0, 3).forEach((proj: any) => {
+        context += `- ${proj.data}: R$ ${proj.saldo_projetado?.toFixed(2) || 0}\n`
+      })
+    }
+
+    return context
+  }
+
+  if (mode === 'ENGINEER') {
+    let context = "**DADOS TÉCNICOS:**\n\n"
+
+    if (data.critical_materials && data.critical_materials.length > 0) {
+      context += `🔧 MATERIAIS CRÍTICOS:\n`
+      data.critical_materials.forEach((item: any) => {
+        context += `- ${item.name}: ${item.quantity} unidades (min: ${item.min_quantity})\n`
+      })
+      context += `\n`
+    }
+
+    if (data.services && data.services.length > 0) {
+      context += `📋 SERVIÇOS DISPONÍVEIS: ${data.services.length} serviços cadastrados\n`
+    }
+
+    if (data.recent_orders && data.recent_orders.length > 0) {
+      context += `\n📝 ÚLTIMAS OS:\n`
+      data.recent_orders.slice(0, 3).forEach((os: any) => {
+        context += `- OS ${os.order_number}: ${os.status}\n`
+      })
+    }
+
+    return context
+  }
+
+  if (mode === 'STRATEGIC') {
+    let context = "**VISÃO DO NEGÓCIO:**\n\n"
+
+    if (data.business_intelligence) {
+      const bi = data.business_intelligence
+      context += `📈 Performance Geral: ${bi.performance_level || 'N/A'}\n`
+      context += `💡 Principais Insights disponíveis\n`
+    }
+
+    return context
+  }
+
+  return "**CONTEXTO:** Pronto para conversar sobre seu negócio.\n"
+}
 
 async function callAIProvider(
   provider: any,
   userMessage: string,
-  businessContext: any
+  mode: string,
+  modeContext: string
 ): Promise<string> {
   const providerType = provider.provider_type
   const apiKey = provider.api_key
@@ -62,69 +283,12 @@ async function callAIProvider(
   const model = provider.default_model
   const config = provider.config || {}
 
-  let contextMessage = "**CONTEXTO DO NEGÓCIO:**\n\n"
-
-  if (businessContext && businessContext.business_data) {
-    const data = businessContext.business_data
-    const intent = businessContext.intent_analysis?.intent
-
-    if (intent === 'inventory_query' && data.resumo) {
-      contextMessage += `**ESTOQUE:**\n`
-      contextMessage += `- Total de itens: ${data.resumo.total_itens}\n`
-      contextMessage += `- Valor total: R$ ${data.resumo.valor_total}\n`
-      contextMessage += `- Itens zerados: ${data.resumo.itens_zerados}\n`
-      contextMessage += `- Itens críticos: ${data.resumo.itens_criticos}\n`
-      contextMessage += `- Itens baixos: ${data.resumo.itens_baixos}\n`
-      contextMessage += `- Itens OK: ${data.resumo.itens_ok}\n\n`
-
-      if (data.itens_criticos && data.itens_criticos.length > 0) {
-        contextMessage += `**ITENS CRÍTICOS (primeiros 5):**\n`
-        data.itens_criticos.slice(0, 5).forEach((item: any) => {
-          contextMessage += `- ${item.name}: ${item.quantity} unidades (mínimo: ${item.min_quantity}) - ${item.status}\n`
-        })
-      }
-    }
-    else if (intent === 'financial_query' && data.resumo) {
-      contextMessage += `**FINANCEIRO (últimos 30 dias):**\n`
-      contextMessage += `- Receitas: R$ ${data.resumo.total_receitas_valor}\n`
-      contextMessage += `- Despesas: R$ ${data.resumo.total_despesas_valor}\n`
-      contextMessage += `- Margem: ${data.indicadores?.margem_percentual || 0}%\n`
-      contextMessage += `- Lançamentos vencidos: ${data.resumo.lancamentos_vencidos}\n`
-      contextMessage += `- Valor vencido: R$ ${data.resumo.valor_vencido || 0}\n\n`
-    }
-    else if (intent === 'service_order_query' && data.resumo) {
-      contextMessage += `**ORDENS DE SERVIÇO (últimos 30 dias):**\n`
-      contextMessage += `- Total de OS: ${data.resumo.total_os}\n`
-      contextMessage += `- Pendentes: ${data.resumo.pendentes}\n`
-      contextMessage += `- Em andamento: ${data.resumo.em_andamento}\n`
-      contextMessage += `- Concluídas: ${data.resumo.concluidas}\n`
-      contextMessage += `- Taxa de conclusão: ${data.indicadores?.taxa_conclusao || 0}%\n`
-      contextMessage += `- Ticket médio: R$ ${data.indicadores?.ticket_medio || 0}\n\n`
-    }
-    else if (intent === 'customer_query' && data.resumo) {
-      contextMessage += `**CLIENTES:**\n`
-      contextMessage += `- Total: ${data.resumo.total_clientes}\n`
-      contextMessage += `- Ativos: ${data.resumo.ativos}\n`
-      contextMessage += `- Inativos: ${data.resumo.inativos}\n`
-      contextMessage += `- Inativos há 90+ dias: ${data.indicadores?.clientes_inativos_90dias || 0}\n\n`
-
-      if (data.top_clientes && data.top_clientes.length > 0) {
-        contextMessage += `**TOP 5 CLIENTES:**\n`
-        data.top_clientes.slice(0, 5).forEach((cliente: any, idx: number) => {
-          contextMessage += `${idx + 1}. ${cliente.name} - ${cliente.total_os} OS - R$ ${cliente.valor_total}\n`
-        })
-      }
-    }
-  }
-
-  if (contextMessage === "**CONTEXTO DO NEGÓCIO:**\n\n") {
-    contextMessage = "**CONTEXTO:** Sem dados específicos do negócio no momento. Responda com base no conhecimento geral de gestão empresarial."
-  }
+  const systemPrompt = MODE_PROMPTS[mode as keyof typeof MODE_PROMPTS] || MODE_PROMPTS.STRATEGIC
 
   const messages = [
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: contextMessage },
-    { role: "user", content: `**PERGUNTA DO USUÁRIO:** ${userMessage}` }
+    { role: "system", content: systemPrompt },
+    { role: "user", content: modeContext },
+    { role: "user", content: `**PERGUNTA:** ${userMessage}` }
   ]
 
   if (providerType === 'openrouter') {
@@ -140,16 +304,12 @@ async function callAIProvider(
         model: model,
         messages: messages,
         temperature: config.temperature || 0.7,
-        max_tokens: config.max_tokens || 4000,
-        top_p: config.top_p || 0.9,
-        frequency_penalty: config.frequency_penalty || 0.1,
-        presence_penalty: config.presence_penalty || 0.1
+        max_tokens: config.max_tokens || 3000
       })
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`OpenRouter API error: ${error}`)
+      throw new Error(`OpenRouter API error: ${await response.text()}`)
     }
 
     const data = await response.json()
@@ -165,18 +325,15 @@ async function callAIProvider(
       },
       body: JSON.stringify({
         model: model,
-        max_tokens: config.max_tokens || 4000,
+        max_tokens: config.max_tokens || 3000,
         temperature: config.temperature || 0.7,
-        system: SYSTEM_PROMPT + "\n\n" + contextMessage,
-        messages: [
-          { role: "user", content: userMessage }
-        ]
+        system: systemPrompt + "\n\n" + modeContext,
+        messages: [{ role: "user", content: userMessage }]
       })
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Anthropic API error: ${error}`)
+      throw new Error(`Anthropic API error: ${await response.text()}`)
     }
 
     const data = await response.json()
@@ -193,13 +350,12 @@ async function callAIProvider(
         model: model,
         messages: messages,
         temperature: config.temperature || 0.7,
-        max_tokens: config.max_tokens || 4000
+        max_tokens: config.max_tokens || 3000
       })
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`OpenAI API error: ${error}`)
+      throw new Error(`OpenAI API error: ${await response.text()}`)
     }
 
     const data = await response.json()
@@ -223,91 +379,87 @@ Deno.serve(async (req: Request) => {
 
     console.log('🤖 Thomaz Chat: Processing message:', message)
 
-    const { data: provider, error: providerError } = await supabase
-      .rpc('get_active_ai_provider')
-
-    if (providerError || !provider) {
-      console.error('No active AI provider found:', providerError)
-
-      const { data: fallbackResponse } = await supabase
-        .rpc('thomaz_generate_contextual_response', {
-          user_message: message,
-          conv_id: sessionId,
-          usr_id: userId || null
-        })
-
-      return new Response(
-        JSON.stringify({
-          response: fallbackResponse?.intent_analysis?.suggested_questions?.[0] ||
-                   "Olá! Como posso ajudar você hoje?",
-          confidence: 0.7,
-          needsClarification: false,
-          tone: 'professional'
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      )
-    }
-
-    const { data: businessContext } = await supabase
-      .rpc('prepare_ai_context', {
+    // PASSO 1: Detectar modo e intenção
+    const { data: modeDetection } = await supabase
+      .rpc('thomaz_detect_mode_and_intent', {
         user_message: message,
         session_id: sessionId
       })
 
-    console.log('📊 Business context prepared:', businessContext?.intent_analysis?.intent)
+    const detectedMode = modeDetection?.mode || 'STRATEGIC'
+    const detectedIntent = modeDetection?.intent || 'general'
+    const confidence = modeDetection?.confidence || 0.5
+
+    console.log(`🎯 Modo detectado: ${detectedMode} (${(confidence * 100).toFixed(0)}%)`)
+    console.log(`💡 Intenção: ${detectedIntent}`)
+
+    // PASSO 2: Obter personalidade do modo
+    const { data: modeData } = await supabase
+      .from('thomaz_cognitive_modes')
+      .select('*')
+      .eq('mode_code', detectedMode)
+      .single()
+
+    const modeName = modeData?.mode_name || detectedMode
+
+    // PASSO 3: Buscar dados relevantes ao modo
+    let businessData: any = {}
+
+    if (detectedMode === 'CFO') {
+      businessData = await getCFOData(supabase)
+    } else if (detectedMode === 'ENGINEER') {
+      businessData = await getEngineerData(supabase)
+    } else if (detectedMode === 'STRATEGIC') {
+      businessData = await getStrategicData(supabase)
+    }
+
+    // PASSO 4: Montar contexto específico do modo
+    const modeContext = buildModeContext(detectedMode, businessData)
+
+    // PASSO 5: Obter provider de IA
+    const { data: provider } = await supabase.rpc('get_active_ai_provider')
 
     let aiResponse: string
 
-    if (!provider.api_key) {
-      console.log('⚠️  No API key configured, using fallback response')
+    // PASSO 6: Gerar resposta
+    if (!provider || !provider.api_key) {
+      console.log('⚠️  Modo fallback (sem API key)')
 
-      const { data: conversationalResponse } = await supabase
-        .rpc('thomaz_generate_contextual_response', {
-          user_message: message,
-          conv_id: sessionId,
-          usr_id: userId || null
-        })
-
-      const intent = conversationalResponse?.intent_analysis?.intent || 'conversation'
-      const tone = conversationalResponse?.intent_analysis?.tone || 'professional'
-
-      const responses: Record<string, string> = {
-        'greeting': 'Olá! 👋 Como posso ajudar você hoje?\n\nPosso te auxiliar com análises de estoque, financeiro, ordens de serviço ou clientes!',
-        'thanks': 'Por nada! 😊 Fico feliz em ajudar! Se precisar de mais alguma coisa, é só falar!',
-        'goodbye': 'Até logo! 👋 Estarei aqui sempre que precisar!',
-        'help_request': 'Claro! Posso te ajudar com:\n\n📦 Estoque e materiais\n💰 Financeiro\n🔧 Ordens de serviço\n👥 Clientes\n\nSobre qual área você precisa de ajuda?'
+      // Fallback inteligente por modo
+      if (detectedMode === 'CFO') {
+        aiResponse = `💰 **Modo CFO Ativo**\n\nPara análises financeiras completas, configure uma API key em Configurações → Provedores de IA.\n\nEnquanto isso, posso mostrar dados básicos:\n${modeContext}`
+      } else if (detectedMode === 'ENGINEER') {
+        aiResponse = `🔧 **Modo Engenheiro Ativo**\n\nPara recomendações técnicas detalhadas, configure uma API key.\n\nDados técnicos disponíveis:\n${modeContext}`
+      } else {
+        aiResponse = `🤔 **Modo Estratégico Ativo**\n\nPara conversas estratégicas profundas, configure uma API key.\n\nVamos começar: sobre qual aspecto do seu negócio você quer conversar?`
       }
 
-      aiResponse = responses[intent] ||
-                  'Desculpe, preciso de uma API key configurada para responder perguntas mais complexas. Por favor, configure um provedor de IA nas configurações do sistema.'
-
     } else {
-      aiResponse = await callAIProvider(provider, message, businessContext)
+      // Usar IA externa com personalidade do modo
+      aiResponse = await callAIProvider(provider, message, detectedMode, modeContext)
     }
 
-    console.log('✅ AI Response generated')
+    console.log('✅ Response generated in mode:', detectedMode)
 
-    await supabase.from('thomaz_conversation_context').upsert({
-      session_id: sessionId,
+    // PASSO 7: Registrar interação
+    await supabase.from('thomaz_interactions').insert({
       user_id: userId,
-      context_data: {
-        last_message: message,
-        last_response: aiResponse,
-        timestamp: new Date().toISOString()
-      },
-      last_interaction_at: new Date().toISOString()
-    }, {
-      onConflict: 'session_id'
+      session_id: sessionId,
+      user_message: message,
+      thomaz_response: aiResponse,
+      mode_used: detectedMode,
+      intent_detected: detectedIntent,
+      confidence_score: confidence
     })
 
     const result: ChatResponse = {
       response: aiResponse,
-      confidence: 0.9,
-      needsClarification: false,
-      tone: 'professional'
+      mode: detectedMode,
+      modeName: modeName,
+      intent: detectedIntent,
+      confidence: confidence,
+      needsClarification: confidence < 0.6,
+      tone: modeData?.personality?.tone || 'professional'
     }
 
     return new Response(
@@ -323,6 +475,9 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         response: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.',
+        mode: 'STRATEGIC',
+        modeName: 'Estratégico',
+        intent: 'error',
         confidence: 0,
         needsClarification: false,
         tone: 'apologetic',
