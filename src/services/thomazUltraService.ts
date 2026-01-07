@@ -1142,6 +1142,79 @@ Pergunte qualquer coisa sobre o negócio!`
   isInitialized(): boolean {
     return this.initialized
   }
+
+  async generateAlerts(): Promise<any> {
+    const result = await thomazDatabaseService.executeRPC('thomaz_generate_all_alerts')
+    return result
+  }
+
+  async getActiveAlerts(): Promise<any> {
+    const result = await thomazDatabaseService.queryTable('thomaz_alerts', {
+      filters: [
+        { column: 'status', operator: 'in', value: ['novo', 'visto'] }
+      ],
+      orderBy: { column: 'prioridade', ascending: false },
+      limit: 50
+    })
+    return result
+  }
+
+  async getCriticalAlerts(): Promise<any> {
+    const result = await thomazDatabaseService.queryTable('thomaz_alerts', {
+      filters: [
+        { column: 'status', operator: 'eq', value: 'novo' },
+        { column: 'nivel_risco', operator: 'eq', value: 'critico' }
+      ],
+      orderBy: { column: 'prioridade', ascending: false }
+    })
+    return result
+  }
+
+  async acknowledgeAlert(alertId: string, userId?: string): Promise<any> {
+    const result = await thomazDatabaseService.updateRecord('thomaz_alerts', alertId, {
+      status: 'visto',
+      acknowledged_at: new Date().toISOString(),
+      acknowledged_by: userId || null
+    })
+    return result
+  }
+
+  async resolveAlert(alertId: string, resolutionNote: string, userId?: string): Promise<any> {
+    const result = await thomazDatabaseService.updateRecord('thomaz_alerts', alertId, {
+      status: 'resolvido',
+      resolved_at: new Date().toISOString(),
+      resolved_by: userId || null,
+      resolution_note: resolutionNote,
+      is_active: false
+    })
+    return result
+  }
+
+  async getAlertsSummary(): Promise<any> {
+    const result = await thomazDatabaseService.queryTable('thomaz_alerts', {
+      filters: [
+        { column: 'status', operator: 'eq', value: 'novo' }
+      ]
+    })
+
+    if (!result.success || !result.data) {
+      return {
+        total: 0,
+        critico: 0,
+        atencao: 0,
+        saudavel: 0
+      }
+    }
+
+    const summary = {
+      total: result.data.length,
+      critico: result.data.filter((a: any) => a.nivel_risco === 'critico').length,
+      atencao: result.data.filter((a: any) => a.nivel_risco === 'atencao').length,
+      saudavel: result.data.filter((a: any) => a.nivel_risco === 'saudavel').length
+    }
+
+    return summary
+  }
 }
 
 export const thomazUltraService = new ThomazUltraService()
