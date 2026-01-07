@@ -18,15 +18,44 @@ interface ChatResponse {
   mode: string
   modeName: string
   intent: string
+  explanationMode: string
   confidence: number
   needsClarification: boolean
   suggestedQuestions?: string[]
   tone: string
 }
 
-// System Prompts por Modo
+// REGRA 2: Instruções de Explicação
+const RULE_2_INSTRUCTIONS = `
+⚠️ REGRA Nº 2 - EXPLICAÇÃO SOB DEMANDA (OBRIGATÓRIA):
+
+Você SÓ explica quando EXPLICITAMENTE autorizado.
+
+🎯 COMPORTAMENTO PADRÃO (modo EXECUTIVO):
+- Frase curta (1-3 linhas no máximo)
+- Diagnóstico direto
+- Orientação objetiva
+- SEM justificar decisão
+- SEM didatismo
+- SEM "IA educada"
+- SEM explicações não solicitadas
+
+💡 MODO EXPLICATIVO (APENAS se autorizado):
+- Fornecer base técnica
+- Detalhar cálculos
+- Mostrar composição
+- Explicar fundamentos
+- Apresentar memória de cálculo
+
+IMPORTANTE: O sistema já detectou o modo apropriado para esta conversa.
+Siga RIGOROSAMENTE o modo informado abaixo.
+`
+
+// System Prompts por Modo (com Regra 2 integrada)
 const MODE_PROMPTS = {
   CFO: `Você é o Thomaz em MODO CFO - Chief Financial Officer experiente.
+
+${RULE_2_INSTRUCTIONS}
 
 **SUA PERSONALIDADE:**
 - Analítico e pragmático
@@ -35,7 +64,7 @@ const MODE_PROMPTS = {
 - Focado em números e projeções
 - Forward-thinking (sempre pensando no futuro)
 
-**SEU ESTILO DE FALA:**
+**SEU ESTILO DE FALA (modo EXECUTIVO):**
 - "Financeiramente falando..."
 - "Os números mostram que..."
 - "O risco aqui é..."
@@ -54,9 +83,11 @@ const MODE_PROMPTS = {
 2. NUNCA invente números
 3. Seja DIRETO sobre problemas
 4. Ofereça SOLUÇÕES práticas
-5. Termine com PRÓXIMOS PASSOS claros`,
+5. RESPEITE o modo de explicação detectado`,
 
   ENGINEER: `Você é o Thomaz em MODO ENGENHEIRO - Engenheiro de Climatização experiente.
+
+${RULE_2_INSTRUCTIONS}
 
 **SUA PERSONALIDADE:**
 - Prático e experiente
@@ -65,7 +96,7 @@ const MODE_PROMPTS = {
 - Traduz complexidade técnica para gestão
 - Solution-oriented
 
-**SEU ESTILO DE FALA:**
+**SEU ESTILO DE FALA (modo EXECUTIVO):**
 - "Tecnicamente é viável, mas..."
 - "Na prática, o que acontece é..."
 - "Isso vai te custar mais em..."
@@ -85,9 +116,11 @@ const MODE_PROMPTS = {
 2. ALERTE sobre erros comuns
 3. TRADUZA técnica para linguagem de gestão
 4. Seja PRÁTICO, não apenas teórico
-5. Ofereça ALTERNATIVAS se o orçamento for limitado`,
+5. RESPEITE o modo de explicação detectado`,
 
   STRATEGIC: `Você é o Thomaz em MODO ESTRATÉGICO - Conselheiro e Mentor empresarial.
+
+${RULE_2_INSTRUCTIONS}
 
 **SUA PERSONALIDADE:**
 - Reflexivo e provocativo
@@ -96,7 +129,7 @@ const MODE_PROMPTS = {
 - Paciente e estratégico
 - Não dá resposta rasa
 
-**SEU ESTILO DE FALA:**
+**SEU ESTILO DE FALA (modo EXECUTIVO):**
 - "Antes disso, deixa eu te perguntar..."
 - "Você já parou pra pensar que..."
 - "O que realmente está te travando é..."
@@ -123,10 +156,9 @@ const MODE_PROMPTS = {
 2. FAÇA perguntas provocativas
 3. ORGANIZE pensamento em estruturas claras
 4. IDENTIFIQUE o problema REAL por trás da pergunta
-5. NUNCA dê solução pronta sem contexto`
+5. RESPEITE o modo de explicação detectado`
 }
 
-// Função para buscar dados do modo CFO
 async function getCFOData(supabase: any) {
   const { data: healthData } = await supabase
     .from('v_thomaz_financial_health_score')
@@ -153,7 +185,6 @@ async function getCFOData(supabase: any) {
   }
 }
 
-// Função para buscar dados do modo ENGENHEIRO
 async function getEngineerData(supabase: any) {
   const { data: services } = await supabase
     .from('service_catalog')
@@ -179,7 +210,6 @@ async function getEngineerData(supabase: any) {
   }
 }
 
-// Função para buscar dados do modo ESTRATÉGICO
 async function getStrategicData(supabase: any) {
   const { data: biData } = await supabase
     .from('v_thomaz_business_intelligence')
@@ -199,7 +229,6 @@ async function getStrategicData(supabase: any) {
   }
 }
 
-// Função para montar contexto por modo
 function buildModeContext(mode: string, data: any): string {
   if (mode === 'CFO') {
     const health = data.health_score
@@ -275,6 +304,7 @@ async function callAIProvider(
   provider: any,
   userMessage: string,
   mode: string,
+  explanationMode: string,
   modeContext: string
 ): Promise<string> {
   const providerType = provider.provider_type
@@ -285,8 +315,12 @@ async function callAIProvider(
 
   const systemPrompt = MODE_PROMPTS[mode as keyof typeof MODE_PROMPTS] || MODE_PROMPTS.STRATEGIC
 
+  const explanationInstruction = explanationMode === 'EXPLICATIVO'
+    ? '\n\n🔓 MODO EXPLICATIVO ATIVADO: Usuário solicitou explicação. Forneça detalhes técnicos, cálculos e fundamentos.'
+    : '\n\n🔒 MODO EXECUTIVO ATIVO: Responda em 1-3 linhas. Seja direto. SEM explicações não solicitadas.'
+
   const messages = [
-    { role: "system", content: systemPrompt },
+    { role: "system", content: systemPrompt + explanationInstruction },
     { role: "user", content: modeContext },
     { role: "user", content: `**PERGUNTA:** ${userMessage}` }
   ]
@@ -304,7 +338,7 @@ async function callAIProvider(
         model: model,
         messages: messages,
         temperature: config.temperature || 0.7,
-        max_tokens: config.max_tokens || 3000
+        max_tokens: explanationMode === 'EXPLICATIVO' ? 3000 : 500
       })
     })
 
@@ -325,9 +359,9 @@ async function callAIProvider(
       },
       body: JSON.stringify({
         model: model,
-        max_tokens: config.max_tokens || 3000,
+        max_tokens: explanationMode === 'EXPLICATIVO' ? 3000 : 500,
         temperature: config.temperature || 0.7,
-        system: systemPrompt + "\n\n" + modeContext,
+        system: systemPrompt + explanationInstruction + "\n\n" + modeContext,
         messages: [{ role: "user", content: userMessage }]
       })
     })
@@ -350,7 +384,7 @@ async function callAIProvider(
         model: model,
         messages: messages,
         temperature: config.temperature || 0.7,
-        max_tokens: config.max_tokens || 3000
+        max_tokens: explanationMode === 'EXPLICATIVO' ? 3000 : 500
       })
     })
 
@@ -379,21 +413,31 @@ Deno.serve(async (req: Request) => {
 
     console.log('🤖 Thomaz Chat: Processing message:', message)
 
-    // PASSO 1: Detectar modo e intenção
+    // PASSO 1: Detectar modo cognitivo (CFO/ENGINEER/STRATEGIC)
     const { data: modeDetection } = await supabase
       .rpc('thomaz_detect_mode_and_intent', {
         user_message: message,
-        session_id: sessionId
+        p_session_id: sessionId
       })
 
     const detectedMode = modeDetection?.mode || 'STRATEGIC'
     const detectedIntent = modeDetection?.intent || 'general'
     const confidence = modeDetection?.confidence || 0.5
 
-    console.log(`🎯 Modo detectado: ${detectedMode} (${(confidence * 100).toFixed(0)}%)`)
-    console.log(`💡 Intenção: ${detectedIntent}`)
+    console.log(`🎯 Modo cognitivo: ${detectedMode} (${(confidence * 100).toFixed(0)}%)`)
 
-    // PASSO 2: Obter personalidade do modo
+    // PASSO 2: Detectar modo de explicação (EXECUTIVO/EXPLICATIVO)
+    const { data: explanationDetection } = await supabase
+      .rpc('thomaz_should_explain', {
+        user_message: message
+      })
+
+    const explanationMode = explanationDetection?.mode || 'EXECUTIVO'
+    const shouldExplain = explanationDetection?.should_explain || false
+
+    console.log(`💡 Modo explicação: ${explanationMode}`)
+
+    // PASSO 3: Obter personalidade do modo
     const { data: modeData } = await supabase
       .from('thomaz_cognitive_modes')
       .select('*')
@@ -402,7 +446,7 @@ Deno.serve(async (req: Request) => {
 
     const modeName = modeData?.mode_name || detectedMode
 
-    // PASSO 3: Buscar dados relevantes ao modo
+    // PASSO 4: Buscar dados relevantes ao modo
     let businessData: any = {}
 
     if (detectedMode === 'CFO') {
@@ -413,35 +457,37 @@ Deno.serve(async (req: Request) => {
       businessData = await getStrategicData(supabase)
     }
 
-    // PASSO 4: Montar contexto específico do modo
+    // PASSO 5: Montar contexto específico do modo
     const modeContext = buildModeContext(detectedMode, businessData)
 
-    // PASSO 5: Obter provider de IA
+    // PASSO 6: Obter provider de IA
     const { data: provider } = await supabase.rpc('get_active_ai_provider')
 
     let aiResponse: string
 
-    // PASSO 6: Gerar resposta
+    // PASSO 7: Gerar resposta
     if (!provider || !provider.api_key) {
       console.log('⚠️  Modo fallback (sem API key)')
 
-      // Fallback inteligente por modo
-      if (detectedMode === 'CFO') {
-        aiResponse = `💰 **Modo CFO Ativo**\n\nPara análises financeiras completas, configure uma API key em Configurações → Provedores de IA.\n\nEnquanto isso, posso mostrar dados básicos:\n${modeContext}`
-      } else if (detectedMode === 'ENGINEER') {
-        aiResponse = `🔧 **Modo Engenheiro Ativo**\n\nPara recomendações técnicas detalhadas, configure uma API key.\n\nDados técnicos disponíveis:\n${modeContext}`
+      if (explanationMode === 'EXECUTIVO') {
+        if (detectedMode === 'CFO') {
+          aiResponse = `Financeiramente, você precisa configurar API key para análise completa.\n\n${modeContext}`
+        } else if (detectedMode === 'ENGINEER') {
+          aiResponse = `Tecnicamente viável, mas precisa API key para recomendação detalhada.\n\n${modeContext}`
+        } else {
+          aiResponse = `Configure API key em Configurações para conversas estratégicas completas.`
+        }
       } else {
-        aiResponse = `🤔 **Modo Estratégico Ativo**\n\nPara conversas estratégicas profundas, configure uma API key.\n\nVamos começar: sobre qual aspecto do seu negócio você quer conversar?`
+        aiResponse = `🔓 Modo explicativo detectado, mas precisa de API key configurada para explicações detalhadas.\n\nDados disponíveis:\n${modeContext}`
       }
 
     } else {
-      // Usar IA externa com personalidade do modo
-      aiResponse = await callAIProvider(provider, message, detectedMode, modeContext)
+      aiResponse = await callAIProvider(provider, message, detectedMode, explanationMode, modeContext)
     }
 
-    console.log('✅ Response generated in mode:', detectedMode)
+    console.log('✅ Response generated:', { mode: detectedMode, explanationMode })
 
-    // PASSO 7: Registrar interação
+    // PASSO 8: Registrar interação
     await supabase.from('thomaz_interactions').insert({
       user_id: userId,
       session_id: sessionId,
@@ -449,7 +495,11 @@ Deno.serve(async (req: Request) => {
       thomaz_response: aiResponse,
       mode_used: detectedMode,
       intent_detected: detectedIntent,
-      confidence_score: confidence
+      confidence_score: confidence,
+      metadata: {
+        explanation_mode: explanationMode,
+        should_explain: shouldExplain
+      }
     })
 
     const result: ChatResponse = {
@@ -457,6 +507,7 @@ Deno.serve(async (req: Request) => {
       mode: detectedMode,
       modeName: modeName,
       intent: detectedIntent,
+      explanationMode: explanationMode,
       confidence: confidence,
       needsClarification: confidence < 0.6,
       tone: modeData?.personality?.tone || 'professional'
@@ -478,6 +529,7 @@ Deno.serve(async (req: Request) => {
         mode: 'STRATEGIC',
         modeName: 'Estratégico',
         intent: 'error',
+        explanationMode: 'EXECUTIVO',
         confidence: 0,
         needsClarification: false,
         tone: 'apologetic',
