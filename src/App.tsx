@@ -114,6 +114,7 @@ import DocumentCenter from './pages/DocumentCenter'
 import ThomazDashboard from './pages/ThomazDashboard'
 import LeadCaptureMetrics from './pages/LeadCaptureMetrics'
 import LeadCaptureCampaigns from './pages/LeadCaptureCampaigns'
+import AIProvidersSettings from './pages/AIProvidersSettings'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -419,7 +420,15 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
+          <Route path="/ai-providers" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <AIProvidersSettings />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/people" element={
             <ProtectedRoute>
               <WebLayout>
