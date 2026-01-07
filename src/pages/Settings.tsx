@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import {
   Settings as SettingsIcon,
   User,
@@ -17,7 +18,8 @@ import {
   Globe,
   Clock,
   Zap,
-  Sparkles
+  Sparkles,
+  ExternalLink
 } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { getUserSettings, updateUserSettings, createDefaultUserSettings } from '../lib/supabase'
@@ -25,6 +27,7 @@ import AdvancedThemeManager from '../components/AdvancedThemeManager'
 
 const Settings = () => {
   const { user } = useUser()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -101,6 +104,7 @@ const Settings = () => {
     { id: 'profile', name: 'Perfil', icon: User },
     { id: 'notifications', name: 'Notificações', icon: Bell },
     { id: 'appearance', name: 'Aparência', icon: Palette },
+    { id: 'thomaz-ai', name: 'Thomaz AI', icon: Sparkles, isExternal: true, path: '/ai-providers' },
     { id: 'privacy', name: 'Privacidade', icon: Eye },
     { id: 'backup', name: 'Backup', icon: Database },
     { id: 'sync', name: 'Sincronização', icon: Cloud },
@@ -176,12 +180,18 @@ const Settings = () => {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm p-4 sticky top-6">
-              {tabs.map((tab) => {
+              {tabs.map((tab: any) => {
                 const Icon = tab.icon
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => {
+                      if (tab.isExternal && tab.path) {
+                        navigate(tab.path)
+                      } else {
+                        setActiveTab(tab.id)
+                      }
+                    }}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-all ${
                       activeTab === tab.id
                         ? 'bg-blue-50 text-blue-600 font-medium'
@@ -189,7 +199,8 @@ const Settings = () => {
                     }`}
                   >
                     <Icon className="w-5 h-5" />
-                    <span>{tab.name}</span>
+                    <span className="flex-1 text-left">{tab.name}</span>
+                    {tab.isExternal && <ExternalLink className="w-4 h-4" />}
                   </button>
                 )
               })}
