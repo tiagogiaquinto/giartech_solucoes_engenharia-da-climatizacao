@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, withRetry } from './supabase'
 
 export interface ServiceOrderItem {
   id?: string
@@ -127,12 +127,14 @@ export const updateServiceOrderItem = async (id: string, updates: Partial<Servic
 }
 
 export const deleteServiceOrderItem = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('service_order_items')
-    .delete()
-    .eq('id', id)
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('service_order_items')
+      .delete()
+      .eq('id', id)
 
-  if (error) throw error
+    if (error) throw error
+  })
 }
 
 export const getServiceOrderTeam = async (serviceOrderId: string): Promise<ServiceOrderTeamMember[]> => {
@@ -346,12 +348,14 @@ export const updateCustomerAddress = async (id: string, updates: Partial<Custome
 }
 
 export const deleteCustomerAddress = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('customer_addresses')
-    .delete()
-    .eq('id', id)
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('customer_addresses')
+      .delete()
+      .eq('id', id)
 
-  if (error) throw error
+    if (error) throw error
+  })
 }
 
 export const getCustomerContacts = async (customerId: string): Promise<CustomerContact[]> => {
@@ -389,12 +393,14 @@ export const updateCustomerContact = async (id: string, updates: Partial<Custome
 }
 
 export const deleteCustomerContact = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('customer_contacts')
-    .delete()
-    .eq('id', id)
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('customer_contacts')
+      .delete()
+      .eq('id', id)
 
-  if (error) throw error
+    if (error) throw error
+  })
 }
 
 export const getCustomerEquipment = async (customerId: string): Promise<CustomerEquipment[]> => {
@@ -442,12 +448,14 @@ export const updateCustomerEquipment = async (id: string, updates: Partial<Custo
 }
 
 export const deleteCustomerEquipment = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('customer_equipment')
-    .delete()
-    .eq('id', id)
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('customer_equipment')
+      .delete()
+      .eq('id', id)
 
-  if (error) throw error
+    if (error) throw error
+  })
 }
 
 export interface Material {
@@ -584,11 +592,13 @@ export const updateServiceOrder = async (id: string, updates: Partial<ServiceOrd
 }
 
 export const deleteServiceOrder = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('service_orders')
-    .delete()
-    .eq('id', id)
-  if (error) throw error
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('service_orders')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+  })
 }
 
 export const getServiceOrderById = async (id: string): Promise<ServiceOrder> => {
@@ -686,12 +696,22 @@ export const getClients = async () => {
 }
 export const createDbClient = async (client: any) => { const { data } = await supabase.from('customers').insert([client]).select().single(); return data }
 export const updateClient = async (id: string, updates: any) => { const { data } = await supabase.from('customers').update(updates).eq('id', id).select().single(); return data }
-export const deleteClient = async (id: string) => { await supabase.from('customers').delete().eq('id', id) }
+export const deleteClient = async (id: string) => {
+  await withRetry(async () => {
+    const { error } = await supabase.from('customers').delete().eq('id', id)
+    if (error) throw error
+  })
+}
 export const getContracts = async () => { const { data } = await supabase.from('contracts').select('*'); return data || [] }
 export const getContractsByClient = async (clientId: string) => { const { data } = await supabase.from('contracts').select('*').eq('customer_id', clientId); return data || [] }
 export const createContract = async (contract: any) => { const { data } = await supabase.from('contracts').insert([contract]).select().single(); return data }
 export const updateContract = async (id: string, updates: any) => { const { data } = await supabase.from('contracts').update(updates).eq('id', id).select().single(); return data }
-export const deleteContract = async (id: string) => { await supabase.from('contracts').delete().eq('id', id) }
+export const deleteContract = async (id: string) => {
+  await withRetry(async () => {
+    const { error } = await supabase.from('contracts').delete().eq('id', id)
+    if (error) throw error
+  })
+}
 export const getAgendaEvents = async () => {
   const { data, error } = await supabase
     .from('agenda_events')
@@ -732,7 +752,12 @@ export const getAgendaEvents = async () => {
 }
 export const createAgendaEvent = async (event: any) => { const { data } = await supabase.from('agenda_events').insert([event]).select().single(); return data }
 export const updateAgendaEvent = async (id: string, updates: any) => { const { data } = await supabase.from('agenda_events').update(updates).eq('id', id).select().single(); return data }
-export const deleteAgendaEvent = async (id: string) => { await supabase.from('agenda_events').delete().eq('id', id) }
+export const deleteAgendaEvent = async (id: string) => {
+  await withRetry(async () => {
+    const { error } = await supabase.from('agenda_events').delete().eq('id', id)
+    if (error) throw error
+  })
+}
 // =====================================================
 // USER SETTINGS
 // =====================================================
@@ -865,8 +890,18 @@ export const updateSystemPreference = async (key: string, value: any) => {
 export const getFinanceEntries = async () => { const { data } = await supabase.from('finance_entries').select('*'); return data || [] }
 export const createFinanceEntry = async (entry: any) => { const { data } = await supabase.from('finance_entries').insert([entry]).select().single(); return data }
 export const updateFinanceEntry = async (id: string, updates: any) => { const { data } = await supabase.from('finance_entries').update(updates).eq('id', id).select().single(); return data }
-export const deleteFinanceEntry = async (id: string) => { await supabase.from('finance_entries').delete().eq('id', id) }
+export const deleteFinanceEntry = async (id: string) => {
+  await withRetry(async () => {
+    const { error } = await supabase.from('finance_entries').delete().eq('id', id)
+    if (error) throw error
+  })
+}
 export const getSuppliers = async () => { const { data } = await supabase.from('suppliers').select('*'); return data || [] }
 export const createSupplier = async (supplier: any) => { const { data } = await supabase.from('suppliers').insert([supplier]).select().single(); return data }
 export const updateSupplier = async (id: string, updates: any) => { const { data } = await supabase.from('suppliers').update(updates).eq('id', id).select().single(); return data }
-export const deleteSupplier = async (id: string) => { await supabase.from('suppliers').delete().eq('id', id) }
+export const deleteSupplier = async (id: string) => {
+  await withRetry(async () => {
+    const { error } = await supabase.from('suppliers').delete().eq('id', id)
+    if (error) throw error
+  })
+}
