@@ -55,8 +55,8 @@ const FinancialManagement = () => {
   const [filterDateStart, setFilterDateStart] = useState('')
   const [filterDateEnd, setFilterDateEnd] = useState('')
   const [filterRecurrence, setFilterRecurrence] = useState<'all' | 'recorrente' | 'nao_recorrente'>('all')
-  const [sortField, setSortField] = useState<'data' | 'valor' | 'created_at'>('data')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [sortField, setSortField] = useState<'data' | 'data_vencimento' | 'valor' | 'created_at'>('data_vencimento')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const [categories, setCategories] = useState<any[]>([])
   const itemsPerPage = 15
@@ -280,12 +280,14 @@ const FinancialManagement = () => {
       (entry as any).categoria === filterCategory ||
       (entry as any).category === filterCategory
 
-    const entryDate = new Date(entry.data)
+    // Usar data_vencimento para filtros (mais relevante para recorrências)
+    const dateToFilter = (entry as any).data_vencimento || entry.data
+    const entryDate = new Date(dateToFilter)
     const matchesMonth = !filterMonth || entryDate.getMonth() + 1 === parseInt(filterMonth)
     const matchesYear = !filterYear || entryDate.getFullYear() === parseInt(filterYear)
 
-    const matchesDateRange = (!filterDateStart || entry.data >= filterDateStart) &&
-                             (!filterDateEnd || entry.data <= filterDateEnd)
+    const matchesDateRange = (!filterDateStart || dateToFilter >= filterDateStart) &&
+                             (!filterDateEnd || dateToFilter <= filterDateEnd)
 
     const matchesRecurrence = filterRecurrence === 'all' ||
       (filterRecurrence === 'recorrente' && (entry as any).is_recurring === true) ||
@@ -612,7 +614,8 @@ const FinancialManagement = () => {
               onChange={(e) => setSortField(e.target.value as any)}
               className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             >
-              <option value="data">Data</option>
+              <option value="data_vencimento">Data de Vencimento</option>
+              <option value="data">Data de Lançamento</option>
               <option value="valor">Valor</option>
               <option value="created_at">Data de Criação</option>
             </select>
