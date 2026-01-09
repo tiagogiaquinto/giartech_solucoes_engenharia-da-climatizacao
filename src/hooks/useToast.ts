@@ -39,6 +39,10 @@ export const useToast = () => {
     return addToast('info', message, duration)
   }, [addToast])
 
+  const showToast = useCallback((message: string, type: ToastType, duration?: number) => {
+    return addToast(type, message, duration)
+  }, [addToast])
+
   return {
     toasts,
     addToast,
@@ -46,6 +50,7 @@ export const useToast = () => {
     success,
     error,
     warning,
-    info
+    info,
+    showToast
   }
 }
