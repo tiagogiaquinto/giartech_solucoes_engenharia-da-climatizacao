@@ -62,6 +62,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'crm-professional', path: '/crm-professional', icon: Target, label: 'CRM Profissional', description: 'Pipeline de vendas e pós-venda completo com lead scoring, automação de follow-ups e gestão inteligente de clientes' },
   { id: 'lead-capture-metrics', path: '/lead-capture-metrics', icon: TrendingUp, label: 'Métricas de Captação', description: 'Métricas e análise de performance de captação automática de leads' },
   { id: 'lead-capture-campaigns', path: '/lead-capture-campaigns', icon: Megaphone, label: 'Campanhas de Captação', description: 'Gerencie campanhas automáticas de captação via Google Maps e CEP' },
+  { id: 'lead-sources-config', path: '/lead-sources-config', icon: Settings, label: 'Configurar APIs', description: 'Configure APIs do Google Maps, LinkedIn, Facebook, Instagram e outras fontes de leads' },
   { id: 'captured-leads', path: '/captured-leads', icon: Users, label: 'Leads Capturados', description: 'Gerencie, qualifique e converta leads em clientes' },
   { id: 'crm-templates', path: '/crm-templates', icon: MessageSquare, label: 'Mensagens do CRM', description: 'Configure mensagens personalizadas para WhatsApp, Email e SMS' },
   { id: 'customer-gamification', path: '/customer-gamification', icon: Star, label: 'Gamificação de Clientes', description: 'Sistema de pontos, níveis, badges e benefícios para fidelização de clientes' },
