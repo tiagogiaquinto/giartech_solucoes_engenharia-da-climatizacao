@@ -30,9 +30,11 @@ import {
   MessageSquare,
   History,
   Star,
-  Users
+  Users,
+  CheckSquare,
+  Square
 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { supabase, bulkDelete } from '../lib/supabase'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import DocumentEditor from '../components/DocumentEditor'
@@ -152,6 +154,9 @@ export default function DocumentCenter() {
   const [editorMode, setEditorMode] = useState<EditorMode>('create')
   const [saving, setSaving] = useState(false)
   const [showVisualEditor, setShowVisualEditor] = useState(false)
+  const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set())
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -308,10 +313,60 @@ export default function DocumentCenter() {
       if (error) throw error
 
       alert('Documento excluído com sucesso!')
+      setSelectedDocIds(new Set())
       await loadDocuments()
     } catch (error) {
       console.error('Error deleting document:', error)
       alert('Erro ao excluir documento')
+    }
+  }
+
+  const toggleSelectAllDocs = () => {
+    if (selectedDocIds.size === filteredDocuments.length) {
+      setSelectedDocIds(new Set())
+    } else {
+      setSelectedDocIds(new Set(filteredDocuments.map(d => d.id)))
+    }
+  }
+
+  const toggleSelectDoc = (id: string) => {
+    const newSelected = new Set(selectedDocIds)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedDocIds(newSelected)
+  }
+
+  const handleBulkDeleteDocs = async () => {
+    if (selectedDocIds.size === 0) return
+    setShowBulkDeleteConfirm(true)
+  }
+
+  const confirmBulkDeleteDocs = async () => {
+    try {
+      setBulkDeleting(true)
+      setShowBulkDeleteConfirm(false)
+
+      const idsArray = Array.from(selectedDocIds)
+      const result = await bulkDelete('generated_documents', idsArray, 100)
+
+      if (result.success.length > 0) {
+        alert(`✅ Exclusão concluída!\n\n✅ Sucesso: ${result.success.length} documento(s)\n${result.failed.length > 0 ? `❌ Falhou: ${result.failed.length} documento(s)` : ''}`)
+      }
+
+      if (result.failed.length > 0) {
+        console.error('Failed deletions:', result.failed)
+      }
+
+      setSelectedDocIds(new Set())
+      await loadDocuments()
+    } catch (error) {
+      console.error('Error bulk deleting:', error)
+      alert('Erro ao excluir documentos em massa.')
+    } finally {
+      setBulkDeleting(false)
     }
   }
 
@@ -466,6 +521,31 @@ export default function DocumentCenter() {
 
           <div className="bg-white rounded-lg shadow mb-6">
             <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  {selectedDocIds.size > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">
+                        {selectedDocIds.size} selecionado(s)
+                      </span>
+                      <button
+                        onClick={handleBulkDeleteDocs}
+                        disabled={bulkDeleting}
+                        className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 text-sm disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {bulkDeleting ? 'Excluindo...' : 'Excluir Selecionados'}
+                      </button>
+                      <button
+                        onClick={() => setSelectedDocIds(new Set())}
+                        className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
               <div className="flex items-center space-x-4">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -495,6 +575,18 @@ export default function DocumentCenter() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-6 py-3 text-left">
+                      <button
+                        onClick={toggleSelectAllDocs}
+                        className="flex items-center"
+                      >
+                        {selectedDocIds.size === filteredDocuments.length && filteredDocuments.length > 0 ? (
+                          <CheckSquare className="h-5 w-5 text-blue-600" />
+                        ) : (
+                          <Square className="h-5 w-5 text-gray-400" />
+                        )}
+                      </button>
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Número
                     </th>
@@ -524,6 +616,18 @@ export default function DocumentCenter() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredDocuments.map((doc) => (
                     <tr key={doc.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => toggleSelectDoc(doc.id)}
+                          className="flex items-center"
+                        >
+                          {selectedDocIds.has(doc.id) ? (
+                            <CheckSquare className="h-5 w-5 text-blue-600" />
+                          ) : (
+                            <Square className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                          )}
+                        </button>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {doc.document_number}
                       </td>
@@ -934,6 +1038,56 @@ export default function DocumentCenter() {
             loadTemplates()
           }}
         />
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-100 rounded-lg">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Confirmar Exclusão em Massa
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Esta ação não pode ser desfeita
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-yellow-800">
+                Você está prestes a excluir <strong>{selectedDocIds.size} documento(s)</strong>.
+              </p>
+              <p className="text-sm text-yellow-800 mt-2">
+                Esta ação não poderá ser desfeita.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmBulkDeleteDocs}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Confirmar Exclusão
+              </button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   )

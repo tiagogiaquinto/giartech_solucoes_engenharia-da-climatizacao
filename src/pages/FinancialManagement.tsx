@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { DollarSign, TrendingUp, TrendingDown, Calendar, ListFilter as Filter, Download, Plus, FileText, CreditCard, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, Clock, CreditCard as Edit, Trash2, Package, RefreshCw, Repeat } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { DollarSign, TrendingUp, TrendingDown, Calendar, ListFilter as Filter, Download, Plus, FileText, CreditCard, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, Clock, CreditCard as Edit, Trash2, Package, RefreshCw, Repeat, CheckSquare, Square } from 'lucide-react'
+import { supabase, bulkDelete } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import FinanceEntryModal from '../components/FinanceEntryModal'
 import RecurrenceCalendarModal from '../components/RecurrenceCalendarModal'
@@ -64,6 +64,9 @@ const FinancialManagement = () => {
   const [editingEntryId, setEditingEntryId] = useState<string | undefined>(undefined)
   const [showRecurrenceModal, setShowRecurrenceModal] = useState(false)
   const [generatingRecurrences, setGeneratingRecurrences] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   useEffect(() => {
     loadFinancialData()
@@ -124,10 +127,61 @@ const FinancialManagement = () => {
       if (error) throw error
 
       alert('Lançamento excluído com sucesso!')
+      setSelectedIds(new Set())
       await loadFinancialData()
     } catch (error) {
       console.error('Error deleting entry:', error)
       alert('Erro ao excluir lançamento. Verifique se não há registros relacionados.')
+    }
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paginatedEntries.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(paginatedEntries.map(e => e.id)))
+    }
+  }
+
+  const toggleSelectEntry = (id: string) => {
+    const newSelected = new Set(selectedIds)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+
+    setShowBulkDeleteConfirm(true)
+  }
+
+  const confirmBulkDelete = async () => {
+    try {
+      setBulkDeleting(true)
+      setShowBulkDeleteConfirm(false)
+
+      const idsArray = Array.from(selectedIds)
+      const result = await bulkDelete('finance_entries', idsArray, 100)
+
+      if (result.success.length > 0) {
+        alert(`✅ Exclusão concluída!\n\n✅ Sucesso: ${result.success.length} lançamento(s)\n${result.failed.length > 0 ? `❌ Falhou: ${result.failed.length} lançamento(s)` : ''}`)
+      }
+
+      if (result.failed.length > 0) {
+        console.error('Failed deletions:', result.failed)
+      }
+
+      setSelectedIds(new Set())
+      await loadFinancialData()
+    } catch (error) {
+      console.error('Error bulk deleting:', error)
+      alert('Erro ao excluir lançamentos em massa.')
+    } finally {
+      setBulkDeleting(false)
     }
   }
 
@@ -652,7 +706,30 @@ const FinancialManagement = () => {
       {/* Lançamentos */}
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Lançamentos</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold text-gray-900">Lançamentos</h2>
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">
+                  {selectedIds.size} selecionado(s)
+                </span>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 text-sm disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {bulkDeleting ? 'Excluindo...' : 'Excluir Selecionados'}
+                </button>
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
+          </div>
           <div className="flex gap-2">
             <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
               <Download className="h-4 w-4" />
@@ -681,6 +758,23 @@ const FinancialManagement = () => {
           </div>
         </div>
 
+        {/* Seleção Global */}
+        {paginatedEntries.length > 0 && (
+          <div className="flex items-center gap-2 mb-3 pb-3 border-b">
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+            >
+              {selectedIds.size === paginatedEntries.length ? (
+                <CheckSquare className="h-5 w-5 text-blue-600" />
+              ) : (
+                <Square className="h-5 w-5" />
+              )}
+              <span>Selecionar todos desta página</span>
+            </button>
+          </div>
+        )}
+
         {/* Lista de Lançamentos */}
         <div className="space-y-2">
           {paginatedEntries.map((entry) => (
@@ -691,6 +785,16 @@ const FinancialManagement = () => {
               className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
             >
               <div className="flex items-center gap-4 flex-1">
+                <button
+                  onClick={() => toggleSelectEntry(entry.id)}
+                  className="flex-shrink-0"
+                >
+                  {selectedIds.has(entry.id) ? (
+                    <CheckSquare className="h-5 w-5 text-blue-600" />
+                  ) : (
+                    <Square className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  )}
+                </button>
                 <div className={`p-3 rounded-lg ${
                   entry.tipo === 'receita'
                     ? 'bg-green-100'
@@ -866,6 +970,56 @@ const FinancialManagement = () => {
         isOpen={showRecurrenceModal}
         onClose={() => setShowRecurrenceModal(false)}
       />
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-100 rounded-lg">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Confirmar Exclusão em Massa
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Esta ação não pode ser desfeita
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-yellow-800">
+                Você está prestes a excluir <strong>{selectedIds.size} lançamento(s)</strong>.
+              </p>
+              <p className="text-sm text-yellow-800 mt-2">
+                Esta ação terá efeito cascata em registros relacionados e não poderá ser desfeita.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmBulkDelete}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Confirmar Exclusão
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }
