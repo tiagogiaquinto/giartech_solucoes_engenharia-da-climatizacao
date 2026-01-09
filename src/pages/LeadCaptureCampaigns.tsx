@@ -5,13 +5,25 @@ import { useToast } from '../hooks/useToast';
 
 interface Campaign {
   id: string;
-  nome: string;
-  descricao: string;
-  source_type: string;
-  filters: any;
-  schedule: string;
-  is_active: boolean;
-  last_run: string;
+  nome?: string;
+  descricao?: string;
+  source_type?: string;
+  filters?: any;
+  schedule?: string;
+  is_active?: boolean;
+  last_run?: string;
+  name?: string;
+  description?: string;
+  status?: 'ativo' | 'pausado' | 'concluído';
+  search_type?: 'google_maps' | 'cep_region' | 'manual';
+  search_keywords?: string[];
+  search_region?: string;
+  search_radius_km?: number;
+  target_business_types?: string[];
+  cep_ranges?: Array<{ start: string; end: string }>;
+  auto_capture_enabled?: boolean;
+  capture_frequency?: 'daily' | 'weekly' | 'monthly';
+  last_capture_at?: string;
   total_leads_captured: number;
   created_at: string;
 }
@@ -26,23 +38,35 @@ interface CampaignModalProps {
 const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, onSave, campaign }) => {
   const { showToast } = useToast();
   const [formData, setFormData] = useState({
-    nome: '',
-    descricao: '',
-    source_type: 'cnpj',
-    filters: {},
-    schedule: '',
-    is_active: true,
+    name: '',
+    description: '',
+    search_type: 'google_maps' as 'google_maps' | 'cep_region' | 'manual',
+    search_keywords: '',
+    search_region: '',
+    search_radius_km: 10,
+    target_business_types: '',
+    cep_start: '',
+    cep_end: '',
+    status: 'ativo' as 'ativo' | 'pausado' | 'concluído',
+    auto_capture_enabled: false,
+    capture_frequency: 'weekly' as 'daily' | 'weekly' | 'monthly',
   });
 
   useEffect(() => {
     if (campaign) {
       setFormData({
-        nome: campaign.nome,
-        descricao: campaign.descricao,
-        source_type: campaign.source_type,
-        filters: campaign.filters,
-        schedule: campaign.schedule,
-        is_active: campaign.is_active,
+        name: campaign.nome || campaign.name || '',
+        description: campaign.descricao || campaign.description || '',
+        search_type: campaign.search_type || 'google_maps',
+        search_keywords: campaign.search_keywords?.join(', ') || '',
+        search_region: campaign.search_region || '',
+        search_radius_km: campaign.search_radius_km || 10,
+        target_business_types: campaign.target_business_types?.join(', ') || '',
+        cep_start: campaign.cep_ranges?.[0]?.start || '',
+        cep_end: campaign.cep_ranges?.[0]?.end || '',
+        status: campaign.status || 'ativo',
+        auto_capture_enabled: campaign.auto_capture_enabled || false,
+        capture_frequency: campaign.capture_frequency || 'weekly',
       });
     }
   }, [campaign]);
@@ -51,24 +75,49 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, onSave, 
     e.preventDefault();
 
     try {
+      const keywords = formData.search_keywords.split(',').map(k => k.trim()).filter(Boolean);
+      const businessTypes = formData.target_business_types.split(',').map(t => t.trim()).filter(Boolean);
+
+      const cepRanges = formData.cep_start && formData.cep_end
+        ? [{ start: formData.cep_start, end: formData.cep_end }]
+        : [];
+
+      const campaignData = {
+        name: formData.name,
+        description: formData.description,
+        status: formData.status,
+        search_type: formData.search_type,
+        search_keywords: keywords,
+        search_region: formData.search_region,
+        search_radius_km: formData.search_radius_km,
+        target_business_types: businessTypes,
+        cep_ranges: cepRanges,
+        auto_capture_enabled: formData.auto_capture_enabled,
+        capture_frequency: formData.capture_frequency,
+      };
+
       if (campaign) {
-        await supabase
+        const { error } = await supabase
           .from('lead_capture_campaigns')
-          .update(formData)
+          .update(campaignData)
           .eq('id', campaign.id);
+
+        if (error) throw error;
         showToast('Campanha atualizada com sucesso!', 'success');
       } else {
-        await supabase
+        const { error } = await supabase
           .from('lead_capture_campaigns')
-          .insert([formData]);
+          .insert([campaignData]);
+
+        if (error) throw error;
         showToast('Campanha criada com sucesso!', 'success');
       }
 
       onSave();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar campanha:', error);
-      showToast('Erro ao salvar campanha', 'error');
+      showToast(error.message || 'Erro ao salvar campanha', 'error');
     }
   };
 
@@ -84,12 +133,12 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, onSave, 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome da Campanha
+              Nome da Campanha *
             </label>
             <input
               type="text"
-              value={formData.nome}
-              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               required
             />
@@ -100,42 +149,114 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, onSave, 
               Descrição
             </label>
             <textarea
-              value={formData.descricao}
-              onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               rows={3}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Fonte
-            </label>
-            <select
-              value={formData.source_type}
-              onChange={(e) => setFormData({ ...formData, source_type: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="cnpj">CNPJ (API Receita Federal)</option>
-              <option value="linkedin">LinkedIn</option>
-              <option value="instagram">Instagram</option>
-              <option value="google">Google</option>
-              <option value="facebook">Facebook</option>
-              <option value="manual">Manual</option>
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Busca *
+              </label>
+              <select
+                value={formData.search_type}
+                onChange={(e) => setFormData({ ...formData, search_type: e.target.value as any })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="google_maps">Google Maps</option>
+                <option value="cep_region">Região por CEP</option>
+                <option value="manual">Manual</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="ativo">Ativo</option>
+                <option value="pausado">Pausado</option>
+                <option value="concluído">Concluído</option>
+              </select>
+            </div>
           </div>
 
-          {formData.source_type === 'cnpj' && (
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">Filtros CNPJ</h4>
-              <p className="text-sm text-blue-700 mb-3">
-                Configure os filtros para captação automática via CNPJ
-              </p>
-              <div className="space-y-2">
+          {formData.search_type === 'google_maps' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Palavras-chave (separadas por vírgula)
+                </label>
                 <input
                   type="text"
-                  placeholder="CNPJs separados por vírgula"
-                  className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  value={formData.search_keywords}
+                  onChange={(e) => setFormData({ ...formData, search_keywords: e.target.value })}
+                  placeholder="Ex: ar condicionado, refrigeração, climatização"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Região
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.search_region}
+                    onChange={(e) => setFormData({ ...formData, search_region: e.target.value })}
+                    placeholder="Ex: São Paulo, SP"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Raio (km)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.search_radius_km}
+                    onChange={(e) => setFormData({ ...formData, search_radius_km: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {formData.search_type === 'cep_region' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CEP Inicial
+                </label>
+                <input
+                  type="text"
+                  value={formData.cep_start}
+                  onChange={(e) => setFormData({ ...formData, cep_start: e.target.value })}
+                  placeholder="01000-000"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CEP Final
+                </label>
+                <input
+                  type="text"
+                  value={formData.cep_end}
+                  onChange={(e) => setFormData({ ...formData, cep_end: e.target.value })}
+                  placeholder="01999-999"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -143,31 +264,46 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, onSave, 
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Agendamento (Opcional)
+              Tipos de Negócio (separados por vírgula)
             </label>
             <input
               type="text"
-              value={formData.schedule}
-              onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
-              placeholder="Ex: 0 9 * * * (todos os dias às 9h)"
+              value={formData.target_business_types}
+              onChange={(e) => setFormData({ ...formData, target_business_types: e.target.value })}
+              placeholder="Ex: Refrigeração, HVAC, Manutenção"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Formato cron: minuto hora dia mês dia-da-semana
-            </p>
           </div>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="is_active"
-              checked={formData.is_active}
-              onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
-              Campanha ativa
-            </label>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.auto_capture_enabled}
+                  onChange={(e) => setFormData({ ...formData, auto_capture_enabled: e.target.checked })}
+                  className="rounded"
+                />
+                <span className="text-sm font-medium text-gray-700">Captura Automática</span>
+              </label>
+            </div>
+
+            {formData.auto_capture_enabled && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Frequência
+                </label>
+                <select
+                  value={formData.capture_frequency}
+                  onChange={(e) => setFormData({ ...formData, capture_frequency: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="daily">Diária</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="monthly">Mensal</option>
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -225,13 +361,16 @@ const LeadCaptureCampaigns: React.FC = () => {
 
   const toggleCampaignStatus = async (campaign: Campaign) => {
     try {
+      const currentStatus = campaign.status || (campaign.is_active ? 'ativo' : 'pausado');
+      const newStatus = currentStatus === 'ativo' ? 'pausado' : 'ativo';
+
       await supabase
         .from('lead_capture_campaigns')
-        .update({ is_active: !campaign.is_active })
+        .update({ status: newStatus })
         .eq('id', campaign.id);
 
       showToast(
-        `Campanha ${!campaign.is_active ? 'ativada' : 'pausada'} com sucesso!`,
+        `Campanha ${newStatus === 'ativo' ? 'ativada' : 'pausada'} com sucesso!`,
         'success'
       );
       loadCampaigns();
@@ -259,37 +398,26 @@ const LeadCaptureCampaigns: React.FC = () => {
   };
 
   const executeCampaign = async (campaign: Campaign) => {
-    if (campaign.source_type !== 'cnpj') {
-      showToast('No momento, apenas campanhas CNPJ podem ser executadas manualmente', 'info');
-      return;
-    }
+    const searchType = campaign.search_type || campaign.source_type;
 
-    const cnpjsInput = prompt('Digite os CNPJs separados por vírgula:');
-    if (!cnpjsInput) return;
-
-    const cnpjList = cnpjsInput.split(',').map(c => c.trim()).filter(c => c);
-
-    if (cnpjList.length === 0) {
-      showToast('Nenhum CNPJ válido fornecido', 'error');
+    if (!searchType || searchType === 'manual') {
+      showToast('Configure o tipo de busca antes de executar', 'info');
       return;
     }
 
     setExecutingCampaign(campaign.id);
 
     try {
+      const endpoint = searchType === 'google_maps'
+        ? 'buscar-leads-google'
+        : 'buscar-leads-cep';
+
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/captar-leads-cnpj`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}?campaignId=${campaign.id}`,
         {
-          method: 'POST',
           headers: {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            campaign_id: campaign.id,
-            cnpj_list: cnpjList,
-            auto_enrich: true,
-          }),
+          }
         }
       );
 
@@ -297,42 +425,45 @@ const LeadCaptureCampaigns: React.FC = () => {
 
       if (result.success) {
         showToast(
-          `${result.captured} leads capturados com sucesso! ${result.errors} erros.`,
+          `${result.leads_captured} leads capturados com sucesso!`,
           'success'
         );
         loadCampaigns();
       } else {
-        showToast('Erro ao executar campanha', 'error');
+        throw new Error(result.error || 'Erro ao executar campanha');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao executar campanha:', error);
-      showToast('Erro ao executar campanha', 'error');
+      showToast(error.message || 'Erro ao executar campanha', 'error');
     } finally {
       setExecutingCampaign(null);
     }
   };
 
   const filteredCampaigns = campaigns.filter((campaign) => {
+    const campaignName = campaign.name || campaign.nome || '';
+    const campaignDesc = campaign.description || campaign.descricao || '';
+    const campaignStatus = campaign.status || (campaign.is_active ? 'ativo' : 'pausado');
+    const searchType = campaign.search_type || campaign.source_type || '';
+
     const matchesSearch =
-      campaign.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      campaign.descricao?.toLowerCase().includes(searchTerm.toLowerCase());
+      campaignName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      campaignDesc.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesFilter =
       filterType === 'all' ||
-      (filterType === 'active' && campaign.is_active) ||
-      (filterType === 'inactive' && !campaign.is_active) ||
-      campaign.source_type === filterType;
+      (filterType === 'active' && campaignStatus === 'ativo') ||
+      (filterType === 'inactive' && campaignStatus !== 'ativo') ||
+      searchType === filterType;
 
     return matchesSearch && matchesFilter;
   });
 
   const getSourceTypeBadge = (type: string) => {
     const badges: { [key: string]: { color: string; label: string } } = {
+      google_maps: { color: 'bg-green-100 text-green-800', label: 'Google Maps' },
+      cep_region: { color: 'bg-blue-100 text-blue-800', label: 'Região CEP' },
       cnpj: { color: 'bg-blue-100 text-blue-800', label: 'CNPJ' },
-      linkedin: { color: 'bg-purple-100 text-purple-800', label: 'LinkedIn' },
-      instagram: { color: 'bg-pink-100 text-pink-800', label: 'Instagram' },
-      google: { color: 'bg-green-100 text-green-800', label: 'Google' },
-      facebook: { color: 'bg-indigo-100 text-indigo-800', label: 'Facebook' },
       manual: { color: 'bg-gray-100 text-gray-800', label: 'Manual' },
     };
 
@@ -423,16 +554,16 @@ const LeadCaptureCampaigns: React.FC = () => {
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
           >
             <div className="flex justify-between items-start mb-4">
-              {getSourceTypeBadge(campaign.source_type)}
+              {getSourceTypeBadge(campaign.search_type || campaign.source_type || 'manual')}
               <div className="flex gap-2">
                 <button
                   onClick={() => toggleCampaignStatus(campaign)}
                   className={`p-1 rounded hover:bg-gray-100 ${
-                    campaign.is_active ? 'text-green-600' : 'text-gray-400'
+                    (campaign.status === 'ativo' || campaign.is_active) ? 'text-green-600' : 'text-gray-400'
                   }`}
-                  title={campaign.is_active ? 'Pausar' : 'Ativar'}
+                  title={(campaign.status === 'ativo' || campaign.is_active) ? 'Pausar' : 'Ativar'}
                 >
-                  {campaign.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  {(campaign.status === 'ativo' || campaign.is_active) ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </button>
                 <button
                   onClick={() => {
@@ -455,10 +586,10 @@ const LeadCaptureCampaigns: React.FC = () => {
             </div>
 
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {campaign.nome}
+              {campaign.name || campaign.nome}
             </h3>
             <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-              {campaign.descricao}
+              {campaign.description || campaign.descricao}
             </p>
 
             <div className="space-y-2 mb-4">
@@ -468,11 +599,11 @@ const LeadCaptureCampaigns: React.FC = () => {
                   {campaign.total_leads_captured}
                 </span>
               </div>
-              {campaign.last_run && (
+              {(campaign.last_capture_at || campaign.last_run) && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Última Execução</span>
                   <span className="text-gray-900">
-                    {new Date(campaign.last_run).toLocaleDateString('pt-BR')}
+                    {new Date(campaign.last_capture_at || campaign.last_run).toLocaleDateString('pt-BR')}
                   </span>
                 </div>
               )}
