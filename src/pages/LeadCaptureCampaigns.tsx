@@ -339,6 +339,15 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, onSave, 
   );
 };
 
+interface CampaignMetrics {
+  total_campaigns: number;
+  active_campaigns: number;
+  total_leads: number;
+  leads_this_week: number;
+  leads_this_month: number;
+  avg_leads_per_campaign: number;
+}
+
 const LeadCaptureCampaigns: React.FC = () => {
   const { showToast } = useToast();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -348,9 +357,18 @@ const LeadCaptureCampaigns: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [executingCampaign, setExecutingCampaign] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState<CampaignMetrics>({
+    total_campaigns: 0,
+    active_campaigns: 0,
+    total_leads: 0,
+    leads_this_week: 0,
+    leads_this_month: 0,
+    avg_leads_per_campaign: 0,
+  });
 
   useEffect(() => {
     loadCampaigns();
+    loadMetrics();
   }, []);
 
   const loadCampaigns = async () => {
@@ -371,6 +389,47 @@ const LeadCaptureCampaigns: React.FC = () => {
     }
   };
 
+  const loadMetrics = async () => {
+    try {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+      const { data: campaigns, error: campaignsError } = await supabase
+        .from('lead_capture_campaigns')
+        .select('total_leads_captured, status, last_capture_at');
+
+      if (campaignsError) throw campaignsError;
+
+      const { data: leadsWeek, error: leadsWeekError } = await supabase
+        .from('captured_leads')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', oneWeekAgo.toISOString());
+
+      const { data: leadsMonth, error: leadsMonthError } = await supabase
+        .from('captured_leads')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', oneMonthAgo.toISOString());
+
+      const totalLeads = campaigns?.reduce((sum, c) => sum + (c.total_leads_captured || 0), 0) || 0;
+      const activeCampaigns = campaigns?.filter(c => c.status === 'ativo').length || 0;
+      const avgLeads = campaigns && campaigns.length > 0 ? totalLeads / campaigns.length : 0;
+
+      setMetrics({
+        total_campaigns: campaigns?.length || 0,
+        active_campaigns: activeCampaigns,
+        total_leads: totalLeads,
+        leads_this_week: leadsWeek?.length || 0,
+        leads_this_month: leadsMonth?.length || 0,
+        avg_leads_per_campaign: Math.round(avgLeads * 10) / 10,
+      });
+    } catch (error) {
+      console.error('Erro ao carregar métricas:', error);
+    }
+  };
+
   const toggleCampaignStatus = async (campaign: Campaign) => {
     try {
       const currentStatus = campaign.status || (campaign.is_active ? 'ativo' : 'pausado');
@@ -386,6 +445,7 @@ const LeadCaptureCampaigns: React.FC = () => {
         'success'
       );
       loadCampaigns();
+      loadMetrics();
     } catch (error) {
       console.error('Erro ao alterar status:', error);
       showToast('Erro ao alterar status da campanha', 'error');
@@ -403,6 +463,7 @@ const LeadCaptureCampaigns: React.FC = () => {
 
       showToast('Campanha excluída com sucesso!', 'success');
       loadCampaigns();
+      loadMetrics();
     } catch (error) {
       console.error('Erro ao excluir campanha:', error);
       showToast('Erro ao excluir campanha', 'error');
@@ -441,6 +502,7 @@ const LeadCaptureCampaigns: React.FC = () => {
           'success'
         );
         loadCampaigns();
+        loadMetrics();
       } else {
         throw new Error(result.error || 'Erro ao executar campanha');
       }
@@ -516,6 +578,81 @@ const LeadCaptureCampaigns: React.FC = () => {
           <Plus className="w-4 h-4" />
           Nova Campanha
         </button>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Campanhas</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{metrics.total_campaigns}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Filter className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Campanhas Ativas</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{metrics.active_campaigns}</p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <Play className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total de Leads</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{metrics.total_leads}</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Search className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Leads Esta Semana</p>
+              <p className="text-2xl font-bold text-blue-600 mt-1">{metrics.leads_this_week}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <RefreshCw className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Leads Este Mês</p>
+              <p className="text-2xl font-bold text-indigo-600 mt-1">{metrics.leads_this_month}</p>
+            </div>
+            <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <Plus className="w-6 h-6 text-indigo-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Média por Campanha</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{metrics.avg_leads_per_campaign}</p>
+            </div>
+            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+              <Search className="w-6 h-6 text-orange-600" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -604,18 +741,60 @@ const LeadCaptureCampaigns: React.FC = () => {
               {campaign.description || campaign.descricao}
             </p>
 
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Leads Capturados</span>
-                <span className="font-semibold text-gray-900">
-                  {campaign.total_leads_captured}
-                </span>
+            <div className="space-y-3 mb-4">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-gray-600">Leads Capturados</span>
+                  <span className="text-xs font-medium text-gray-500">
+                    {campaign.auto_capture_enabled ? `Auto (${campaign.capture_frequency})` : 'Manual'}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {campaign.total_leads_captured}
+                  </span>
+                  <span className="text-xs text-gray-500">leads</span>
+                </div>
               </div>
+
+              {campaign.search_keywords && campaign.search_keywords.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {campaign.search_keywords.slice(0, 3).map((keyword, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded"
+                    >
+                      {keyword}
+                    </span>
+                  ))}
+                  {campaign.search_keywords.length > 3 && (
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                      +{campaign.search_keywords.length - 3}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {campaign.search_region && (
+                <div className="text-xs text-gray-600 flex items-center gap-1">
+                  <span className="font-medium">Região:</span>
+                  <span>{campaign.search_region}</span>
+                  {campaign.search_radius_km && (
+                    <span className="text-gray-500">({campaign.search_radius_km}km)</span>
+                  )}
+                </div>
+              )}
+
               {(campaign.last_capture_at || campaign.last_run) && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Última Execução</span>
-                  <span className="text-gray-900">
-                    {new Date(campaign.last_capture_at || campaign.last_run).toLocaleDateString('pt-BR')}
+                <div className="text-xs text-gray-500 flex items-center justify-between pt-2 border-t border-gray-100">
+                  <span>Última execução:</span>
+                  <span className="font-medium">
+                    {new Date(campaign.last_capture_at || campaign.last_run).toLocaleDateString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </span>
                 </div>
               )}
