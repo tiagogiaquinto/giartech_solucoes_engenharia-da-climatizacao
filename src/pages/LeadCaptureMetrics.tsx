@@ -222,25 +222,25 @@ const LeadCaptureMetrics: React.FC = () => {
         <StatCard
           title="Leads Capturados"
           value={metrics.totalLeads.toString()}
-          icon={<Users className="w-6 h-6" />}
+          icon={Users}
           trend={{ value: 12, isPositive: true }}
         />
         <StatCard
           title="Leads Qualificados"
           value={metrics.qualifiedLeads.toString()}
-          icon={<Target className="w-6 h-6" />}
+          icon={Target}
           trend={{ value: 8, isPositive: true }}
         />
         <StatCard
           title="Taxa de Qualificação"
           value={`${metrics.qualificationRate}%`}
-          icon={<TrendingUp className="w-6 h-6" />}
+          icon={TrendingUp}
           trend={{ value: 5, isPositive: true }}
         />
         <StatCard
           title="Score Médio"
           value={metrics.avgScore.toString()}
-          icon={<Activity className="w-6 h-6" />}
+          icon={Activity}
           trend={{ value: 3, isPositive: true }}
         />
       </div>
