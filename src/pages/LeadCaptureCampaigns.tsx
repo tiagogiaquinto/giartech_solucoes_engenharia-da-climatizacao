@@ -82,6 +82,12 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, onSave, 
         ? [{ start: formData.cep_start, end: formData.cep_end }]
         : [];
 
+      const sourceTypeMap: Record<string, string> = {
+        'google_maps': 'google',
+        'cep_region': 'cnpj',
+        'manual': 'manual'
+      };
+
       const campaignData = {
         name: formData.name,
         nome: formData.name,
@@ -90,7 +96,7 @@ const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose, onSave, 
         status: formData.status,
         is_active: formData.status === 'ativo',
         search_type: formData.search_type,
-        source_type: formData.search_type,
+        source_type: sourceTypeMap[formData.search_type] || 'manual',
         search_keywords: keywords,
         search_region: formData.search_region,
         search_radius_km: formData.search_radius_km,
