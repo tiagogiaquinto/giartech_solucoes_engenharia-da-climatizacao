@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Users, Phone, Mail, MapPin, Building, Star, ExternalLink, Check, X, UserPlus, MessageCircle, Calendar, Tag } from 'lucide-react'
+import { Users, Phone, Mail, MapPin, Building, Star, ExternalLink, Check, X, UserPlus, MessageCircle, Calendar, Tag, Plus, Edit as EditIcon, Save } from 'lucide-react'
 import { useToast } from '../hooks/useToast'
+import { CnpjSearchField } from '../components/CnpjSearchField'
 
 interface Lead {
   id: string
@@ -45,9 +46,30 @@ export default function CapturedLeadsManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showFormModal, setShowFormModal] = useState(false)
+  const [editingLead, setEditingLead] = useState<Partial<Lead> | null>(null)
   const { showToast } = useToast()
 
   const [employees, setEmployees] = useState<any[]>([])
+
+  const [formData, setFormData] = useState<Partial<Lead>>({
+    company_name: '',
+    cnpj: '',
+    email: '',
+    phone: '',
+    whatsapp: '',
+    address: '',
+    cep: '',
+    city: '',
+    state: '',
+    neighborhood: '',
+    business_type: '',
+    website: '',
+    source: 'manual',
+    status: 'novo',
+    priority: 'média',
+    notes: '',
+  })
 
   useEffect(() => {
     loadLeads()
@@ -157,6 +179,81 @@ export default function CapturedLeadsManagement() {
     }
   }
 
+  const openFormModal = (lead?: Lead) => {
+    if (lead) {
+      setEditingLead(lead)
+      setFormData(lead)
+    } else {
+      setEditingLead(null)
+      setFormData({
+        company_name: '',
+        cnpj: '',
+        email: '',
+        phone: '',
+        whatsapp: '',
+        address: '',
+        cep: '',
+        city: '',
+        state: '',
+        neighborhood: '',
+        business_type: '',
+        website: '',
+        source: 'manual',
+        status: 'novo',
+        priority: 'média',
+        notes: '',
+      })
+    }
+    setShowFormModal(true)
+  }
+
+  const saveLead = async () => {
+    try {
+      if (!formData.company_name) {
+        showToast('Nome da empresa é obrigatório', 'error')
+        return
+      }
+
+      if (editingLead) {
+        const { error } = await supabase
+          .from('captured_leads')
+          .update(formData)
+          .eq('id', editingLead.id)
+
+        if (error) throw error
+        showToast('Lead atualizado com sucesso!', 'success')
+      } else {
+        const { error } = await supabase
+          .from('captured_leads')
+          .insert([formData])
+
+        if (error) throw error
+        showToast('Lead criado com sucesso!', 'success')
+      }
+
+      setShowFormModal(false)
+      loadLeads()
+    } catch (error: any) {
+      console.error('Error saving lead:', error)
+      showToast(error.message || 'Erro ao salvar lead', 'error')
+    }
+  }
+
+  const handleCnpjData = (data: any) => {
+    setFormData(prev => ({
+      ...prev,
+      company_name: data.nome || data.fantasia || prev.company_name,
+      cnpj: data.cnpj || prev.cnpj,
+      email: data.email || prev.email,
+      phone: data.telefone || prev.phone,
+      address: `${data.logradouro || ''}, ${data.numero || ''}`.trim(),
+      cep: data.cep || prev.cep,
+      city: data.municipio || prev.city,
+      state: data.uf || prev.state,
+      neighborhood: data.bairro || prev.neighborhood,
+    }))
+  }
+
   const getStatusBadge = (status: string) => {
     const badges = {
       novo: 'bg-blue-100 text-blue-800',
@@ -211,6 +308,13 @@ export default function CapturedLeadsManagement() {
           <h1 className="text-2xl font-bold text-gray-900">Leads Capturados</h1>
           <p className="text-gray-600 mt-1">Gerencie e qualifique seus leads</p>
         </div>
+        <button
+          onClick={() => openFormModal()}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          <Plus className="w-4 h-4" />
+          Novo Lead
+        </button>
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -357,6 +461,13 @@ export default function CapturedLeadsManagement() {
                 <td className="px-6 py-4">
                   <div className="flex gap-2">
                     <button
+                      onClick={() => openFormModal(lead)}
+                      className="p-1 text-gray-600 hover:bg-gray-50 rounded"
+                      title="Editar"
+                    >
+                      <EditIcon className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => {
                         setSelectedLead(lead)
                         setShowDetailModal(true)
@@ -388,6 +499,289 @@ export default function CapturedLeadsManagement() {
           </div>
         )}
       </div>
+
+      {showFormModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-xl font-bold">
+                  {editingLead ? 'Editar Lead' : 'Novo Lead'}
+                </h2>
+                <button
+                  onClick={() => setShowFormModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); saveLead(); }} className="space-y-6">
+                {/* Busca CNPJ */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Buscar por CNPJ (Opcional)
+                  </label>
+                  <CnpjSearchField
+                    onDataFound={handleCnpjData}
+                    onError={(error) => showToast(error, 'error')}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Nome da Empresa */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nome da Empresa *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.company_name || ''}
+                      onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  {/* CNPJ */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      CNPJ
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cnpj || ''}
+                      onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="00.000.000/0000-00"
+                    />
+                  </div>
+
+                  {/* Tipo de Negócio */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tipo de Negócio
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.business_type || ''}
+                      onChange={(e) => setFormData({ ...formData, business_type: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Ex: Restaurante, Loja, Serviços"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.email || ''}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Telefone */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Telefone
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.phone || ''}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="(00) 0000-0000"
+                    />
+                  </div>
+
+                  {/* WhatsApp */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      WhatsApp
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.whatsapp || ''}
+                      onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+
+                  {/* Website */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Website
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.website || ''}
+                      onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="https://exemplo.com.br"
+                    />
+                  </div>
+
+                  {/* CEP */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      CEP
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cep || ''}
+                      onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="00000-000"
+                    />
+                  </div>
+
+                  {/* Endereço */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Endereço
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.address || ''}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Rua, Número, Complemento"
+                    />
+                  </div>
+
+                  {/* Bairro */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Bairro
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.neighborhood || ''}
+                      onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Cidade */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cidade
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.city || ''}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Estado */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Estado
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.state || ''}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="SP"
+                      maxLength={2}
+                    />
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={formData.status || 'novo'}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="novo">Novo</option>
+                      <option value="contatado">Contatado</option>
+                      <option value="qualificado">Qualificado</option>
+                      <option value="convertido">Convertido</option>
+                      <option value="descartado">Descartado</option>
+                    </select>
+                  </div>
+
+                  {/* Prioridade */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Prioridade
+                    </label>
+                    <select
+                      value={formData.priority || 'média'}
+                      onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="baixa">Baixa</option>
+                      <option value="média">Média</option>
+                      <option value="alta">Alta</option>
+                    </select>
+                  </div>
+
+                  {/* Fonte */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fonte
+                    </label>
+                    <select
+                      value={formData.source || 'manual'}
+                      onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="manual">Manual</option>
+                      <option value="google_maps">Google Maps</option>
+                      <option value="correios">Correios</option>
+                      <option value="api">API</option>
+                    </select>
+                  </div>
+
+                  {/* Observações */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Observações
+                    </label>
+                    <textarea
+                      value={formData.notes || ''}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      rows={4}
+                      placeholder="Adicione observações sobre este lead..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setShowFormModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    {editingLead ? 'Atualizar' : 'Salvar Lead'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showDetailModal && selectedLead && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
