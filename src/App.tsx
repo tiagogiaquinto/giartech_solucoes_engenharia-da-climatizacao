@@ -114,6 +114,7 @@ import DocumentCenter from './pages/DocumentCenter'
 import ThomazDashboard from './pages/ThomazDashboard'
 import LeadCaptureMetrics from './pages/LeadCaptureMetrics'
 import LeadCaptureCampaigns from './pages/LeadCaptureCampaigns'
+import CapturedLeadsManagement from './pages/CapturedLeadsManagement'
 import AIProvidersSettings from './pages/AIProvidersSettings'
 
 // Protected route component - DESABILITADO para acesso livre
@@ -613,6 +614,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <LeadCaptureCampaigns />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/captured-leads" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <CapturedLeadsManagement />
               </WebLayout>
             </ProtectedRoute>
           } />
