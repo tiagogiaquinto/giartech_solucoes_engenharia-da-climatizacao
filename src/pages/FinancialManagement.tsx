@@ -63,6 +63,7 @@ const FinancialManagement = () => {
   const [showEntryModal, setShowEntryModal] = useState(false)
   const [editingEntryId, setEditingEntryId] = useState<string | undefined>(undefined)
   const [showRecurrenceModal, setShowRecurrenceModal] = useState(false)
+  const [generatingRecurrences, setGeneratingRecurrences] = useState(false)
 
   useEffect(() => {
     loadFinancialData()
@@ -127,6 +128,40 @@ const FinancialManagement = () => {
     } catch (error) {
       console.error('Error deleting entry:', error)
       alert('Erro ao excluir lançamento. Verifique se não há registros relacionados.')
+    }
+  }
+
+  const handleGenerateRecurrences = async () => {
+    if (!confirm('Deseja gerar todos os lançamentos recorrentes para os próximos 12 meses?\n\nIsso criará automaticamente os lançamentos futuros baseados nas suas recorrências ativas.')) {
+      return
+    }
+
+    try {
+      setGeneratingRecurrences(true)
+
+      const { data, error } = await supabase.rpc('regenerate_all_recurrences')
+
+      if (error) throw error
+
+      const result = data as {
+        success: boolean
+        recurrences_processed: number
+        total_generated: number
+        total_errors: number
+        months_ahead: number
+      }
+
+      if (result.success) {
+        alert(`✅ Geração concluída!\n\n📊 Recorrências processadas: ${result.recurrences_processed}\n✨ Lançamentos criados: ${result.total_generated}\n❌ Erros: ${result.total_errors}\n📅 Meses gerados: ${result.months_ahead}`)
+        await loadFinancialData()
+      } else {
+        alert('Erro ao gerar recorrências.')
+      }
+    } catch (error) {
+      console.error('Error generating recurrences:', error)
+      alert('Erro ao gerar recorrências. Tente novamente.')
+    } finally {
+      setGeneratingRecurrences(false)
     }
   }
 
@@ -289,6 +324,27 @@ const FinancialManagement = () => {
           <p className="text-gray-600 mt-1">Receitas, despesas e DRE</p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={handleGenerateRecurrences}
+            disabled={generatingRecurrences}
+            className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              generatingRecurrences
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+          >
+            {generatingRecurrences ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Gerando...
+              </>
+            ) : (
+              <>
+                <Repeat className="h-4 w-4" />
+                Gerar Recorrências
+              </>
+            )}
+          </button>
           <Link
             to="/financial-integration"
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
