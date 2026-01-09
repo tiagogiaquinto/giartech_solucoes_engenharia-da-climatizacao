@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { DollarSign, TrendingUp, TrendingDown, Calendar, ListFilter as Filter, Download, Plus, FileText, CreditCard, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, Clock, CreditCard as Edit, Trash2, Package, RefreshCw } from 'lucide-react'
+import { DollarSign, TrendingUp, TrendingDown, Calendar, ListFilter as Filter, Download, Plus, FileText, CreditCard, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, Clock, CreditCard as Edit, Trash2, Package, RefreshCw, Repeat } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import FinanceEntryModal from '../components/FinanceEntryModal'
+import RecurrenceCalendarModal from '../components/RecurrenceCalendarModal'
 import { formatDateSafe } from '../utils/format'
 
 interface FinanceEntry {
@@ -53,6 +54,7 @@ const FinancialManagement = () => {
   const [filterYear, setFilterYear] = useState('')
   const [filterDateStart, setFilterDateStart] = useState('')
   const [filterDateEnd, setFilterDateEnd] = useState('')
+  const [filterRecurrence, setFilterRecurrence] = useState<'all' | 'recorrente' | 'nao_recorrente'>('all')
   const [sortField, setSortField] = useState<'data' | 'valor' | 'created_at'>('data')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
@@ -60,6 +62,7 @@ const FinancialManagement = () => {
   const itemsPerPage = 15
   const [showEntryModal, setShowEntryModal] = useState(false)
   const [editingEntryId, setEditingEntryId] = useState<string | undefined>(undefined)
+  const [showRecurrenceModal, setShowRecurrenceModal] = useState(false)
 
   useEffect(() => {
     loadFinancialData()
@@ -249,8 +252,12 @@ const FinancialManagement = () => {
     const matchesDateRange = (!filterDateStart || entry.data >= filterDateStart) &&
                              (!filterDateEnd || entry.data <= filterDateEnd)
 
+    const matchesRecurrence = filterRecurrence === 'all' ||
+      (filterRecurrence === 'recorrente' && (entry as any).is_recurring === true) ||
+      (filterRecurrence === 'nao_recorrente' && !(entry as any).is_recurring)
+
     return matchesType && matchesStatus && matchesSearch && matchesCategory &&
-           matchesMonth && matchesYear && matchesDateRange
+           matchesMonth && matchesYear && matchesDateRange && matchesRecurrence
   })
 
   const totalPages = Math.ceil(filteredEntries.length / itemsPerPage)
@@ -383,24 +390,34 @@ const FinancialManagement = () => {
             <Filter className="h-5 w-5" />
             Filtros Avançados
           </h2>
-          <button
-            onClick={() => {
-              setFilterType('all')
-              setFilterStatus('all')
-              setFilterSearch('')
-              setFilterCategory('all')
-              setFilterMonth('')
-              setFilterYear('')
-              setFilterDateStart('')
-              setFilterDateEnd('')
-              setSortField('data')
-              setSortOrder('desc')
-              setCurrentPage(1)
-            }}
-            className="text-sm text-blue-600 hover:text-blue-700"
-          >
-            Limpar Filtros
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowRecurrenceModal(true)}
+              className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 text-sm"
+            >
+              <Calendar className="h-4 w-4" />
+              Calendário de Recorrências
+            </button>
+            <button
+              onClick={() => {
+                setFilterType('all')
+                setFilterStatus('all')
+                setFilterSearch('')
+                setFilterCategory('all')
+                setFilterMonth('')
+                setFilterYear('')
+                setFilterDateStart('')
+                setFilterDateEnd('')
+                setFilterRecurrence('all')
+                setSortField('data')
+                setSortOrder('desc')
+                setCurrentPage(1)
+              }}
+              className="text-sm text-blue-600 hover:text-blue-700"
+            >
+              Limpar Filtros
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -515,6 +532,19 @@ const FinancialManagement = () => {
             placeholder="Data fim"
             className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
           />
+
+          <select
+            value={filterRecurrence}
+            onChange={(e) => {
+              setFilterRecurrence(e.target.value as any)
+              setCurrentPage(1)
+            }}
+            className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-gradient-to-r from-purple-50 to-blue-50"
+          >
+            <option value="all">Todos os lançamentos</option>
+            <option value="recorrente">🔄 Apenas Recorrentes</option>
+            <option value="nao_recorrente">📌 Apenas Únicos</option>
+          </select>
         </div>
 
         {/* Ordenação */}
@@ -770,6 +800,12 @@ const FinancialManagement = () => {
           setEditingEntryId(undefined)
         }}
         entryId={editingEntryId}
+      />
+
+      {/* Recurrence Calendar Modal */}
+      <RecurrenceCalendarModal
+        isOpen={showRecurrenceModal}
+        onClose={() => setShowRecurrenceModal(false)}
       />
     </div>
   )
