@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import DocumentEditor from '../components/DocumentEditor'
 import VisualDocumentEditor from '../components/VisualDocumentEditor'
-import AdvancedDocumentEditor from '../components/AdvancedDocumentEditor'
+import AdvancedDocumentEditorPro from '../components/AdvancedDocumentEditorPro'
 
 interface DocumentTemplate {
   id: string
@@ -1000,7 +1000,7 @@ export default function DocumentCenter() {
       )}
 
       {showAdvancedEditor && (
-        <AdvancedDocumentEditor
+        <AdvancedDocumentEditorPro
           document={selectedDocument}
           template={selectedTemplate}
           mode={editorMode}
