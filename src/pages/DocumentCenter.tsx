@@ -213,9 +213,11 @@ export default function DocumentCenter() {
     const { data, error } = await supabase
       .from('company_document_config')
       .select('*')
-      .single()
+      .maybeSingle()
 
-    if (error && error.code !== 'PGRST116') throw error
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error loading company config:', error)
+    }
 
     setCompanyConfig(data || {
       company_name: '',
@@ -352,7 +354,7 @@ export default function DocumentCenter() {
       const { data: existing } = await supabase
         .from('company_document_config')
         .select('id')
-        .single()
+        .maybeSingle()
 
       if (existing) {
         const { error } = await supabase

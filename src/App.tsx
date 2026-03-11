@@ -269,8 +269,7 @@ function App() {
   return (
     <AuthProvider>
       <UserProvider>
-        <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
+        <Routes location={location}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/mobile/login" element={<MobileLogin />} />
           <Route path="/pricing" element={<PricingPlans />} />
@@ -946,7 +945,7 @@ function App() {
         </Routes>
 
         {/* Tutorial Interativo */}
-        <Tutorial 
+        <Tutorial
           isOpen={showTutorial}
           onComplete={() => {
             setShowTutorial(false)
@@ -960,26 +959,25 @@ function App() {
           feature={premiumFeature}
           onClose={() => setShowPremiumModal(false)}
         />
-        
+
         {/* Modal Enterprise */}
         <EnterpriseFeatureModal
           isOpen={showEnterpriseModal}
           feature={enterpriseFeature}
           onClose={() => setShowEnterpriseModal(false)}
         />
-        
+
         {/* Modal Restrição de Acesso */}
         <AccessRestrictionModal
           isOpen={showAccessRestrictionModal}
           onClose={() => setShowAccessRestrictionModal(false)}
           requiredRole={restrictedAccess}
         />
-        
+
         {/* Banner Premium */}
         {showPremiumBanner && (
           <PremiumBanner feature={premiumFeature} />
         )}
-      </AnimatePresence>
 
       {/* Thomaz Super Chat - Assistente Inteligente Único */}
       <ThomazSuperChat />
