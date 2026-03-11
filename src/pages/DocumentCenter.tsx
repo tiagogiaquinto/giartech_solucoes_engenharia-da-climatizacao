@@ -1,39 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  FileText,
-  Plus,
-  Search,
-  Filter,
-  Eye,
-  Edit,
-  Trash2,
-  Download,
-  Send,
-  Copy,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  Settings,
-  Save,
-  X,
-  Upload,
-  Palette,
-  Building2,
-  CreditCard,
-  Award,
-  FileCheck,
-  ClipboardList,
-  Shield,
-  Printer,
-  Share2,
-  MessageSquare,
-  History,
-  Star,
-  Users,
-  CheckSquare,
-  Square
-} from 'lucide-react'
+import { FileText, Plus, Search, ListFilter as Filter, Eye, CreditCard as Edit, Trash2, Download, Send, Copy, CircleCheck as CheckCircle2, Clock, Circle as XCircle, Settings, Save, X, Upload, Palette, Building2, CreditCard, Award, FileCheck, ClipboardList, Shield, Printer, Share2, MessageSquare, History, Star, Users, SquareCheck as CheckSquare, Square } from 'lucide-react'
 import { supabase, bulkDelete } from '../lib/supabase'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
