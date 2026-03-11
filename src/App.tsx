@@ -91,7 +91,6 @@ import Automations from './pages/Automations'
 import AutomationsEnhanced from './pages/AutomationsEnhanced'
 import CreditScoring from './pages/CreditScoring'
 import FinanceiroConsolidado from './pages/FinanceiroConsolidado'
-import ExecutivoConsolidado from './pages/ExecutivoConsolidado'
 import RelatoriosConsolidado from './pages/RelatoriosConsolidado'
 import CustomerReferrals from './pages/CustomerReferrals'
 import CustomerCredits from './pages/CustomerCredits'
@@ -112,10 +111,6 @@ import GoalsAndRankings from './pages/GoalsAndRankings'
 import BudgetManagement from './pages/BudgetManagement'
 import DocumentCenter from './pages/DocumentCenter'
 import ThomazDashboard from './pages/ThomazDashboard'
-import LeadCaptureMetrics from './pages/LeadCaptureMetrics'
-import LeadCaptureCampaigns from './pages/LeadCaptureCampaigns'
-import CapturedLeadsManagement from './pages/CapturedLeadsManagement'
-import LeadSourcesConfig from './pages/LeadSourcesConfig'
 import AIProvidersSettings from './pages/AIProvidersSettings'
 
 // Protected route component - DESABILITADO para acesso livre
@@ -603,38 +598,6 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/lead-capture-metrics" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <LeadCaptureMetrics />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/lead-capture-campaigns" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <LeadCaptureCampaigns />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/captured-leads" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <CapturedLeadsManagement />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/lead-sources-config" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <LeadSourcesConfig />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
           <Route path="/financial-analysis" element={
             <ProtectedRoute>
               <WebLayout>
@@ -679,14 +642,6 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <FinanceiroConsolidado />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/executivo" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <ExecutivoConsolidado />
               </WebLayout>
             </ProtectedRoute>
           } />
