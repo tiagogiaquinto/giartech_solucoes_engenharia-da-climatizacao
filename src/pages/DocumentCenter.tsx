@@ -39,6 +39,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import DocumentEditor from '../components/DocumentEditor'
 import VisualDocumentEditor from '../components/VisualDocumentEditor'
+import AdvancedDocumentEditor from '../components/AdvancedDocumentEditor'
 
 interface DocumentTemplate {
   id: string
@@ -154,6 +155,8 @@ export default function DocumentCenter() {
   const [editorMode, setEditorMode] = useState<EditorMode>('create')
   const [saving, setSaving] = useState(false)
   const [showVisualEditor, setShowVisualEditor] = useState(false)
+  const [showAdvancedEditor, setShowAdvancedEditor] = useState(false)
+  const [editorType, setEditorType] = useState<'basic' | 'advanced' | 'visual'>('advanced')
   const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set())
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
@@ -260,10 +263,10 @@ export default function DocumentCenter() {
     })
   }
 
-  const handleCreateDocument = (template: DocumentTemplate, useVisual = false) => {
+  const handleCreateDocument = (template: DocumentTemplate, type: 'basic' | 'advanced' | 'visual' = 'advanced') => {
     console.log('🎯 handleCreateDocument called:', {
       template_name: template.name,
-      useVisual,
+      editorType: type,
       has_content: !!template.content_template,
       content_length: template.content_template?.length || 0,
       has_header: !!template.header_text,
@@ -273,32 +276,36 @@ export default function DocumentCenter() {
     setSelectedTemplate(template)
     setSelectedDocument(null)
     setEditorMode('create')
+    setEditorType(type)
 
-    if (useVisual) {
+    if (type === 'visual') {
       console.log('✨ Opening Visual Editor with template:', template.name)
       setShowVisualEditor(true)
+    } else if (type === 'advanced') {
+      console.log('🚀 Opening Advanced Editor')
+      setShowAdvancedEditor(true)
     } else {
-      console.log('📝 Opening Simple Editor')
+      console.log('📝 Opening Basic Editor')
       setShowEditor(true)
     }
   }
 
   const handleCreateDocumentVisual = (template: DocumentTemplate) => {
-    handleCreateDocument(template, true)
+    handleCreateDocument(template, 'visual')
   }
 
   const handleViewDocument = (document: GeneratedDocument) => {
     setSelectedDocument(document)
     setSelectedTemplate(null)
     setEditorMode('view')
-    setShowEditor(true)
+    setShowAdvancedEditor(true)
   }
 
   const handleEditDocument = (document: GeneratedDocument) => {
     setSelectedDocument(document)
     setSelectedTemplate(null)
     setEditorMode('edit')
-    setShowEditor(true)
+    setShowAdvancedEditor(true)
   }
 
   const handleDeleteDocument = async (id: string) => {
@@ -757,20 +764,20 @@ export default function DocumentCenter() {
                       </span>
                       <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
-                          onClick={() => handleCreateDocument(template)}
-                          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center"
-                          title="Editor Simples"
+                          onClick={() => handleCreateDocument(template, 'advanced')}
+                          className="px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 text-sm font-medium flex items-center shadow-lg"
+                          title="Editor Avançado com Preview"
                         >
                           <FileText className="w-4 h-4 mr-1" />
-                          Simples
+                          Editar
                         </button>
                         <button
                           onClick={() => handleCreateDocumentVisual(template)}
-                          className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium flex items-center"
-                          title="Editor Visual (Canva)"
+                          className="px-3 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 text-sm font-medium flex items-center shadow-lg"
+                          title="Editor Visual (Canvas)"
                         >
                           <Palette className="w-4 h-4 mr-1" />
-                          Visual
+                          Canvas
                         </button>
                       </div>
                     </div>
@@ -1021,6 +1028,24 @@ export default function DocumentCenter() {
           }}
           onSave={() => {
             loadDocuments()
+          }}
+        />
+      )}
+
+      {showAdvancedEditor && (
+        <AdvancedDocumentEditor
+          document={selectedDocument}
+          template={selectedTemplate}
+          mode={editorMode}
+          onClose={() => {
+            setShowAdvancedEditor(false)
+            setSelectedDocument(null)
+            setSelectedTemplate(null)
+          }}
+          onSave={() => {
+            setShowAdvancedEditor(false)
+            loadDocuments()
+            loadTemplates()
           }}
         />
       )}
