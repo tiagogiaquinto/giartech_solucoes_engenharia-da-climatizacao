@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-import { formatDateSafe } from '../utils/format'
-  Shield, 
-  Users, 
-  Settings, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
+import {
+  Shield,
+  Users,
+  Settings,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
   EyeOff,
   Check,
   X,
@@ -21,6 +20,7 @@ import { formatDateSafe } from '../utils/format'
   User,
   Building
 } from 'lucide-react'
+import { formatDateSafe } from '../utils/format'
 
 interface Permission {
   id: string

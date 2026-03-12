@@ -1,358 +1,110 @@
-# 🚀 Como Testar o Sistema Mobile no Celular
+# Como Testar o Giartech em Dispositivos Móveis
 
-## 📱 **3 OPÇÕES PARA TESTE:**
+## Instalação de Dependências
 
----
+```bash
+npm install
+```
 
-## **OPÇÃO 1: Teste Local (Mais Rápido)** ⚡
+## Desenvolvimento
 
-### **Passo 1: Encontre o IP do seu computador**
+```bash
+npm run dev
+```
+
+## Build para Produção
+
+```bash
+npm run build
+npm run preview
+```
+
+## Testando em Dispositivos Reais
+
+### 1. Via Rede Local
+
+#### Passo 1: Obter seu IP Local
 
 **Windows:**
 ```bash
 ipconfig
-# Procure por "IPv4 Address" (ex: 192.168.1.100)
 ```
+Procure por "IPv4 Address" na interface WiFi
 
 **Mac/Linux:**
 ```bash
-ifconfig | grep inet
-# ou
-ip addr show
-# Procure pelo IP local (ex: 192.168.1.100)
+ifconfig | grep "inet "
 ```
 
-### **Passo 2: Iniciar o servidor de desenvolvimento**
+#### Passo 2: Iniciar o servidor
 
 ```bash
 npm run dev -- --host
 ```
 
-O terminal vai mostrar algo como:
+O Vite exibirá:
 ```
   ➜  Local:   http://localhost:5173/
   ➜  Network: http://192.168.1.100:5173/
 ```
 
-### **Passo 3: Acessar no celular**
+#### Passo 3: Acessar do celular
 
-1. **Conecte seu celular na MESMA rede Wi-Fi do computador**
-2. **Abra o navegador do celular**
-3. **Digite o endereço Network** (exemplo):
-   ```
-   http://192.168.1.100:5173/mobile/login
-   ```
+No navegador do celular, digite o endereço Network (exemplo: `http://192.168.1.100:5173/`)
 
-✅ **Pronto!** Você já pode testar!
+**Importante:** O celular precisa estar na mesma rede WiFi que o computador.
 
----
+### 2. Via Túnel Público (ngrok, localtunnel, etc)
 
-## **OPÇÃO 2: Deploy na Vercel (Recomendado)** 🌐
-
-### **Passo 1: Instalar Vercel CLI**
+#### Usando ngrok:
 
 ```bash
-npm install -g vercel
+# Instalar ngrok
+npm install -g ngrok
+
+# Em um terminal, iniciar o dev server
+npm run dev
+
+# Em outro terminal, criar o túnel
+ngrok http 5173
 ```
 
-### **Passo 2: Fazer login**
+Acesse a URL pública gerada (exemplo: `https://abc123.ngrok.io`)
 
-```bash
-vercel login
-```
+## Instalando como PWA
 
-### **Passo 3: Deploy**
+### Android (Chrome)
 
-```bash
-vercel --prod
-```
+1. Abra o site no Chrome
+2. Toque no menu (⋮) no canto superior direito
+3. Selecione "Instalar app" ou "Adicionar à tela inicial"
+4. Confirme a instalação
+5. O ícone aparecerá na tela inicial
 
-### **Passo 4: Acessar**
+### iOS (Safari)
 
-A Vercel vai gerar um link como:
-```
-https://giartech-mobile.vercel.app
-```
+1. Abra o site no Safari
+2. Toque no botão de compartilhar (quadrado com seta para cima)
+3. Role para baixo e selecione "Adicionar à Tela de Início"
+4. Edite o nome se desejar
+5. Toque em "Adicionar"
+6. O ícone aparecerá na tela inicial
 
-**Acesse no celular:**
-```
-https://giartech-mobile.vercel.app/mobile/login
-```
+## Problemas Comuns
 
----
+### App não carrega no celular
 
-## **OPÇÃO 3: Deploy na Netlify** 🦊
+- Verifique se ambos estão na mesma rede WiFi
+- Desative firewall/antivírus temporariamente
+- Use `--host 0.0.0.0` ao iniciar o dev server
 
-### **Passo 1: Instalar Netlify CLI**
+### Service Worker não registra
 
-```bash
-npm install -g netlify-cli
-```
+- Em desenvolvimento, o SW está desabilitado por padrão
+- Para testar PWA, use `npm run build && npm run preview`
 
-### **Passo 2: Fazer login**
+### Layout quebrado no mobile
 
-```bash
-netlify login
-```
-
-### **Passo 3: Deploy**
-
-```bash
-netlify deploy --prod --dir=dist
-```
-
-### **Passo 4: Acessar**
-
-A Netlify vai gerar um link como:
-```
-https://giartech-mobile.netlify.app
-```
-
-**Acesse no celular:**
-```
-https://giartech-mobile.netlify.app/mobile/login
-```
-
----
-
-## 📲 **ROTAS MOBILE DISPONÍVEIS:**
-
-Após fazer login, você pode testar todas as rotas:
-
-```
-/mobile/login          → Tela de Login (Splash + Form)
-/mobile                → Homepage (Dashboard)
-/mobile/agenda         → Agenda do Técnico
-/mobile/orders         → Lista de OS
-/mobile/purchases      → Solicitações de Compra
-/mobile/routes         → Rastreamento de Rotas
-/mobile/profile        → Perfil do Usuário
-```
-
----
-
-## 🔐 **CREDENCIAIS DE TESTE:**
-
-Para testar o login, você precisa de um usuário cadastrado no banco.
-
-### **Criar usuário de teste (executar no Supabase SQL Editor):**
-
-```sql
--- 1. Criar perfil de usuário
-INSERT INTO user_profiles (user_id, email, name, role, active)
-VALUES (
-  gen_random_uuid(),
-  'tecnico@giartech.com',
-  'João Técnico',
-  'technician',
-  true
-);
-
--- 2. Criar funcionário vinculado
-INSERT INTO employees (
-  user_id,
-  full_name,
-  email,
-  role,
-  active
-)
-SELECT
-  user_id,
-  'João Técnico',
-  'tecnico@giartech.com',
-  'technician',
-  true
-FROM user_profiles
-WHERE email = 'tecnico@giartech.com';
-```
-
-**Login:**
-- Email: `tecnico@giartech.com`
-- Senha: (qualquer valor no modo dev)
-
----
-
-## 🎯 **TESTE RÁPIDO PASSO A PASSO:**
-
-### **1. Iniciar servidor local:**
-```bash
-cd /tmp/cc-agent/58142715/project
-npm run dev -- --host
-```
-
-### **2. Pegar o IP:**
-Procure no terminal a linha **"Network:"**
-```
-➜  Network: http://192.168.1.100:5173/
-```
-
-### **3. No celular:**
-- Conecte no mesmo Wi-Fi
-- Abra o navegador
-- Digite: `http://SEU_IP:5173/mobile/login`
-- Exemplo: `http://192.168.1.100:5173/mobile/login`
-
-### **4. Fazer login:**
-- Email: `tecnico@giartech.com`
-- Senha: qualquer coisa (dev mode)
-- Clicar "ENTRAR"
-
-### **5. Testar todas as abas:**
-- ✅ Início → Ver dashboard
-- ✅ Agenda → Ver compromissos
-- ✅ OS → Ver ordens de serviço
-- ✅ Compras → Nova solicitação
-- ✅ Rotas → Rastreamento GPS
-
----
-
-## 🚀 **DEPLOY RÁPIDO (1 MINUTO):**
-
-### **Usando Vercel (Mais Fácil):**
-
-```bash
-# 1. Instalar
-npm install -g vercel
-
-# 2. Login
-vercel login
-
-# 3. Deploy
-vercel --prod
-```
-
-**Pronto!** Link gerado automaticamente! 🎉
-
-Copie o link e abra no celular!
-
----
-
-## 📱 **ADICIONAR À TELA INICIAL (PWA):**
-
-Depois de acessar pelo navegador:
-
-### **iPhone (Safari):**
-1. Abrir o site
-2. Tocar no botão **Compartilhar** 📤
-3. Rolar e tocar em **"Adicionar à Tela de Início"**
-4. Confirmar
-
-### **Android (Chrome):**
-1. Abrir o site
-2. Tocar nos **3 pontos** ⋮
-3. Tocar em **"Adicionar à tela inicial"**
-4. Confirmar
-
-✅ **Agora você tem o app como se fosse nativo!**
-
----
-
-## 🐛 **TROUBLESHOOTING:**
-
-### **Não consegue acessar pelo IP:**
-- ✅ Verifique se estão na mesma rede Wi-Fi
-- ✅ Desabilite firewall temporariamente
-- ✅ Verifique se o servidor está rodando
-- ✅ Tente usar `0.0.0.0` ao invés de `localhost`
-
-### **Tela branca no celular:**
-- ✅ Limpe o cache do navegador
-- ✅ Abra em modo anônimo
-- ✅ Verifique o console de erros (Chrome DevTools mobile)
-
-### **Login não funciona:**
-- ✅ Verifique se o usuário existe no banco
-- ✅ Verifique as variáveis de ambiente (.env)
-- ✅ Verifique a conexão com Supabase
-
----
-
-## 🎨 **O QUE VOCÊ VAI VER NO CELULAR:**
-
-### **✨ Splash Screen (2.5s):**
-- Logo animado girando
-- Formas flutuantes
-- Loading dots pulsantes
-- Gradiente azul vibrante
-
-### **🔐 Tela de Login:**
-- Card premium com glassmorphism
-- Inputs elegantes com ícones
-- Botão gradiente
-- Features cards coloridos
-- Animações suaves
-
-### **🏠 Homepage:**
-- Header gradiente com avatar
-- Stats do dia (cards coloridos)
-- OS recentes
-- Eventos da agenda
-- Bottom navigation animado
-
-### **📊 Todas as Funcionalidades:**
-- ✅ Agenda com navegador de datas
-- ✅ Lista de OS com filtros
-- ✅ Solicitação de compras completa
-- ✅ Rastreamento GPS de rotas
-- ✅ Notificações com badge
-- ✅ Menu de perfil
-- ✅ Logout
-
----
-
-## 💡 **DICAS:**
-
-1. **Use em modo retrato** para melhor experiência
-2. **Adicione à tela inicial** para acesso rápido
-3. **Teste em Wi-Fi** para melhor performance
-4. **Use gestos** (toque, arraste, etc)
-5. **Explore as micro-interações** (muito legais!)
-
----
-
-## 📞 **PRECISA DE AJUDA?**
-
-Se algo não funcionar:
-
-1. Verifique o terminal (erros no servidor)
-2. Abra o DevTools do navegador mobile
-3. Verifique a conexão com Supabase
-4. Teste primeiro no computador
-
----
-
-## ✅ **CHECKLIST DE TESTE:**
-
-- [ ] Splash screen aparece
-- [ ] Transição suave para login
-- [ ] Login funciona
-- [ ] Navega para /mobile
-- [ ] Header aparece com avatar
-- [ ] Bottom nav tem 5 abas
-- [ ] Abas mudam de cor ao clicar
-- [ ] Notificações abrem lateral
-- [ ] Perfil abre modal
-- [ ] Logout funciona
-- [ ] Todas páginas carregam
-- [ ] Animações são suaves
-- [ ] Touch funciona bem
-
----
-
-## 🎯 **LINK MAIS RÁPIDO:**
-
-**Se você já tem deploy:**
-```
-https://SEU-DOMINIO.com/mobile/login
-```
-
-**Se vai testar local:**
-```
-http://SEU-IP:5173/mobile/login
-```
-
----
-
-**PRONTO PARA TESTAR! 🚀📱✨**
-
-Qualquer dúvida, me avise!
+- Limpe o cache do navegador
+- Force refresh (Ctrl+Shift+R)
+- Verifique se todas as dependências estão instaladas
