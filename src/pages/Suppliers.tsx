@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Building2, Plus, CreditCard as Edit, Trash2, Search, Phone, Mail, MapPin, Globe, CircleCheck as CheckCircle, Circle as XCircle, Loader as Loader2 } from 'lucide-react'
+import { Building2, Plus, CreditCard as Edit, Trash2, Search, Phone, Mail, MapPin, Globe, CheckCircle, Circle as XCircle, Loader as Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { fetchCnpjData, fetchCepData, formatCnpj, formatCep } from '../utils/externalApis'
 

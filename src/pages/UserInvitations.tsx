@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Plus, X, Clock, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, Send, Copy, MessageCircle, CheckSquare } from 'lucide-react'
+import { Mail, Plus, X, Clock, CheckCircle, Circle as XCircle, AlertCircle, Send, Copy, MessageCircle, CheckSquare } from 'lucide-react'
 import { getUserInvitations, createUserInvitation, cancelUserInvitation, expireOldInvitations, type UserInvitation } from '../lib/database-services'
 import { useUser } from '../contexts/UserContext'
 import { supabase } from '../lib/supabase'
