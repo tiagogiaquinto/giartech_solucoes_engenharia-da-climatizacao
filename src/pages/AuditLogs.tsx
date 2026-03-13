@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, FileText, User, Clock, ListFilter as Filter, Download, Search, CircleAlert as AlertCircle, CircleCheck as CheckCircle, Circle as XCircle, CreditCard as Edit, Plus, Trash2, Calendar, Database } from 'lucide-react'
+import { Shield, FileText, User, Clock, ListFilter as Filter, Download, Search, AlertCircle, CheckCircle, Circle as XCircle, CreditCard as Edit, Plus, Trash2, Calendar, Database } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { TrendingUp, Users, FolderOpen, Clock, Plus, CircleCheck as CheckCircle, CircleAlert as AlertCircle, X, Save, Mail, Phone, Calendar, FileText, Send, DollarSign, ArrowUp, ArrowDown, ChevronRight, RefreshCw, Package } from 'lucide-react'
+import { TrendingUp, Users, FolderOpen, Clock, Plus, CheckCircle, AlertCircle, X, Save, Mail, Phone, Calendar, FileText, Send, DollarSign, ArrowUp, ArrowDown, ChevronRight, RefreshCw, Package } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { Link } from 'react-router-dom'
 import { useDashboardData } from '../../hooks/useDashboardData'

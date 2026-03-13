@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Plus, Trash2, Package, Users, Clock, DollarSign, CircleAlert as AlertCircle, Info, TrendingUp, Calculator } from 'lucide-react'
+import { X, Save, Plus, Trash2, Package, Users, Clock, DollarSign, AlertCircle, Info, TrendingUp, Calculator } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 interface MaterialItem {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { DollarSign, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Wallet, Users, ChartPie as PieChart, ChartBar as BarChart3, Calendar, Download, ListFilter as Filter, ChevronDown, ChevronUp, FileText, Table, ChartLine as LineChart, CircleAlert as AlertCircle, Package, Lock } from 'lucide-react'
+import { DollarSign, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Wallet, Users, PieChart, BarChart3, Calendar, Download, ListFilter as Filter, ChevronDown, ChevronUp, FileText, Table, LineChart, AlertCircle, Package, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import KPIDashboard from '../components/KPIDashboard'
 import { useUser } from '../contexts/UserContext'

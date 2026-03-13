@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Plus, Search, ListFilter as Filter, CreditCard as Edit, Trash2, Save, X, Phone, Mail, MapPin, Building, User, Calendar, FileText, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Clock, Shield, DollarSign, Eye, ChevronDown, ChevronUp, ClipboardList, Package, ArrowRight, MessageSquare, Copy } from 'lucide-react'
+import { Users, Plus, Search, ListFilter as Filter, CreditCard as Edit, Trash2, Save, X, Phone, Mail, MapPin, Building, User, Calendar, FileText, AlertTriangle as AlertTriangle, CheckCircle, Clock, Shield, DollarSign, Eye, ChevronDown, ChevronUp, ClipboardList, Package, ArrowRight, MessageSquare, Copy } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { useNavigate } from 'react-router-dom'
 import {

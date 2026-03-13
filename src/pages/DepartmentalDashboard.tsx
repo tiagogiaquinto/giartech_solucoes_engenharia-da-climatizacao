@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ChartBar as BarChart3, ChartPie as PieChart, TrendingUp, Users, Clock, CircleCheck as CheckCircle, ListFilter as Filter, Download, Calendar, RefreshCw, ArrowRight, ArrowDown, ArrowUp, Zap, Star, TriangleAlert as AlertTriangle, X, Printer, FileText, Mail, Loader } from 'lucide-react'
+import { BarChart3, PieChart, TrendingUp, Users, Clock, CheckCircle, ListFilter as Filter, Download, Calendar, RefreshCw, ArrowRight, ArrowDown, ArrowUp, Zap, Star, AlertTriangle as AlertTriangle, X, Printer, FileText, Mail, Loader } from 'lucide-react'
 import DonutChart from '../components/charts/DonutChart'
 import BarChartComponent from '../components/charts/BarChartComponent'
 import ComparisonChart from '../components/charts/ComparisonChart'

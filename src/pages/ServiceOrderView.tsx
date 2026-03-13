@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, CircleAlert as AlertCircle, Eye } from 'lucide-react'
+import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, AlertCircle, Eye } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { mapServiceItems } from '../utils/serviceOrderDataMapper'

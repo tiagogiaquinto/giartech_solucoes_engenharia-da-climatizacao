@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { FileText, Plus, Search, CreditCard as Edit, Trash2, Eye, Calendar, DollarSign, CircleAlert as AlertCircle, CircleCheck as CheckCircle, Clock } from 'lucide-react'
+import { FileText, Plus, Search, CreditCard as Edit, Trash2, Eye, Calendar, DollarSign, AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useUser } from '../contexts/UserContext'
 import { format } from 'date-fns'

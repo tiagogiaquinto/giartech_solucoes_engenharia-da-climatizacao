@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Save, X, Eye, Download, Printer, FileText, Bold, Italic, Underline, ChevronLeft as AlignLeft, TextAlignCenter as AlignCenter, Highlighter as AlignRight, TextAlignJustify as AlignJustify, List, ListOrdered, Image as ImageIcon, Table as TableIcon, Link as LinkIcon, Undo, Redo, Copy, Sparkles, Palette, PanelRightOpen, PanelRightClose, Heading1, Heading2, Heading3, Quote, Minus, ZoomIn, ZoomOut, Strikethrough, Subscript, Superscript, Eraser, RotateCcw, Type, Paintbrush, Columns2 as Columns, LayoutGrid as Layout, Signature as FileSignature, Highlighter, Layers, Code } from 'lucide-react'
+import { Save, X, Eye, Download, Printer, FileText, Bold, Italic, Underline, ChevronLeft as AlignLeft, AlignCenter as AlignCenter, Highlighter as AlignRight, AlignJustify as AlignJustify, List, ListOrdered, Image as ImageIcon, Table as TableIcon, Link as LinkIcon, Undo, Redo, Copy, Sparkles, Palette, PanelRightOpen, PanelRightClose, Heading1, Heading2, Heading3, Quote, Minus, ZoomIn, ZoomOut, Strikethrough, Subscript, Superscript, Eraser, RotateCcw, Type, Paintbrush, Columns as Columns, LayoutGrid as Layout, PenTool as FileSignature, Highlighter, Layers, Code } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'

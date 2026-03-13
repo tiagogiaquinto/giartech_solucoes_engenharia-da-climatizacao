@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Plus, Search, ListFilter as Filter, Package, ArrowRight, Clock, CreditCard as Edit, Trash2, Eye, Save, X, DollarSign, TriangleAlert as AlertTriangle, Copy } from 'lucide-react'
+import { FileText, Plus, Search, ListFilter as Filter, Package, ArrowRight, Clock, CreditCard as Edit, Trash2, Eye, Save, X, DollarSign, AlertTriangle as AlertTriangle, Copy } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import {
   getServiceCatalog,

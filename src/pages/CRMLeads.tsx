@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Users, Plus, Search, ListFilter as Filter, CreditCard as Edit, Trash2, Phone, Mail, Building, TrendingUp, CircleCheck as CheckCircle, Clock, Circle as XCircle, Eye } from 'lucide-react'
+import { Users, Plus, Search, ListFilter as Filter, CreditCard as Edit, Trash2, Phone, Mail, Building, TrendingUp, CheckCircle, Clock, Circle as XCircle, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useUser } from '../contexts/UserContext'
 

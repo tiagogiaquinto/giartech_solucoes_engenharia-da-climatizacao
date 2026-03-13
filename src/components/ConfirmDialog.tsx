@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { TriangleAlert as AlertTriangle, X } from 'lucide-react'
+import { AlertTriangle as AlertTriangle, X } from 'lucide-react'
 import Button from './ui/Button'
 
 interface ConfirmDialogProps {

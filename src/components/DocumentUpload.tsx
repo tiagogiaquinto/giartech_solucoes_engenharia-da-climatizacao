@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Upload, FileText, CircleCheck as CheckCircle, Circle as XCircle, Loader } from 'lucide-react'
+import { Upload, FileText, CheckCircle, Circle as XCircle, Loader } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 interface DocumentUploadProps {

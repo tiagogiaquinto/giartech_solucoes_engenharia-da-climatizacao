@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Package, Plus, CreditCard as Edit, Trash2, Search, CircleAlert as AlertCircle, DollarSign, CircleCheck as CheckCircle, Circle as XCircle, Box, TrendingUp, ShoppingCart, Percent } from 'lucide-react'
+import { Package, Plus, CreditCard as Edit, Trash2, Search, AlertCircle, DollarSign, CheckCircle, Circle as XCircle, Box, TrendingUp, ShoppingCart, Percent } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 interface Material {

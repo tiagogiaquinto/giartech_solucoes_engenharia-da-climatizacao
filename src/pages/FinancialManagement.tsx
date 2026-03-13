@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { DollarSign, TrendingUp, TrendingDown, Calendar, ListFilter as Filter, Download, Plus, FileText, CreditCard, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, Clock, CreditCard as Edit, Trash2, Package, RefreshCw, Repeat, CheckSquare, Square } from 'lucide-react'
+import { DollarSign, TrendingUp, TrendingDown, Calendar, ListFilter as Filter, Download, Plus, FileText, CreditCard, AlertCircle, CheckCircle2, Clock, CreditCard as Edit, Trash2, Package, RefreshCw, Repeat, CheckSquare, Square } from 'lucide-react'
 import { supabase, bulkDelete } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import FinanceEntryModal from '../components/FinanceEntryModal'
