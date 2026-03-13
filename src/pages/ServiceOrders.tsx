@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ClipboardList, Plus, Search, ListFilter as Filter, Clock, CheckCircle, AlertCircle, X, User, Calendar, FileEdit as EditIcon, Eye, Copy, PlayCircle, Trash2, Smartphone } from 'lucide-react'
+import { ClipboardList, Plus, Search, ListFilter as Filter, Clock, CheckCircle, AlertCircle, X, User, Calendar, FileEdit as EditIcon, Eye, Copy, PlayCircle, Trash2, Smartphone, FileText } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { getServiceOrders, createServiceOrder, updateServiceOrder, deleteServiceOrder, type ServiceOrder } from '../lib/supabase'
 import { ServiceOrderModalOptimized } from '../components/ServiceOrderModalOptimized'
@@ -10,6 +10,8 @@ import { cache } from '../utils/cache'
 import { getServiceOrderStatusLabel, getPriorityLabel } from '../utils/databaseMappers'
 import { GamificationToggle } from '../components/ServiceOrder/GamificationToggle'
 import { formatDateSafe } from '../utils/format'
+import DocumentGeneratorButton from '../components/DocumentGeneratorButton'
+import { TemplateData } from '../services/templateFillService'
 
 
 const ServiceOrders = () => {
@@ -465,12 +467,22 @@ const ServiceOrders = () => {
                   >
                     <PlayCircle className="h-4 w-4" />
                   </button>
+                  <DocumentGeneratorButton
+                    templateType="service_order"
+                    data={{
+                      serviceOrder: order,
+                      customer: order.customer,
+                      company: { name: 'GiarTech' }
+                    }}
+                    label=""
+                    className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                  />
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDuplicate(order)
                     }}
-                    className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                     title="Duplicar OS"
                   >
                     <Copy className="h-4 w-4" />
