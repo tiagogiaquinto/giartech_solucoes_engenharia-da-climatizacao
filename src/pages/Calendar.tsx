@@ -79,7 +79,7 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
   const [serviceOrders, setServiceOrders] = useState<any[]>([])
 
   // Filtros da lista de compromissos
-  const [listPeriod, setListPeriod] = useState<'month' | 'quarter' | 'next3'>('month')
+  const [listPeriod, setListPeriod] = useState<'day' | 'month' | 'quarter' | 'next3'>('month')
   const [listSort, setListSort] = useState<'date' | 'priority' | 'status' | 'type'>('date')
 
   useEffect(() => {
@@ -376,6 +376,12 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
       const eventMonth = eventDate.getMonth()
 
       switch (listPeriod) {
+        case 'day':
+          // Somente dia atual
+          const eventDay = eventDate.getDate()
+          const currentDay = now.getDate()
+          return eventDay === currentDay && eventMonth === currentMonth && eventYear === currentYear
+
         case 'month':
           // Somente mês atual
           return eventMonth === currentMonth && eventYear === currentYear
@@ -482,6 +488,10 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
     const currentYear = now.getFullYear()
 
     switch (listPeriod) {
+      case 'day':
+        const currentDay = now.getDate()
+        return `${currentDay} de ${monthNames[currentMonth]} ${currentYear}`
+
       case 'month':
         return `${monthNames[currentMonth]} ${currentYear}`
 
@@ -1355,9 +1365,10 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                     </label>
                     <select
                       value={listPeriod}
-                      onChange={(e) => setListPeriod(e.target.value as 'month' | 'quarter' | 'next3')}
+                      onChange={(e) => setListPeriod(e.target.value as 'day' | 'month' | 'quarter' | 'next3')}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                     >
+                      <option value="day">📅 Dia Atual</option>
                       <option value="month">📆 Mês Atual</option>
                       <option value="quarter">📊 Trimestre Central (anterior + atual + próximo)</option>
                       <option value="next3">📈 Próximos 3 Meses (atual + 2 próximos)</option>
