@@ -1074,7 +1074,7 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
 
           {sortedEvents.length === 0 && (
             <div className="text-center py-8 text-gray-400">
-              <GanttChart className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <GitBranch className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>Nenhuma tarefa para visualizar</p>
             </div>
           )}
@@ -1256,7 +1256,7 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
               }`}
             >
-              <GanttChart className="h-3.5 w-3.5" />
+              <GitBranch className="h-3.5 w-3.5" />
               Gantt
             </button>
           </div>
