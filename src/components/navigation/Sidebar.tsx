@@ -82,6 +82,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'people', path: '/people', icon: Users, label: 'Gestão de Pessoas', description: 'Funcionários, usuários, acessos e convites unificados' },
   { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações' },
   { id: 'document-templates', path: '/document-templates', icon: FileText, label: 'Templates de Documentos', description: 'Gerenciar templates de OS, contratos e propostas' },
+  { id: 'template-manager', path: '/template-manager', icon: FileText, label: 'Templates HVAC', description: 'Modelos profissionais editáveis para refrigeração e climatização' },
   { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais' }
 ]
 

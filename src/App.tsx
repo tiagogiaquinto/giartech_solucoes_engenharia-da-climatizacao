@@ -109,6 +109,7 @@ import BudgetManagement from './pages/BudgetManagement'
 import DocumentCenter from './pages/DocumentCenter'
 import ThomazDashboard from './pages/ThomazDashboard'
 import AIProvidersSettings from './pages/AIProvidersSettings'
+import TemplateManager from './pages/TemplateManager'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -850,6 +851,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <DocumentTemplates />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/template-manager" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <TemplateManager />
               </WebLayout>
             </ProtectedRoute>
           } />
