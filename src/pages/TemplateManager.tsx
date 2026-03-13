@@ -389,22 +389,41 @@ const TemplateManager = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
           >
-            <div className="p-6 border-b flex items-center justify-between">
+            <div className="p-6 border-b flex items-center justify-between bg-gradient-to-r from-blue-600 to-purple-600 text-white">
               <h2 className="text-2xl font-bold">{showPreview.name}</h2>
               <button
                 onClick={() => setShowPreview(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
               >
                 ✕
               </button>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-              <p className="text-gray-600 mb-4">{showPreview.description}</p>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
-                  {showPreview.content_template?.substring(0, 1000)}...
-                </pre>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
+              <p className="text-gray-600 mb-6 text-lg">{showPreview.description}</p>
+              <div className="bg-white border-2 border-gray-200 rounded-lg p-6 shadow-inner">
+                <div
+                  dangerouslySetInnerHTML={{ __html: showPreview.content_template || '' }}
+                  className="prose max-w-none"
+                />
               </div>
+            </div>
+            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowPreview(null)}
+                className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={() => {
+                  setShowPreview(null)
+                  handleEdit(showPreview.id)
+                }}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+              >
+                <Edit className="w-4 h-4" />
+                <span>Editar Template</span>
+              </button>
             </div>
           </motion.div>
         </div>
