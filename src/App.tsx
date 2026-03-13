@@ -75,9 +75,6 @@ import CompanySettings from './pages/CompanySettings'
 import Equipments from './pages/Equipments'
 import Suppliers from './pages/Suppliers'
 import Purchasing from './pages/Purchasing'
-import GoogleAdsTracking from './pages/GoogleAdsTracking'
-import GoogleAdsSettings from './pages/GoogleAdsSettings'
-import GoogleAdsOAuthSetup from './pages/GoogleAdsOAuthSetup'
 import RouteTracking from './pages/RouteTracking'
 import Documents from './pages/Documents'
 import EmailSettings from './pages/EmailSettings'
@@ -893,30 +890,6 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <Purchasing />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/google-ads-tracking" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <GoogleAdsTracking />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/google-ads-settings" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <GoogleAdsSettings />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/google-ads-oauth" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <GoogleAdsOAuthSetup />
               </WebLayout>
             </ProtectedRoute>
           } />
