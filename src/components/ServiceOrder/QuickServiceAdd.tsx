@@ -57,62 +57,57 @@ export const QuickServiceAdd: React.FC<QuickServiceAddProps> = ({
   const handleSearch = async () => {
     const term = searchTerm.trim()
     setHasSearched(true)
-
-    if (!term) {
-      const top = serviceCatalog.slice(0, 20).map(enrichCatalogItem)
-      setSearchResults(top)
-      setShowDropdown(true)
-      return
-    }
-
     setSearching(true)
     setShowDropdown(true)
+
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('service_catalog')
         .select(`
-          *,
-          materiais:service_catalog_materials(
-            material_id,
-            quantidade,
-            material:materials(*)
+          id, name, description, category, base_price, estimated_time_minutes, active,
+          service_catalog_materials(
+            id, material_id, quantity, material_name, material_unit,
+            unit_cost_at_time, unit_sale_price
           )
         `)
-        .or(`nome.ilike.%${term}%,descricao.ilike.%${term}%,categoria.ilike.%${term}%`)
-        .eq('ativo', true)
-        .order('nome')
+        .eq('active', true)
+        .order('name')
         .limit(20)
 
+      if (term) {
+        query = query.or(`name.ilike.%${term}%,description.ilike.%${term}%,category.ilike.%${term}%`)
+      }
+
+      const { data, error } = await query
       if (error) throw error
 
-      const results = (data || []).map(enrichCatalogItem)
-      setSearchResults(results)
+      setSearchResults((data || []).map(normalizeItem))
     } catch (err) {
       console.error('Erro na busca:', err)
-      const local = serviceCatalog
-        .filter(s =>
-          s.nome?.toLowerCase().includes(term.toLowerCase()) ||
-          s.descricao?.toLowerCase().includes(term.toLowerCase())
-        )
-        .slice(0, 20)
-        .map(enrichCatalogItem)
-      setSearchResults(local)
+      setSearchResults([])
     } finally {
       setSearching(false)
     }
   }
 
-  const enrichCatalogItem = (item: any) => ({
-    ...item,
-    materiais: item.materiais?.map((m: any) => ({
+  const normalizeItem = (item: any) => ({
+    id: item.id,
+    nome: item.name,
+    descricao: item.description,
+    categoria: item.category,
+    preco_base: item.base_price,
+    tempo_estimado_minutos: item.estimated_time_minutes,
+    materiais: (item.service_catalog_materials || []).map((m: any) => ({
       material_id: m.material_id,
-      quantidade: m.quantidade,
-      nome: m.material?.nome || m.nome || '',
-      unidade_medida: m.material?.unidade_medida || m.unidade_medida || 'un',
-      preco_compra: m.material?.preco_compra ?? m.preco_compra ?? 0,
-      preco_venda: m.material?.preco_venda ?? m.preco_venda ?? m.material?.preco_compra ?? 0
-    })) || item.materiais || []
+      quantidade: parseFloat(m.quantity || 1),
+      nome: m.material_name || '',
+      unidade_medida: m.material_unit || 'un',
+      preco_compra: parseFloat(m.unit_cost_at_time || 0),
+      preco_venda: parseFloat(m.unit_sale_price || m.unit_cost_at_time || 0)
+    }))
   })
+
+  const enrichCatalogItem = (item: any) => item
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
