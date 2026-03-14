@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react'
-import { X, Save, Printer, Send, Loader2, Plus, Package, Users } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { X, Save, Loader2, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { CustomerSelector } from './ServiceOrder/CustomerSelector'
 import { QuickServiceAdd } from './ServiceOrder/QuickServiceAdd'
 import { ServiceItemCard } from './ServiceOrder/ServiceItemCard'
 import { FinancialSummary } from './ServiceOrder/FinancialSummary'
+import { TemplateSelector } from './TemplateSelector'
 
 interface ServiceItem {
   id: string
@@ -48,6 +49,26 @@ interface LaborItem {
   custo_total: number
 }
 
+const EMPTY_FORM = {
+  description: '',
+  scheduled_at: '',
+  notes: '',
+  payment_method: 'pix',
+  payment_conditions: '',
+  warranty_period: 90,
+  warranty_type: 'days' as 'days' | 'months' | 'years'
+}
+
+const EMPTY_TOTALS = {
+  subtotal: 0,
+  desconto: 0,
+  descontoPercentual: 0,
+  custoTotal: 0,
+  total: 0,
+  lucroTotal: 0,
+  margemLucro: 0
+}
+
 interface ServiceOrderModalProps {
   isOpen: boolean
   onClose: () => void
@@ -69,31 +90,25 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([])
   const [materials, setMaterials] = useState<any[]>([])
   const [staff, setStaff] = useState<any[]>([])
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [showMaterialModal, setShowMaterialModal] = useState<string | null>(null)
   const [showLaborModal, setShowLaborModal] = useState<string | null>(null)
 
-  const [formData, setFormData] = useState({
-    description: '',
-    scheduled_at: '',
-    notes: '',
-    payment_method: 'pix',
-    payment_conditions: '',
-    warranty_period: 90,
-    warranty_type: 'days' as 'days' | 'months' | 'years'
-  })
+  const [formData, setFormData] = useState(EMPTY_FORM)
+  const [totals, setTotals] = useState(EMPTY_TOTALS)
 
-  const [totals, setTotals] = useState({
-    subtotal: 0,
-    desconto: 0,
-    descontoPercentual: 0,
-    custoTotal: 0,
-    total: 0,
-    lucroTotal: 0,
-    margemLucro: 0
-  })
+  const resetState = useCallback(() => {
+    setSelectedCustomer(null)
+    setServiceItems([])
+    setFormData(EMPTY_FORM)
+    setTotals(EMPTY_TOTALS)
+    setShowMaterialModal(null)
+    setShowLaborModal(null)
+  }, [])
 
   useEffect(() => {
     if (isOpen) {
+      resetState()
       loadInitialData()
     }
   }, [isOpen, serviceOrderId])
@@ -168,7 +183,7 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
       setSelectedCustomer(order.customer)
       setFormData({
         description: order.description || '',
-        scheduled_at: order.scheduled_at?.split('T')[0] || '',
+        scheduled_at: order.scheduled_at ? order.scheduled_at.split('T')[0] : '',
         notes: order.notes || '',
         payment_method: order.payment_method || 'pix',
         payment_conditions: order.payment_conditions || '',
@@ -176,19 +191,20 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
         warranty_type: order.warranty_type || 'days'
       })
 
-      if (order.items) {
+      if (order.items && order.items.length > 0) {
         const mappedItems: ServiceItem[] = order.items.map((item: any) => ({
           id: item.id,
+          service_catalog_id: item.service_catalog_id,
           descricao: item.descricao || '',
           escopo_detalhado: item.escopo_detalhado || '',
           quantidade: parseFloat(item.quantidade || 1),
           preco_unitario: parseFloat(item.preco_unitario || 0),
           preco_total: parseFloat(item.preco_total || 0),
           tempo_estimado_minutos: item.tempo_estimado_minutos || 0,
-          materiais: item.materiais?.map((m: any) => ({
+          materiais: (item.materiais || []).map((m: any) => ({
             id: m.id,
             material_id: m.material_id,
-            nome: m.nome || 'Material',
+            nome: m.nome || m.material?.nome || 'Material',
             quantidade: parseFloat(m.quantidade || 0),
             unidade_medida: m.unidade_medida || 'un',
             preco_compra_unitario: parseFloat(m.preco_compra_unitario || 0),
@@ -198,15 +214,15 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
             custo_total: parseFloat(m.custo_total || 0),
             valor_total: parseFloat(m.valor_total || 0),
             lucro: parseFloat(m.valor_total || 0) - parseFloat(m.custo_total || 0)
-          })) || [],
-          funcionarios: item.funcionarios?.map((f: any) => ({
+          })),
+          funcionarios: (item.funcionarios || []).map((f: any) => ({
             id: f.id,
             staff_id: f.employee_id,
-            nome: f.employee?.nome || 'Funcionário',
+            nome: f.employee?.name || f.employee?.nome || 'Funcionário',
             tempo_minutos: f.tempo_minutos || 0,
             custo_hora: parseFloat(f.custo_hora || 0),
             custo_total: parseFloat(f.custo_total || 0)
-          })) || [],
+          })),
           custo_materiais: parseFloat(item.custo_materiais || 0),
           custo_mao_obra: parseFloat(item.custo_mao_obra || 0),
           custo_total: parseFloat(item.custo_total || 0),
@@ -243,8 +259,78 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
     }))
   }
 
+  const handleTemplateSelect = (templateData: any) => {
+    if (templateData.description) {
+      setFormData(prev => ({
+        ...prev,
+        description: templateData.description || prev.description,
+        warranty_period: templateData.warranty_period || prev.warranty_period,
+        warranty_type: templateData.warranty_type || prev.warranty_type,
+        payment_method: templateData.payment_method || prev.payment_method,
+        payment_conditions: templateData.payment_conditions || prev.payment_conditions,
+        notes: templateData.notes || prev.notes
+      }))
+    }
+
+    if (templateData.serviceItems && templateData.serviceItems.length > 0) {
+      const mappedItems: ServiceItem[] = templateData.serviceItems.map((item: any, idx: number) => {
+        const catalogMatch = serviceCatalog.find(
+          c => c.id === item.service_catalog_id || c.nome === item.descricao
+        )
+        const precoUnitario = parseFloat(item.preco_unitario || catalogMatch?.preco_base || 0)
+        const quantidade = parseFloat(item.quantidade || 1)
+        const precoTotal = precoUnitario * quantidade
+
+        const materiais = (item.materiais || catalogMatch?.materiais || []).map((m: any) => {
+          const qtd = parseFloat(m.quantidade || 0)
+          const precoCompraUnit = parseFloat(m.preco_compra_unitario || m.preco_compra || 0)
+          const precoVendaUnit = parseFloat(m.preco_venda_unitario || m.preco_venda || 0)
+          return {
+            id: `mat-tpl-${Date.now()}-${idx}-${Math.random()}`,
+            material_id: m.material_id || '',
+            nome: m.nome || 'Material',
+            quantidade: qtd,
+            unidade_medida: m.unidade_medida || 'un',
+            preco_compra_unitario: precoCompraUnit,
+            preco_venda_unitario: precoVendaUnit,
+            preco_compra: precoCompraUnit * qtd,
+            preco_venda: precoVendaUnit * qtd,
+            custo_total: precoCompraUnit * qtd,
+            valor_total: precoVendaUnit * qtd,
+            lucro: (precoVendaUnit - precoCompraUnit) * qtd
+          }
+        })
+
+        const custoMateriais = materiais.reduce((s: number, m: any) => s + m.custo_total, 0)
+        const custoMaoObra = parseFloat(item.custo_mao_obra || 0)
+        const custoTotal = custoMateriais + custoMaoObra
+        const lucro = precoTotal - custoTotal
+        const margemLucro = precoTotal > 0 ? (lucro / precoTotal) * 100 : 0
+
+        return {
+          id: `tpl-${Date.now()}-${idx}`,
+          service_catalog_id: item.service_catalog_id || catalogMatch?.id,
+          descricao: item.descricao || '',
+          escopo_detalhado: item.escopo_detalhado || '',
+          quantidade,
+          preco_unitario: precoUnitario,
+          preco_total: precoTotal,
+          tempo_estimado_minutos: item.tempo_estimado_minutos || 60,
+          materiais,
+          funcionarios: [],
+          custo_materiais: custoMateriais,
+          custo_mao_obra: custoMaoObra,
+          custo_total: custoTotal,
+          lucro,
+          margem_lucro: margemLucro
+        }
+      })
+      setServiceItems(mappedItems)
+    }
+  }
+
   const handleAddService = (service: ServiceItem) => {
-    setServiceItems([...serviceItems, service])
+    setServiceItems(prev => [...prev, service])
   }
 
   const handleAddCustomService = () => {
@@ -263,11 +349,11 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
       lucro: 0,
       margem_lucro: 0
     }
-    setServiceItems([...serviceItems, newService])
+    setServiceItems(prev => [...prev, newService])
   }
 
   const handleUpdateService = (id: string, updates: Partial<ServiceItem>) => {
-    setServiceItems(serviceItems.map(item => {
+    setServiceItems(prev => prev.map(item => {
       if (item.id !== id) return item
 
       const updated = { ...item, ...updates }
@@ -289,7 +375,7 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
   }
 
   const handleDeleteService = (id: string) => {
-    setServiceItems(serviceItems.filter(item => item.id !== id))
+    setServiceItems(prev => prev.filter(item => item.id !== id))
   }
 
   const handleDescontoChange = (valor: number, percentual: number) => {
@@ -393,7 +479,8 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
             .insert(
               item.materiais.map(m => ({
                 service_order_item_id: itemData.id,
-                material_id: m.material_id,
+                material_id: m.material_id || null,
+                nome: m.nome,
                 quantidade: m.quantidade,
                 unidade_medida: m.unidade_medida,
                 preco_compra_unitario: m.preco_compra_unitario,
@@ -435,171 +522,214 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
-          <h2 className="text-2xl font-bold text-white">
-            {serviceOrderId ? 'Editar' : 'Nova'} Ordem de Serviço
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-blue-500 rounded-lg transition-colors text-white"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
+            <h2 className="text-2xl font-bold text-white">
+              {serviceOrderId ? 'Editar' : 'Nova'} Ordem de Serviço
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-blue-500 rounded-lg transition-colors text-white"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <CustomerSelector
-                  customers={customers}
-                  selectedCustomer={selectedCustomer}
-                  onSelect={setSelectedCustomer}
-                />
-
-                <div className="bg-white rounded-xl p-6 shadow-sm border">
-                  <label className="block text-sm font-medium mb-2">Descrição da OS</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    rows={2}
-                    placeholder="Descreva brevemente o serviço..."
+          <div className="flex-1 overflow-y-auto p-6">
+            {loading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                  <CustomerSelector
+                    customers={customers}
+                    selectedCustomer={selectedCustomer}
+                    onSelect={setSelectedCustomer}
                   />
-                </div>
 
-                <QuickServiceAdd
-                  serviceCatalog={serviceCatalog}
-                  onAddService={handleAddService}
-                  onAddCustomService={handleAddCustomService}
-                />
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Serviços Adicionados ({serviceItems.length})</h3>
-                  {serviceItems.map((item, index) => (
-                    <ServiceItemCard
-                      key={item.id}
-                      item={item}
-                      index={index}
-                      onUpdate={handleUpdateService}
-                      onDelete={handleDeleteService}
-                      onAddMaterial={handleAddMaterial}
-                      onAddLabor={handleAddLabor}
+                  <div className="bg-white rounded-xl p-6 shadow-sm border">
+                    <label className="block text-sm font-medium mb-2">Descrição da OS</label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      rows={2}
+                      placeholder="Descreva brevemente o serviço..."
                     />
-                  ))}
-                  {serviceItems.length === 0 && (
-                    <div className="bg-gray-50 border-2 border-dashed rounded-xl p-8 text-center text-gray-500">
-                      Nenhum serviço adicionado ainda
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowTemplateModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors border"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Usar Template de OS
+                    </button>
+                  </div>
+
+                  <QuickServiceAdd
+                    serviceCatalog={serviceCatalog}
+                    onAddService={handleAddService}
+                    onAddCustomService={handleAddCustomService}
+                  />
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Serviços Adicionados ({serviceItems.length})</h3>
+                    {serviceItems.map((item, index) => (
+                      <ServiceItemCard
+                        key={item.id}
+                        item={item}
+                        index={index}
+                        onUpdate={handleUpdateService}
+                        onDelete={handleDeleteService}
+                        onAddMaterial={handleAddMaterial}
+                        onAddLabor={handleAddLabor}
+                      />
+                    ))}
+                    {serviceItems.length === 0 && (
+                      <div className="bg-gray-50 border-2 border-dashed rounded-xl p-8 text-center text-gray-500">
+                        Nenhum serviço adicionado ainda
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
+                    <h3 className="text-lg font-semibold">Informações Adicionais</h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Data Agendada</label>
+                        <input
+                          type="date"
+                          value={formData.scheduled_at}
+                          onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
+                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Forma de Pagamento</label>
+                        <select
+                          value={formData.payment_method}
+                          onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="pix">PIX</option>
+                          <option value="dinheiro">Dinheiro</option>
+                          <option value="cartao_credito">Cartão de Crédito</option>
+                          <option value="cartao_debito">Cartão de Débito</option>
+                          <option value="transferencia">Transferência</option>
+                          <option value="boleto">Boleto</option>
+                        </select>
+                      </div>
                     </div>
-                  )}
-                </div>
 
-                <div className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
-                  <h3 className="text-lg font-semibold">Informações Adicionais</h3>
-
-                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Data Agendada</label>
-                      <input
-                        type="date"
-                        value={formData.scheduled_at}
-                        onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
+                      <label className="block text-sm font-medium mb-1">Condições de Pagamento</label>
+                      <textarea
+                        value={formData.payment_conditions}
+                        onChange={(e) => setFormData({ ...formData, payment_conditions: e.target.value })}
                         className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        rows={2}
+                        placeholder="Ex: 50% no início, 50% na conclusão"
                       />
                     </div>
 
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Prazo de Garantia</label>
+                        <input
+                          type="number"
+                          value={formData.warranty_period}
+                          onChange={(e) => setFormData({ ...formData, warranty_period: parseInt(e.target.value) || 0 })}
+                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                          min={0}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Tipo de Garantia</label>
+                        <select
+                          value={formData.warranty_type}
+                          onChange={(e) => setFormData({ ...formData, warranty_type: e.target.value as 'days' | 'months' | 'years' })}
+                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="days">Dias</option>
+                          <option value="months">Meses</option>
+                          <option value="years">Anos</option>
+                        </select>
+                      </div>
+                    </div>
+
                     <div>
-                      <label className="block text-sm font-medium mb-1">Forma de Pagamento</label>
-                      <select
-                        value={formData.payment_method}
-                        onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                      <label className="block text-sm font-medium mb-1">Observações</label>
+                      <textarea
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                         className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="pix">PIX</option>
-                        <option value="dinheiro">Dinheiro</option>
-                        <option value="cartao_credito">Cartão de Crédito</option>
-                        <option value="cartao_debito">Cartão de Débito</option>
-                        <option value="transferencia">Transferência</option>
-                        <option value="boleto">Boleto</option>
-                      </select>
+                        rows={3}
+                        placeholder="Observações internas..."
+                      />
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Condições de Pagamento</label>
-                    <textarea
-                      value={formData.payment_conditions}
-                      onChange={(e) => setFormData({ ...formData, payment_conditions: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      rows={2}
-                      placeholder="Ex: 50% no início, 50% na conclusão"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Observações</label>
-                    <textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      rows={3}
-                      placeholder="Observações internas..."
-                    />
-                  </div>
+                <div className="lg:col-span-1">
+                  <FinancialSummary
+                    subtotal={totals.subtotal}
+                    desconto={totals.desconto}
+                    descontoPercentual={totals.descontoPercentual}
+                    custoTotal={totals.custoTotal}
+                    total={totals.total}
+                    lucroTotal={totals.lucroTotal}
+                    margemLucro={totals.margemLucro}
+                    onDescontoChange={handleDescontoChange}
+                  />
                 </div>
               </div>
+            )}
+          </div>
 
-              <div className="lg:col-span-1">
-                <FinancialSummary
-                  subtotal={totals.subtotal}
-                  desconto={totals.desconto}
-                  descontoPercentual={totals.descontoPercentual}
-                  custoTotal={totals.custoTotal}
-                  total={totals.total}
-                  lucroTotal={totals.lucroTotal}
-                  margemLucro={totals.margemLucro}
-                  onDescontoChange={handleDescontoChange}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="border-t p-6 bg-gray-50 flex items-center justify-between">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            Cancelar
-          </button>
-
-          <div className="flex gap-3">
+          <div className="border-t p-6 bg-gray-50 flex items-center justify-between">
             <button
-              onClick={handleSave}
-              disabled={saving || !selectedCustomer || serviceItems.length === 0}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              {saving ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-5 w-5" />
-                  Salvar
-                </>
-              )}
+              Cancelar
             </button>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleSave}
+                disabled={saving || !selectedCustomer || serviceItems.length === 0}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-5 w-5" />
+                    Salvar
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <TemplateSelector
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        onSelect={handleTemplateSelect}
+      />
+    </>
   )
 }
