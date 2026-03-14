@@ -1,21 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  FileText,
-  Download,
-  Printer,
-  Eye,
-  Edit3,
-  Plus,
-  Trash2,
-  Save,
-  X,
-  Settings,
-  Copy,
-  Send,
-  Palette,
-  CheckCircle2
-} from 'lucide-react'
+import { FileText, Download, Printer, Eye, FileEdit as Edit3, Plus, Trash2, Save, X, Settings, Copy, Send, Palette, CheckCircle2 } from 'lucide-react'
 import {
   budgetPDFService,
   BudgetData,
@@ -24,6 +9,9 @@ import {
   defaultTemplates
 } from '../services/budgetPDFService'
 import { format } from 'date-fns'
+import { supabase } from '../lib/supabase'
+import TemplateSelectorModal from './TemplateSelectorModal'
+import { fillTemplate, TemplateData } from '../services/templateFillService'
 
 interface BudgetPDFEditorProps {
   initialData?: Partial<BudgetData>
@@ -73,6 +61,8 @@ export default function BudgetPDFEditor({
   const [editingItem, setEditingItem] = useState<BudgetItem | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
+  const [loadedTemplateHtml, setLoadedTemplateHtml] = useState<string>('')
 
   const [newItem, setNewItem] = useState<Partial<BudgetItem>>({
     description: '',
@@ -175,6 +165,31 @@ export default function BudgetPDFEditor({
     budgetPDFService.printPDF(budgetData, selectedTemplate)
   }
 
+  const handleLoadTemplate = (filledHtml: string, template: any) => {
+    setLoadedTemplateHtml(filledHtml)
+    setShowTemplateSelector(false)
+
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${template.name}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              @media print { body { margin: 0; } }
+            </style>
+          </head>
+          <body>
+            ${filledHtml}
+          </body>
+        </html>
+      `)
+      printWindow.document.close()
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -214,6 +229,14 @@ export default function BudgetPDFEditor({
           <div className="flex items-center gap-2">
             {!readOnly && (
               <>
+                <button
+                  onClick={() => setShowTemplateSelector(true)}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                  title="Carregar template do banco de dados"
+                >
+                  <FileText className="w-4 h-4" />
+                  Carregar Template
+                </button>
                 <button
                   onClick={() => setShowTemplates(!showTemplates)}
                   className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors flex items-center gap-2"
@@ -620,6 +643,44 @@ export default function BudgetPDFEditor({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Template Selector Modal */}
+      {showTemplateSelector && (
+        <TemplateSelectorModal
+          isOpen={showTemplateSelector}
+          onClose={() => setShowTemplateSelector(false)}
+          templateType="budget"
+          data={{
+            budget: {
+              budget_number: budgetData.number,
+              validity_date: budgetData.validUntil,
+              total: budgetData.total
+            },
+            customer: {
+              name: budgetData.customer.name,
+              cpf_cnpj: budgetData.customer.document,
+              email: budgetData.customer.email,
+              phone: budgetData.customer.phone,
+              address: budgetData.customer.address
+            },
+            company: {
+              name: budgetData.company.name,
+              cnpj: budgetData.company.document,
+              email: budgetData.company.email,
+              phone: budgetData.company.phone,
+              address: budgetData.company.address
+            },
+            items: budgetData.items.map(item => ({
+              description: item.description,
+              quantity: item.quantity,
+              unit_price: item.unitPrice,
+              total_price: item.total
+            }))
+          }}
+          onSelect={handleLoadTemplate}
+          title="Selecionar Template de Orçamento"
+        />
+      )}
     </div>
   )
 }
