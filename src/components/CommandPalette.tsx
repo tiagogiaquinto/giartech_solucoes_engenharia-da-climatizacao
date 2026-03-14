@@ -178,6 +178,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       const { data: employees } = await supabase
         .from('employees')
         .select('id, name, role')
+        .eq('active', true)
         .ilike('name', `%${searchQuery}%`)
         .limit(5)
 

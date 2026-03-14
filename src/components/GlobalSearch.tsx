@@ -7,18 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react'
-import {
-  Search,
-  FileText,
-  Users,
-  Package,
-  DollarSign,
-  UserCircle,
-  Plus,
-  Command,
-  X,
-  Loader2
-} from 'lucide-react'
+import { Search, FileText, Users, Package, DollarSign, CircleUser as UserCircle, Plus, Command, X, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { formatDateSafe } from '../utils/format'
@@ -127,6 +116,7 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
       const { data: funcionarios } = await supabase
         .from('employees')
         .select('id, name, role, phone')
+        .eq('active', true)
         .or(`name.ilike.%${searchQuery}%,role.ilike.%${searchQuery}%`)
         .limit(3)
 

@@ -104,6 +104,7 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
         const { data } = await supabase
           .from('employees')
           .select('id, name, email, phone')
+          .eq('active', true)
           .ilike('name', `%${searchEmployee}%`)
           .limit(10)
         setEmployees(data || [])

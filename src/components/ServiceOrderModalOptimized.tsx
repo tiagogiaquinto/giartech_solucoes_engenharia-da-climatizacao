@@ -116,7 +116,7 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
           )
         `).order('nome'),
         supabase.from('materials').select('*').order('nome'),
-        supabase.from('employees').select('id, nome, custo_hora').order('nome')
+        supabase.from('employees').select('id, name, custo_hora').eq('active', true).order('name')
       ])
 
       if (customersRes.data) setCustomers(customersRes.data)

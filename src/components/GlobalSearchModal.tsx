@@ -146,19 +146,20 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       // Buscar Funcionários
       const { data: employees } = await supabase
         .from('employees')
-        .select('id, nome_completo, cargo, telefone')
-        .ilike('nome_completo', searchTerm)
+        .select('id, name, role, phone')
+        .eq('active', true)
+        .ilike('name', `%${searchTerm}%`)
         .limit(5)
 
       employees?.forEach(employee => {
         searchResults.push({
           id: employee.id,
-          title: employee.nome_completo,
-          subtitle: employee.cargo || 'Funcionário',
+          title: employee.name,
+          subtitle: employee.role || 'Funcionário',
           type: 'employee',
           url: `/employees/${employee.id}`,
           icon: <User className="h-5 w-5 text-orange-600" />,
-          metadata: employee.telefone
+          metadata: employee.phone
         })
       })
 
