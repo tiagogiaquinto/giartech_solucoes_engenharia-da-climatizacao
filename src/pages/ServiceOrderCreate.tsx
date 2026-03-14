@@ -414,9 +414,30 @@ const ServiceOrderCreate = () => {
       else console.log('✅ Contratos carregados:', contractsRes.data?.length || 0)
       setContractTemplates(contractsRes.data || [])
 
-      const catalogRes = await supabase.from('service_catalog').select('*').eq('active', true).order('name')
+      const catalogRes = await supabase
+        .from('service_catalog')
+        .select(`
+          *,
+          service_catalog_materials (
+            id,
+            material_id,
+            quantity,
+            unit_cost_at_time,
+            unit_sale_price,
+            materials (
+              id,
+              name,
+              unit,
+              unit_cost,
+              unit_price
+            )
+          )
+        `)
+        .eq('active', true)
+        .order('name')
+
       if (catalogRes.error) console.error('Erro catálogo:', catalogRes.error)
-      else console.log('✅ Catálogo carregado:', catalogRes.data?.length || 0)
+      else console.log('✅ Catálogo carregado com materiais:', catalogRes.data?.length || 0)
       setServiceCatalog(catalogRes.data || [])
 
       const inventoryRes = await supabase.from('inventory').select('*').order('name')
@@ -1912,39 +1933,62 @@ const ServiceOrderCreate = () => {
                           name: s.name,
                           description: s.description,
                           category: s.category,
-                          base_price: s.base_price
+                          base_price: s.base_price,
+                          estimated_time: (s as any).estimated_time_minutes,
+                          materials_count: (s as any).service_catalog_materials?.length || 0
                         }))}
                         onSelect={(service) => {
-                      if (service) {
-                        const catalog = serviceCatalog.find(s => s.id === service.id)
-                        if (catalog) {
-                          const catalogMaterials = (catalog as any).service_catalog_materials || []
+                          console.log('🔍 Serviço selecionado:', service)
+                          if (service) {
+                            const catalog = serviceCatalog.find(s => s.id === service.id)
+                            console.log('📦 Catálogo encontrado:', catalog)
 
-                          const newMaterials = catalogMaterials.map((cm: any) => ({
-                            id: crypto.randomUUID(),
-                            material_id: cm.material_id || '',
-                            nome: cm.material_name || '',
-                            quantidade: Number(cm.quantity) || 1,
-                            preco_compra: Number(cm.unit_cost_at_time) || 0,
-                            preco_venda: Number(cm.unit_sale_price) || 0,
-                            unidade_medida: cm.material_unit || 'UN',
-                            preco_compra_unitario: Number(cm.unit_cost_at_time) || 0,
-                            preco_venda_unitario: Number(cm.unit_sale_price) || 0,
-                            custo_total: (Number(cm.quantity) || 1) * (Number(cm.unit_cost_at_time) || 0),
-                            valor_total: (Number(cm.quantity) || 1) * (Number(cm.unit_sale_price) || 0),
-                            lucro: ((Number(cm.quantity) || 1) * (Number(cm.unit_sale_price) || 0)) - ((Number(cm.quantity) || 1) * (Number(cm.unit_cost_at_time) || 0))
-                          }))
+                            if (catalog) {
+                              const catalogMaterials = (catalog as any).service_catalog_materials || []
+                              console.log('📦 Materiais do catálogo:', catalogMaterials)
 
-                          updateServiceItem(item.id, {
-                            descricao: catalog.name,
-                            preco_unitario: Number(catalog.base_price) || 0,
-                            tempo_estimado_minutos: Number((catalog as any).estimated_duration) || 0,
-                            materiais: newMaterials,
-                            funcionarios: []
-                          })
-                        }
-                      }
-                    }}
+                              const newMaterials = catalogMaterials
+                                .filter((cm: any) => cm.materials)
+                                .map((cm: any) => {
+                                  const material = cm.materials
+                                  const quantity = Number(cm.quantity) || 1
+                                  const unitCost = Number(cm.unit_cost_at_time) || Number(material.unit_cost) || 0
+                                  const unitPrice = Number(cm.unit_sale_price) || Number(material.unit_price) || 0
+
+                                  return {
+                                    id: crypto.randomUUID(),
+                                    material_id: cm.material_id || material.id || '',
+                                    nome: material.name || '',
+                                    quantidade: quantity,
+                                    unidade_medida: material.unit || 'UN',
+                                    preco_compra_unitario: unitCost,
+                                    preco_venda_unitario: unitPrice,
+                                    preco_compra: quantity * unitCost,
+                                    preco_venda: quantity * unitPrice,
+                                    custo_total: quantity * unitCost,
+                                    valor_total: quantity * unitPrice,
+                                    lucro: (quantity * unitPrice) - (quantity * unitCost)
+                                  }
+                                })
+
+                              console.log('✅ Materiais processados:', newMaterials)
+
+                              updateServiceItem(item.id, {
+                                service_catalog_id: catalog.id,
+                                nome: catalog.name,
+                                descricao: catalog.name + (catalog.description ? ` - ${catalog.description}` : ''),
+                                escopo: catalog.description || '',
+                                escopo_detalhado: catalog.detailed_description || '',
+                                preco_unitario: Number(catalog.base_price) || 0,
+                                tempo_estimado_minutos: Number(catalog.estimated_time_minutes) || 0,
+                                materiais: newMaterials,
+                                funcionarios: []
+                              })
+
+                              console.log('✅ Serviço adicionado com sucesso!')
+                            }
+                          }
+                        }}
                       />
                     </div>
                     <button

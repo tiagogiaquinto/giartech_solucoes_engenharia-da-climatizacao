@@ -1,6 +1,13 @@
-# 🔍 SISTEMA DE BUSCA INTELIGENTE - CATÁLOGO E ESTOQUE
+# ✅ BUSCA DE SERVIÇOS NA ORDEM DE SERVIÇO - CORRIGIDA E FUNCIONAL
 
-## ✅ IMPLEMENTADO COM SUCESSO
+## 🎯 PROBLEMAS RESOLVIDOS
+
+### 1. Serviços não apareciam na busca
+- ❌ **ANTES:** Catálogo carregado sem materiais (query simples)
+- ✅ **AGORA:** Query completa com JOIN, incluindo todos os materiais
+
+### 2. Dados não eram editáveis após carregar
+- ✅ **AGORA:** Todos os campos totalmente editáveis após seleção
 
 ---
 
