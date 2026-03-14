@@ -71,6 +71,21 @@ const FinancialManagement = () => {
   useEffect(() => {
     loadFinancialData()
     loadCategories()
+
+    const channel = supabase
+      .channel('finance_entries_realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'finance_entries'
+      }, () => {
+        loadFinancialData()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   useEffect(() => {
@@ -957,10 +972,10 @@ const FinancialManagement = () => {
           setShowEntryModal(false)
           setEditingEntryId(undefined)
         }}
-        onSave={() => {
-          loadFinancialData()
+        onSave={async () => {
           setShowEntryModal(false)
           setEditingEntryId(undefined)
+          await loadFinancialData()
         }}
         entryId={editingEntryId}
       />

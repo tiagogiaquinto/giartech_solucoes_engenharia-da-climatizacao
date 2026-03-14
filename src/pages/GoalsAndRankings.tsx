@@ -1,11 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Target, Trophy, TrendingUp, Users, Award, Star, Zap,
-  Calendar, DollarSign, Percent, Medal, Crown, Gift,
-  Plus, Edit2, Save, X, RefreshCw, ChevronRight, Sparkles,
-  Check, AlertCircle
-} from 'lucide-react'
+import { Target, Trophy, TrendingUp, Users, Award, Star, Zap, Calendar, DollarSign, Percent, Medal, Crown, Gift, Plus, FileEdit as Edit2, Save, X, RefreshCw, ChevronRight, Sparkles, Check, AlertCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 interface CompanyGoal {
@@ -142,20 +137,49 @@ const GoalsAndRankings = () => {
 
   const loadCompanyGoal = async () => {
     const { data } = await supabase
-      .from('v_current_company_goal')
-      .select('*')
+      .from('company_goals')
+      .select('*, employee_goals(employee_id)')
+      .eq('status', 'ativa')
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
 
-    if (data) setCompanyGoal(data)
+    if (data) {
+      const target = data.target_amount || 0
+      const achieved = data.achieved_amount || 0
+      setCompanyGoal({
+        ...data,
+        achieved_amount: achieved,
+        progress_percentage: target > 0 ? (achieved / target) * 100 : 0,
+        status_label: achieved >= target ? 'Atingida' : achieved >= target * 0.9 ? 'Quase Lá' : 'Em Progresso',
+        total_employees: data.employee_goals?.length || 0
+      })
+    } else {
+      setCompanyGoal(null)
+    }
   }
 
   const loadEmployeeGoals = async () => {
     const { data } = await supabase
-      .from('v_current_individual_goals')
-      .select('*')
-      .order('progress_percentage', { ascending: false })
+      .from('employee_goals')
+      .select('*, employees(name, role)')
+      .eq('status', 'ativa')
+      .order('target_amount', { ascending: false })
 
-    if (data) setEmployeeGoals(data)
+    if (data) {
+      setEmployeeGoals(data.map((g: any) => ({
+        ...g,
+        employee_name: g.employees?.name || 'Desconhecido',
+        role: g.employees?.role || '',
+        achieved_amount: g.achieved_amount || 0,
+        progress_percentage: g.target_amount > 0 ? ((g.achieved_amount || 0) / g.target_amount) * 100 : 0,
+        bonus_earned: 0,
+        status_label: (g.achieved_amount || 0) >= g.target_amount ? 'Atingida' : 'Em Progresso',
+        is_active: true
+      })))
+    } else {
+      setEmployeeGoals([])
+    }
   }
 
   const loadRankings = async () => {
@@ -244,7 +268,7 @@ const GoalsAndRankings = () => {
         bonus_pool: '',
         notes: ''
       })
-      await loadCompanyGoal()
+      await loadAllData()
     } catch (error) {
       console.error('Erro ao criar supermeta:', error)
       showToast('Erro ao criar supermeta', 'error')
@@ -279,7 +303,7 @@ const GoalsAndRankings = () => {
         bonus_percentage: '5',
         super_bonus_percentage: '10'
       })
-      await loadEmployeeGoals()
+      await loadAllData()
     } catch (error) {
       console.error('Erro ao criar meta individual:', error)
       showToast('Erro ao criar meta individual', 'error')
