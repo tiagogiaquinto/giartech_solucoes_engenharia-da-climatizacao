@@ -1,9 +1,12 @@
-import React, { useState } from 'react'
-import { Plus, Zap, Package } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { Plus, Search, Package, Loader2, Zap } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 
 interface ServiceItem {
   id: string
+  service_catalog_id?: string
   descricao: string
+  escopo_detalhado?: string
   quantidade: number
   preco_unitario: number
   preco_total: number
@@ -29,132 +32,248 @@ export const QuickServiceAdd: React.FC<QuickServiceAddProps> = ({
   onAddCustomService
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const filteredServices = serviceCatalog.filter(s =>
-    s.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
-  const handleSelectService = (catalogService: any) => {
-    const newService: ServiceItem = {
-      id: `service-${Date.now()}`,
-      descricao: catalogService.nome || '',
-      quantidade: 1,
-      preco_unitario: parseFloat(catalogService.preco_base || 0),
-      preco_total: parseFloat(catalogService.preco_base || 0),
-      tempo_estimado_minutos: catalogService.tempo_estimado_minutos || 60,
-      materiais: catalogService.materiais?.map((m: any) => ({
-        id: `mat-${Date.now()}-${Math.random()}`,
-        material_id: m.material_id,
-        nome: m.material_nome || m.nome || '',
-        quantidade: m.quantidade || 1,
-        unidade_medida: m.unidade_medida || 'un',
-        preco_compra_unitario: parseFloat(m.preco_compra || 0),
-        preco_venda_unitario: parseFloat(m.preco_venda || m.preco_compra || 0),
-        preco_compra: parseFloat(m.preco_compra || 0) * (m.quantidade || 1),
-        preco_venda: parseFloat(m.preco_venda || m.preco_compra || 0) * (m.quantidade || 1),
-        custo_total: parseFloat(m.preco_compra || 0) * (m.quantidade || 1),
-        valor_total: parseFloat(m.preco_venda || m.preco_compra || 0) * (m.quantidade || 1),
-        lucro: (parseFloat(m.preco_venda || m.preco_compra || 0) - parseFloat(m.preco_compra || 0)) * (m.quantidade || 1)
-      })) || [],
-      funcionarios: [],
-      custo_materiais: 0,
-      custo_mao_obra: 0,
-      custo_total: 0,
-      lucro: parseFloat(catalogService.preco_base || 0),
-      margem_lucro: 100
+  const handleSearch = async () => {
+    const term = searchTerm.trim()
+    setHasSearched(true)
+
+    if (!term) {
+      const top = serviceCatalog.slice(0, 20).map(enrichCatalogItem)
+      setSearchResults(top)
+      setShowDropdown(true)
+      return
     }
 
-    const custoMateriais = newService.materiais.reduce((sum, m) => sum + m.custo_total, 0)
-    newService.custo_materiais = custoMateriais
-    newService.custo_total = custoMateriais
-    newService.lucro = newService.preco_total - newService.custo_total
-    newService.margem_lucro = newService.custo_total > 0
-      ? ((newService.lucro / newService.preco_total) * 100)
-      : 100
+    setSearching(true)
+    setShowDropdown(true)
+    try {
+      const { data, error } = await supabase
+        .from('service_catalog')
+        .select(`
+          *,
+          materiais:service_catalog_materials(
+            material_id,
+            quantidade,
+            material:materials(*)
+          )
+        `)
+        .or(`nome.ilike.%${term}%,descricao.ilike.%${term}%,categoria.ilike.%${term}%`)
+        .eq('ativo', true)
+        .order('nome')
+        .limit(20)
+
+      if (error) throw error
+
+      const results = (data || []).map(enrichCatalogItem)
+      setSearchResults(results)
+    } catch (err) {
+      console.error('Erro na busca:', err)
+      const local = serviceCatalog
+        .filter(s =>
+          s.nome?.toLowerCase().includes(term.toLowerCase()) ||
+          s.descricao?.toLowerCase().includes(term.toLowerCase())
+        )
+        .slice(0, 20)
+        .map(enrichCatalogItem)
+      setSearchResults(local)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const enrichCatalogItem = (item: any) => ({
+    ...item,
+    materiais: item.materiais?.map((m: any) => ({
+      material_id: m.material_id,
+      quantidade: m.quantidade,
+      nome: m.material?.nome || m.nome || '',
+      unidade_medida: m.material?.unidade_medida || m.unidade_medida || 'un',
+      preco_compra: m.material?.preco_compra ?? m.preco_compra ?? 0,
+      preco_venda: m.material?.preco_venda ?? m.preco_venda ?? m.material?.preco_compra ?? 0
+    })) || item.materiais || []
+  })
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleSearch()
+    }
+  }
+
+  const handleSelectService = (catalogService: any) => {
+    const materiais = (catalogService.materiais || []).map((m: any) => {
+      const qtd = parseFloat(m.quantidade || 1)
+      const precoCompra = parseFloat(m.preco_compra || 0)
+      const precoVenda = parseFloat(m.preco_venda || m.preco_compra || 0)
+      return {
+        id: `mat-${Date.now()}-${Math.random()}`,
+        material_id: m.material_id,
+        nome: m.nome || '',
+        quantidade: qtd,
+        unidade_medida: m.unidade_medida || 'un',
+        preco_compra_unitario: precoCompra,
+        preco_venda_unitario: precoVenda,
+        preco_compra: precoCompra * qtd,
+        preco_venda: precoVenda * qtd,
+        custo_total: precoCompra * qtd,
+        valor_total: precoVenda * qtd,
+        lucro: (precoVenda - precoCompra) * qtd
+      }
+    })
+
+    const precoBase = parseFloat(catalogService.preco_base || 0)
+    const custoMateriais = materiais.reduce((s: number, m: any) => s + m.custo_total, 0)
+    const lucro = precoBase - custoMateriais
+    const margemLucro = precoBase > 0 ? (lucro / precoBase) * 100 : 100
+
+    const newService: ServiceItem = {
+      id: `service-${Date.now()}`,
+      service_catalog_id: catalogService.id,
+      descricao: catalogService.nome || '',
+      escopo_detalhado: catalogService.descricao || '',
+      quantidade: 1,
+      preco_unitario: precoBase,
+      preco_total: precoBase,
+      tempo_estimado_minutos: catalogService.tempo_estimado_minutos || 60,
+      materiais,
+      funcionarios: [],
+      custo_materiais: custoMateriais,
+      custo_mao_obra: 0,
+      custo_total: custoMateriais,
+      lucro,
+      margem_lucro: margemLucro
+    }
 
     onAddService(newService)
     setSearchTerm('')
+    setSearchResults([])
     setShowDropdown(false)
+    setHasSearched(false)
   }
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 shadow-sm border-2 border-blue-200">
+    <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 shadow-sm border-2 border-blue-200">
       <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
         <Zap className="h-5 w-5 text-blue-600" />
-        Adicionar Serviço Rápido
+        Adicionar Serviço do Catálogo
       </h2>
 
-      <div className="flex gap-3">
+      <div className="flex gap-2">
         <div className="flex-1 relative">
           <input
+            ref={inputRef}
             type="text"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value)
-              setShowDropdown(true)
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={() => {
+              if (hasSearched && searchResults.length > 0) setShowDropdown(true)
             }}
-            onFocus={() => setShowDropdown(true)}
-            className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-            placeholder="Buscar serviço do catálogo..."
+            className="w-full px-4 py-3 pr-4 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+            placeholder="Nome ou categoria do serviço..."
           />
 
-          {showDropdown && filteredServices.length > 0 && (
-            <div className="absolute z-50 w-full mt-2 bg-white border rounded-lg shadow-xl max-h-80 overflow-y-auto">
-              {filteredServices.slice(0, 10).map(service => (
-                <button
-                  key={service.id}
-                  onClick={() => handleSelectService(service)}
-                  className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b last:border-b-0 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{service.nome}</p>
-                      {service.descricao && (
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{service.descricao}</p>
-                      )}
-                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                        {service.tempo_estimado_minutos && (
-                          <span>{service.tempo_estimado_minutos} min</span>
+          {showDropdown && (
+            <div
+              ref={dropdownRef}
+              className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-xl max-h-80 overflow-y-auto"
+            >
+              {searching ? (
+                <div className="flex items-center justify-center gap-2 p-6 text-gray-500">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Buscando serviços...
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="p-6 text-center text-gray-500 text-sm">
+                  Nenhum serviço encontrado para "{searchTerm}"
+                </div>
+              ) : (
+                searchResults.map(service => (
+                  <button
+                    key={service.id}
+                    onClick={() => handleSelectService(service)}
+                    className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b last:border-b-0 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{service.nome}</p>
+                        {service.descricao && (
+                          <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{service.descricao}</p>
                         )}
-                        {service.materiais && service.materiais.length > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Package className="h-3 w-3" />
-                            {service.materiais.length} materiais
-                          </span>
-                        )}
+                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                          {service.categoria && (
+                            <span className="bg-gray-100 px-2 py-0.5 rounded">{service.categoria}</span>
+                          )}
+                          {service.tempo_estimado_minutos > 0 && (
+                            <span>{service.tempo_estimado_minutos} min</span>
+                          )}
+                          {service.materiais?.length > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Package className="h-3 w-3" />
+                              {service.materiais.length} mat.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-bold text-green-600 text-sm">
+                          R$ {parseFloat(service.preco_base || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-green-600">
-                        R$ {parseFloat(service.preco_base || 0).toFixed(2)}
-                      </p>
-                      {service.custo_total > 0 && (
-                        <p className="text-xs text-gray-500">
-                          Custo: R$ {parseFloat(service.custo_total || 0).toFixed(2)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))
+              )}
             </div>
           )}
         </div>
 
         <button
+          onClick={handleSearch}
+          disabled={searching}
+          className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
+        >
+          {searching ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Search className="h-5 w-5" />
+          )}
+          Buscar
+        </button>
+
+        <button
           onClick={onAddCustomService}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap flex items-center gap-2 font-medium"
+          className="px-4 py-3 bg-white border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap flex items-center gap-2 font-medium"
         >
           <Plus className="h-5 w-5" />
-          Serviço Customizado
+          Customizado
         </button>
       </div>
 
-      <div className="mt-3 text-sm text-blue-700 bg-blue-100 rounded-lg p-3">
-        💡 <strong>Dica:</strong> Selecione um serviço do catálogo para adicionar automaticamente com materiais pré-configurados
-      </div>
+      <p className="mt-3 text-xs text-blue-600">
+        Digite o nome do serviço e clique em Buscar ou pressione Enter para pesquisar no catálogo
+      </p>
     </div>
   )
 }
