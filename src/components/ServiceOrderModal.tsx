@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Plus, Trash2, Package, Users, DollarSign, Info, Calculator, Shield, User, Calendar, FileText, Clock, Search, Receipt } from 'lucide-react'
+import { X, Save, Plus, Trash2, Package, Users, DollarSign, Info, Calculator, Shield, User, Calendar, FileText, Clock, Search, Receipt, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import ServiceOrderCostManager from './ServiceOrderCostManager'
+import TemplateSelectorModal from './TemplateSelectorModal'
+import { fillTemplate } from '../services/templateFillService'
 
 interface ServiceItem {
   id: string
@@ -110,6 +112,10 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
   const [newCustomerData, setNewCustomerData] = useState({ nome_razao: '', telefone: '', email: '', cnpj_cpf: '' })
   const [newServiceData, setNewServiceData] = useState({ name: '', description: '', base_price: 0, estimated_time_minutes: 60 })
   const [newMaterialData, setNewMaterialData] = useState({ name: '', unit: 'un', unit_cost: 0, unit_price: 0, quantity: 1 })
+
+  // Estados para Template Selector
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
+  const [loadedTemplateHtml, setLoadedTemplateHtml] = useState<string>('')
 
   useEffect(() => {
     if (isOpen) {
@@ -626,6 +632,59 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
     }
   }
 
+  const handleLoadTemplate = async (filledHtml: string, template: any) => {
+    // Armazena o HTML preenchido para usar na impressão
+    setLoadedTemplateHtml(filledHtml)
+    setShowTemplateSelector(false)
+
+    // Abre preview em nova janela
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${template.name} - OS ${formData.title || 'Nova'}</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 20px;
+              }
+              @media print {
+                body { margin: 0; padding: 10mm; }
+              }
+              @page {
+                size: A4;
+                margin: 10mm;
+              }
+            </style>
+          </head>
+          <body>
+            ${filledHtml}
+            <script>
+              window.onload = () => {
+                // Adiciona botão de impressão
+                const printBtn = document.createElement('button')
+                printBtn.textContent = '🖨️ Imprimir'
+                printBtn.style.cssText = 'position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; z-index: 9999;'
+                printBtn.onclick = () => window.print()
+                document.body.appendChild(printBtn)
+
+                // Esconde botão ao imprimir
+                window.onbeforeprint = () => printBtn.style.display = 'none'
+                window.onafterprint = () => printBtn.style.display = 'block'
+              }
+            </script>
+          </body>
+        </html>
+      `)
+      printWindow.document.close()
+    }
+
+    alert('✅ Template carregado! Uma nova aba foi aberta com o documento preenchido.')
+  }
+
   const handleSave = async () => {
     // Proteção contra salvamentos múltiplos simultâneos
     if (isSaving) {
@@ -904,9 +963,19 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
             </h2>
             <p className="text-blue-100 text-sm mt-1">Preencha os dados em cada aba - salvamento automático</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-            <X className="h-6 w-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowTemplateSelector(true)}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg"
+              title="Carregar template de OS com dados preenchidos"
+            >
+              <Download className="h-5 w-5" />
+              Carregar Template
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+              <X className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         <div className="flex border-b">
@@ -2057,6 +2126,94 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
             </div>
           </div>
         </div>
+      )}
+
+      {/* Template Selector Modal */}
+      {showTemplateSelector && (
+        <TemplateSelectorModal
+          isOpen={showTemplateSelector}
+          onClose={() => setShowTemplateSelector(false)}
+          templateType="service_order"
+          data={{
+            service_order: {
+              order_number: formData.title || 'Nova OS',
+              description: formData.description,
+              scheduled_at: formData.scheduled_at,
+              warranty_period: formData.warranty_period,
+              warranty_type: formData.warranty_type,
+              warranty_terms: formData.warranty_terms,
+              payment_method: formData.payment_method,
+              payment_installments: formData.payment_installments,
+              notes: formData.notes,
+              estimated_hours: formData.estimated_hours,
+              brand: formData.brand,
+              model: formData.model,
+              equipment: formData.equipment,
+              prazo_execucao_dias: formData.prazo_execucao_dias,
+              relatorio_tecnico: formData.relatorio_tecnico,
+              orientacoes_servico: formData.orientacoes_servico,
+              escopo_detalhado: formData.escopo_detalhado,
+              total_price: calculateTotals().total,
+              subtotal: calculateTotals().subtotal,
+              discount: calculateTotals().desconto,
+              total_cost: calculateTotals().custo_total,
+              profit: calculateTotals().lucro_total,
+              profit_margin: calculateTotals().margem_lucro
+            },
+            customer: selectedCustomer ? {
+              name: selectedCustomer.nome_razao,
+              cpf_cnpj: selectedCustomer.cnpj_cpf,
+              email: selectedCustomer.email,
+              phone: selectedCustomer.telefone,
+              address: selectedCustomer.endereco,
+              city: selectedCustomer.cidade,
+              state: selectedCustomer.estado,
+              zip: selectedCustomer.cep
+            } : {},
+            company: companySettings ? {
+              name: companySettings.company_name,
+              cnpj: companySettings.cnpj,
+              email: companySettings.email,
+              phone: companySettings.phone,
+              address: companySettings.address,
+              city: companySettings.city,
+              state: companySettings.state
+            } : {},
+            services: serviceItems.map(item => ({
+              description: item.descricao,
+              quantity: item.quantidade,
+              unit_price: item.preco_unitario,
+              total_price: item.preco_total,
+              estimated_time: item.tempo_estimado_minutos,
+              cost: item.custo_total,
+              profit: item.lucro,
+              profit_margin: item.margem_lucro
+            })),
+            materials: [
+              ...serviceItems.flatMap(s => s.materiais || []),
+              ...globalMaterials
+            ].map(m => ({
+              name: m.nome,
+              quantity: m.quantidade,
+              unit: m.unidade_medida,
+              unit_cost: m.preco_compra_unitario,
+              unit_price: m.preco_venda_unitario,
+              total_cost: m.custo_total,
+              total_price: m.valor_total
+            })),
+            labor: [
+              ...serviceItems.flatMap(s => s.funcionarios || []),
+              ...globalLabor
+            ].map(l => ({
+              name: l.nome,
+              time_minutes: l.tempo_minutos,
+              cost_per_hour: l.custo_hora,
+              total_cost: l.custo_total
+            }))
+          }}
+          onSelect={handleLoadTemplate}
+          title="Selecionar Template de Ordem de Serviço"
+        />
       )}
     </div>
   )
