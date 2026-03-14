@@ -1,40 +1,44 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta name="theme-color" content="#0ea5e9" />
+    <meta name="description" content="Sistema de gerenciamento de ordens de serviço Giartech" />
 
     <!-- PWA Meta Tags -->
-    <meta name="description" content="Sistema completo de gestão empresarial com OS, estoque, financeiro e mais" />
-    <meta name="theme-color" content="#3b82f6" />
-    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <!-- Apple iOS Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Giartech" />
+    <link rel="apple-touch-icon" href="/icon-192x192.png" />
 
-    <!-- Manifest -->
-    <link rel="manifest" href="/manifest.json" />
+    <!-- Android -->
+    <meta name="mobile-web-app-capable" content="yes" />
 
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="/icon.png" />
+    <!-- Microsoft -->
+    <meta name="msapplication-TileColor" content="#0ea5e9" />
+    <meta name="msapplication-tap-highlight" content="no" />
 
-    <title>Giartech - Sistema Integrado</title>
+    <!-- Prevent auto-zoom on input focus (iOS) -->
+    <style>
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+    </style>
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-9gZceMkc.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/vendor-DKdq6Fjb.js">
-    <link rel="modulepreload" crossorigin href="/assets/utils-BPjSJNJF.js">
-    <link rel="modulepreload" crossorigin href="/assets/charts-Dk-CyZpu.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-CmBlHDIt.css">
-  </head>
+    <title>Giartech - Sistema de OS</title>
+    <script type="module" crossorigin src="/assets/index-DtpaAhyP.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/react-vendor-D_axhAkR.js">
+    <link rel="modulepreload" crossorigin href="/assets/ui-vendor-Dk0U0TNE.js">
+    <link rel="modulepreload" crossorigin href="/assets/supabase-Dze4dJsU.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-ByPZoh0-.css">
+  <link rel="manifest" href="/manifest.webmanifest"></head>
   <body>
     <div id="root"></div>
-    <noscript>
-      Você precisa habilitar JavaScript para executar este aplicativo.
-    </noscript>
+
   </body>
 </html>

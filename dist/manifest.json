@@ -1,34 +1,33 @@
 {
-  "name": "Giartech Sistema Integrado",
+  "name": "Giartech - Sistema de OS Integrado",
   "short_name": "Giartech",
-  "description": "Sistema completo de gestão empresarial com OS, estoque, financeiro e mais",
+  "description": "Sistema de gerenciamento de ordens de serviço",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "/icon.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ],
   "categories": ["business", "productivity"],
-  "shortcuts": [
+  "screenshots": [
     {
-      "name": "Nova OS",
-      "url": "/service-orders/create"
-    },
-    {
-      "name": "Dashboard",
-      "url": "/dashboard"
+      "src": "/screenshot1.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ]
 }
