@@ -86,6 +86,10 @@ const GoalsAndRankings = () => {
   const [showNewGoalModal, setShowNewGoalModal] = useState(false)
   const [showNewIndividualModal, setShowNewIndividualModal] = useState(false)
   const [showEditPrizeModal, setShowEditPrizeModal] = useState(false)
+  const [showEditGoalModal, setShowEditGoalModal] = useState(false)
+  const [showEditIndividualModal, setShowEditIndividualModal] = useState(false)
+  const [editingGoal, setEditingGoal] = useState<CompanyGoal | null>(null)
+  const [editingIndividual, setEditingIndividual] = useState<EmployeeGoal | null>(null)
   const [selectedConfig, setSelectedConfig] = useState<RankingConfig | null>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
@@ -337,6 +341,83 @@ const GoalsAndRankings = () => {
     }
   }
 
+  const updateCompanyGoal = async () => {
+    if (!editingGoal) return
+    try {
+      const { error } = await supabase
+        .from('company_goals')
+        .update({
+          period_type: editingGoal.period_type,
+          start_date: editingGoal.start_date,
+          end_date: editingGoal.end_date,
+          target_amount: editingGoal.target_amount,
+          bonus_pool: editingGoal.bonus_pool,
+          notes: editingGoal.notes,
+        })
+        .eq('id', editingGoal.id)
+      if (error) throw error
+      showToast('Supermeta atualizada com sucesso!', 'success')
+      setShowEditGoalModal(false)
+      setEditingGoal(null)
+      await loadAllData()
+    } catch (error) {
+      console.error('Erro ao atualizar supermeta:', error)
+      showToast('Erro ao atualizar supermeta', 'error')
+    }
+  }
+
+  const deleteCompanyGoal = async (id: string) => {
+    if (!confirm('Deseja encerrar esta supermeta?')) return
+    try {
+      const { error } = await supabase
+        .from('company_goals')
+        .update({ status: 'encerrada' })
+        .eq('id', id)
+      if (error) throw error
+      showToast('Supermeta encerrada!', 'success')
+      await loadAllData()
+    } catch (error) {
+      showToast('Erro ao encerrar supermeta', 'error')
+    }
+  }
+
+  const updateIndividualGoal = async () => {
+    if (!editingIndividual) return
+    try {
+      const { error } = await supabase
+        .from('employee_goals')
+        .update({
+          target_amount: editingIndividual.target_amount,
+          bonus_percentage: editingIndividual.bonus_percentage,
+          super_bonus_percentage: editingIndividual.super_bonus_percentage,
+        })
+        .eq('id', editingIndividual.id)
+      if (error) throw error
+      showToast('Meta individual atualizada!', 'success')
+      setShowEditIndividualModal(false)
+      setEditingIndividual(null)
+      await loadEmployeeGoals()
+    } catch (error) {
+      console.error('Erro ao atualizar meta individual:', error)
+      showToast('Erro ao atualizar meta', 'error')
+    }
+  }
+
+  const deleteIndividualGoal = async (id: string) => {
+    if (!confirm('Deseja excluir esta meta individual?')) return
+    try {
+      const { error } = await supabase
+        .from('employee_goals')
+        .update({ status: 'encerrada' })
+        .eq('id', id)
+      if (error) throw error
+      showToast('Meta excluída!', 'success')
+      await loadEmployeeGoals()
+    } catch (error) {
+      showToast('Erro ao excluir meta', 'error')
+    }
+  }
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -447,9 +528,27 @@ const GoalsAndRankings = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-purple-100">Pool de Bônus</p>
-                        <p className="text-3xl font-bold">{formatCurrency(companyGoal.bonus_pool)}</p>
+                      <div className="flex items-start gap-3">
+                        <div className="text-right">
+                          <p className="text-sm text-purple-100">Pool de Bônus</p>
+                          <p className="text-3xl font-bold">{formatCurrency(companyGoal.bonus_pool)}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setEditingGoal(companyGoal); setShowEditGoalModal(true) }}
+                            className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all"
+                            title="Editar supermeta"
+                          >
+                            <Edit2 className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => deleteCompanyGoal(companyGoal.id)}
+                            className="p-2 bg-white/20 hover:bg-red-500/40 rounded-lg transition-all"
+                            title="Encerrar supermeta"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -619,9 +718,27 @@ const GoalsAndRankings = () => {
                             <h4 className="font-bold text-lg text-gray-900">{goal.employee_name}</h4>
                             <p className="text-sm text-gray-600">{goal.role}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-600">Bônus Ganho</p>
-                            <p className="text-xl font-bold text-green-600">{formatCurrency(goal.bonus_earned)}</p>
+                          <div className="flex items-center gap-2">
+                            <div className="text-right">
+                              <p className="text-sm text-gray-600">Bônus Ganho</p>
+                              <p className="text-xl font-bold text-green-600">{formatCurrency(goal.bonus_earned)}</p>
+                            </div>
+                            <div className="flex flex-col gap-1 ml-2">
+                              <button
+                                onClick={() => { setEditingIndividual(goal); setShowEditIndividualModal(true) }}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Editar meta"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteIndividualGoal(goal.id)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Excluir meta"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
                         </div>
 
@@ -1021,6 +1138,165 @@ const GoalsAndRankings = () => {
                   className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
                 >
                   Criar Meta
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditGoalModal && editingGoal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Editar Supermeta</h2>
+              <button onClick={() => { setShowEditGoalModal(false); setEditingGoal(null) }} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
+                <select
+                  value={editingGoal.period_type}
+                  onChange={e => setEditingGoal({ ...editingGoal, period_type: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="mensal">Mensal</option>
+                  <option value="trimestral">Trimestral</option>
+                  <option value="semestral">Semestral</option>
+                  <option value="anual">Anual</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Data Início</label>
+                  <input
+                    type="date"
+                    value={editingGoal.start_date?.slice(0, 10) || ''}
+                    onChange={e => setEditingGoal({ ...editingGoal, start_date: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Data Fim</label>
+                  <input
+                    type="date"
+                    value={editingGoal.end_date?.slice(0, 10) || ''}
+                    onChange={e => setEditingGoal({ ...editingGoal, end_date: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Valor da Meta (R$)</label>
+                  <input
+                    type="number"
+                    value={editingGoal.target_amount}
+                    onChange={e => setEditingGoal({ ...editingGoal, target_amount: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Pool de Bônus (R$)</label>
+                  <input
+                    type="number"
+                    value={editingGoal.bonus_pool}
+                    onChange={e => setEditingGoal({ ...editingGoal, bonus_pool: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                <textarea
+                  value={editingGoal.notes || ''}
+                  onChange={e => setEditingGoal({ ...editingGoal, notes: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => { setShowEditGoalModal(false); setEditingGoal(null) }}
+                  className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={updateCompanyGoal}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                >
+                  Salvar Alterações
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditIndividualModal && editingIndividual && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Editar Meta Individual</h2>
+                <p className="text-sm text-gray-500 mt-1">{editingIndividual.employee_name}</p>
+              </div>
+              <button onClick={() => { setShowEditIndividualModal(false); setEditingIndividual(null) }} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Valor da Meta (R$)</label>
+                <input
+                  type="number"
+                  value={editingIndividual.target_amount}
+                  onChange={e => setEditingIndividual({ ...editingIndividual, target_amount: parseFloat(e.target.value) })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bônus (%)</label>
+                  <input
+                    type="number"
+                    value={editingIndividual.bonus_percentage}
+                    onChange={e => setEditingIndividual({ ...editingIndividual, bonus_percentage: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Super Bônus (%)</label>
+                  <input
+                    type="number"
+                    value={editingIndividual.super_bonus_percentage}
+                    onChange={e => setEditingIndividual({ ...editingIndividual, super_bonus_percentage: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <p className="text-sm text-blue-900">
+                  Bônus: {editingIndividual.bonus_percentage}% ao atingir 100% da meta
+                  <br />
+                  Super Bônus: {editingIndividual.super_bonus_percentage}% ao superar 110% da meta
+                </p>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => { setShowEditIndividualModal(false); setEditingIndividual(null) }}
+                  className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={updateIndividualGoal}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                >
+                  Salvar Alterações
                 </button>
               </div>
             </div>
