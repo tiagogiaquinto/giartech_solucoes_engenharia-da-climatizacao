@@ -419,7 +419,8 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
         subtotal: totals.subtotal,
         desconto_valor: totals.desconto,
         desconto_percentual: totals.descontoPercentual,
-        total: totals.total,
+        total_value: totals.total,
+        final_total: totals.total,
         custo_total: totals.custoTotal,
         lucro_total: totals.lucroTotal,
         margem_lucro: totals.margemLucro,
@@ -480,13 +481,16 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
               item.materiais.map(m => ({
                 service_order_item_id: itemData.id,
                 material_id: m.material_id || null,
-                nome: m.nome,
+                nome_material: m.nome,
+                material_name: m.nome,
                 quantidade: m.quantidade,
-                unidade_medida: m.unidade_medida,
-                preco_compra_unitario: m.preco_compra_unitario,
-                preco_venda_unitario: m.preco_venda_unitario,
+                material_unit: m.unidade_medida,
+                unit_cost_at_time: m.preco_compra || m.preco_compra_unitario || 0,
+                unit_sale_price: m.preco_venda || m.preco_venda_unitario || 0,
                 custo_total: m.custo_total,
-                valor_total: m.valor_total
+                valor_total: m.valor_total,
+                total_cost: m.custo_total,
+                total_sale_price: m.valor_total
               }))
             )
         }
@@ -497,7 +501,7 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
             .insert(
               item.funcionarios.map(f => ({
                 service_order_item_id: itemData.id,
-                employee_id: f.staff_id,
+                staff_id: f.staff_id,
                 tempo_minutos: f.tempo_minutos,
                 custo_hora: f.custo_hora,
                 custo_total: f.custo_total
