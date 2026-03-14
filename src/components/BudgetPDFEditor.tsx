@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FileText, Download, Printer, Eye, FileEdit as Edit3, Plus, Trash2, Save, X, Settings, Copy, Send, Palette, CheckCircle2 } from 'lucide-react'
+import { FileText, Download, Printer, Eye, FileEdit as Edit3, Plus, Trash2, Save, X, Settings, Copy, Send, Palette, CheckCircle2, Search, Package } from 'lucide-react'
 import {
   budgetPDFService,
   BudgetData,
@@ -64,6 +64,12 @@ export default function BudgetPDFEditor({
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [loadedTemplateHtml, setLoadedTemplateHtml] = useState<string>('')
 
+  // Estados para busca de serviços do catálogo
+  const [serviceCatalog, setServiceCatalog] = useState<any[]>([])
+  const [serviceSearch, setServiceSearch] = useState('')
+  const [showServiceSearch, setShowServiceSearch] = useState(false)
+  const [filteredServices, setFilteredServices] = useState<any[]>([])
+
   const [newItem, setNewItem] = useState<Partial<BudgetItem>>({
     description: '',
     quantity: 1,
@@ -75,6 +81,53 @@ export default function BudgetPDFEditor({
   useEffect(() => {
     calculateTotals()
   }, [budgetData.items, budgetData.discount, budgetData.discountType, budgetData.taxes])
+
+  useEffect(() => {
+    loadServiceCatalog()
+  }, [])
+
+  useEffect(() => {
+    if (serviceSearch.length >= 2) {
+      const filtered = serviceCatalog.filter(service =>
+        service.name.toLowerCase().includes(serviceSearch.toLowerCase()) ||
+        service.description?.toLowerCase().includes(serviceSearch.toLowerCase())
+      )
+      setFilteredServices(filtered.slice(0, 10))
+      setShowServiceSearch(filtered.length > 0)
+    } else {
+      setFilteredServices([])
+      setShowServiceSearch(false)
+    }
+  }, [serviceSearch, serviceCatalog])
+
+  const loadServiceCatalog = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('service_catalog')
+        .select(`
+          *,
+          service_catalog_materials (
+            id,
+            material_id,
+            quantity,
+            materials (
+              id,
+              name,
+              unit,
+              unit_cost,
+              unit_price
+            )
+          )
+        `)
+        .eq('active', true)
+        .order('name')
+
+      if (error) throw error
+      setServiceCatalog(data || [])
+    } catch (error) {
+      console.error('Erro ao carregar catálogo:', error)
+    }
+  }
 
   const calculateTotals = () => {
     const subtotal = budgetData.items.reduce((sum, item) => sum + item.total, 0)
@@ -93,6 +146,46 @@ export default function BudgetPDFEditor({
       subtotal,
       total
     }))
+  }
+
+  const selectServiceFromCatalog = (service: any) => {
+    console.log('🔍 Serviço selecionado:', service)
+
+    // Preenche o item com os dados do serviço
+    setNewItem({
+      description: service.name + (service.description ? ` - ${service.description}` : ''),
+      quantity: 1,
+      unit: service.unit || 'SV',
+      unitPrice: service.base_price || 0,
+      category: service.category || 'Serviço'
+    })
+
+    // Adiciona automaticamente os materiais associados ao serviço
+    if (service.service_catalog_materials && service.service_catalog_materials.length > 0) {
+      const materialsToAdd: BudgetItem[] = service.service_catalog_materials
+        .filter((scm: any) => scm.materials)
+        .map((scm: any) => ({
+          id: `material-${Date.now()}-${Math.random()}`,
+          description: `Material: ${scm.materials.name}`,
+          quantity: scm.quantity,
+          unit: scm.materials.unit,
+          unitPrice: scm.materials.unit_price || scm.materials.unit_cost || 0,
+          total: scm.quantity * (scm.materials.unit_price || scm.materials.unit_cost || 0),
+          category: 'Material'
+        }))
+
+      if (materialsToAdd.length > 0) {
+        setBudgetData(prev => ({
+          ...prev,
+          items: [...prev.items, ...materialsToAdd]
+        }))
+        console.log('✅ Materiais adicionados automaticamente:', materialsToAdd.length)
+      }
+    }
+
+    setServiceSearch('')
+    setShowServiceSearch(false)
+    console.log('✅ Dados carregados no formulário')
   }
 
   const addItem = () => {
@@ -455,6 +548,58 @@ export default function BudgetPDFEditor({
             {!readOnly && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <h4 className="text-sm font-semibold text-blue-900 mb-3">Adicionar Item</h4>
+
+                {/* Busca de Serviços do Catálogo */}
+                <div className="mb-4 relative">
+                  <label className="block text-sm font-medium text-blue-900 mb-2">
+                    🔍 Buscar Serviço do Catálogo
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Digite o nome do serviço (mínimo 2 caracteres)..."
+                    value={serviceSearch}
+                    onChange={e => setServiceSearch(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+
+                  {/* Dropdown com resultados */}
+                  {showServiceSearch && filteredServices.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border-2 border-blue-300 rounded-lg shadow-xl max-h-96 overflow-y-auto">
+                      {filteredServices.map((service) => (
+                        <button
+                          key={service.id}
+                          onClick={() => selectServiceFromCatalog(service)}
+                          className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-200 transition-colors"
+                        >
+                          <div className="font-semibold text-gray-900">{service.name}</div>
+                          {service.description && (
+                            <div className="text-sm text-gray-600 mt-1">{service.description}</div>
+                          )}
+                          <div className="flex items-center gap-4 mt-2 text-sm">
+                            <span className="text-blue-600 font-semibold">
+                              R$ {service.base_price?.toFixed(2) || '0.00'}
+                            </span>
+                            {service.estimated_time_minutes && (
+                              <span className="text-gray-500">
+                                ⏱️ {service.estimated_time_minutes} min
+                              </span>
+                            )}
+                            {service.service_catalog_materials?.length > 0 && (
+                              <span className="text-green-600">
+                                📦 {service.service_catalog_materials.length} materiais
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-sm text-gray-600 mb-3 px-2">
+                  Ou preencha manualmente:
+                </div>
+
                 <div className="grid grid-cols-6 gap-3">
                   <div className="col-span-2">
                     <input
