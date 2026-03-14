@@ -424,7 +424,7 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
         custo_total: totals.custoTotal,
         lucro_total: totals.lucroTotal,
         margem_lucro: totals.margemLucro,
-        status: 'aberto'
+        status: 'aberta'
       }
 
       let orderId = serviceOrderId
