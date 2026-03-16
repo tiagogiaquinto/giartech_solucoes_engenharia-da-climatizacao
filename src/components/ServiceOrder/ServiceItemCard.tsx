@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ChevronDown, ChevronUp, Trash2, Package, Users, DollarSign, Clock } from 'lucide-react'
+import { ChevronDown, ChevronUp, Trash2, Package, Users, DollarSign, Clock, Minus, Plus } from 'lucide-react'
 
 interface MaterialItem {
   id: string
@@ -56,6 +56,8 @@ export const ServiceItemCard: React.FC<ServiceItemCardProps> = ({
   onAddLabor
 }) => {
   const [expanded, setExpanded] = useState(false)
+  const [priceText, setPriceText] = useState('')
+  const [editingPrice, setEditingPrice] = useState(false)
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -64,16 +66,30 @@ export const ServiceItemCard: React.FC<ServiceItemCardProps> = ({
     }).format(value)
   }
 
-  const handleQuantityChange = (newQtd: number) => {
+  const handleQuantityChange = (delta: number) => {
+    const newQtd = Math.max(1, item.quantidade + delta)
     const preco_total = item.preco_unitario * newQtd
     onUpdate(item.id, { quantidade: newQtd, preco_total })
   }
 
-  const handlePriceChange = (newPrice: number) => {
+  const handleQuantityInput = (value: string) => {
+    const newQtd = Math.max(1, parseInt(value.replace(/\D/g, ''), 10) || 1)
+    const preco_total = item.preco_unitario * newQtd
+    onUpdate(item.id, { quantidade: newQtd, preco_total })
+  }
+
+  const handlePriceBlur = () => {
+    const newPrice = parseFloat(priceText.replace(/[^\d,]/g, '').replace(',', '.')) || item.preco_unitario
     const preco_total = newPrice * item.quantidade
     const lucro = preco_total - item.custo_total
-    const margem_lucro = item.custo_total > 0 ? ((lucro / preco_total) * 100) : 100
+    const margem_lucro = preco_total > 0 ? ((lucro / preco_total) * 100) : 100
     onUpdate(item.id, { preco_unitario: newPrice, preco_total, lucro, margem_lucro })
+    setEditingPrice(false)
+  }
+
+  const handlePriceFocus = () => {
+    setPriceText(item.preco_unitario > 0 ? item.preco_unitario.toFixed(2).replace('.', ',') : '')
+    setEditingPrice(true)
   }
 
   return (
@@ -96,25 +112,42 @@ export const ServiceItemCard: React.FC<ServiceItemCardProps> = ({
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-xs text-gray-600 mb-1 block">Quantidade</label>
-                <input
-                  type="number"
-                  value={item.quantidade}
-                  onChange={(e) => handleQuantityChange(parseFloat(e.target.value) || 1)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  min="0.01"
-                  step="0.01"
-                />
+                <div className="flex items-center border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+                  <button
+                    type="button"
+                    onClick={() => handleQuantityChange(-1)}
+                    className="px-2 py-2 bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 shrink-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={item.quantidade}
+                    onChange={(e) => handleQuantityInput(e.target.value)}
+                    className="w-full px-2 py-2 text-center font-medium focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleQuantityChange(1)}
+                    className="px-2 py-2 bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 shrink-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label className="text-xs text-gray-600 mb-1 block">Preço Unit. (R$)</label>
                 <input
-                  type="number"
-                  value={item.preco_unitario.toFixed(2)}
-                  onChange={(e) => handlePriceChange(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  min="0"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
+                  value={editingPrice ? priceText : item.preco_unitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  onFocus={handlePriceFocus}
+                  onChange={(e) => setPriceText(e.target.value)}
+                  onBlur={handlePriceBlur}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-medium"
+                  placeholder="0,00"
                 />
               </div>
 

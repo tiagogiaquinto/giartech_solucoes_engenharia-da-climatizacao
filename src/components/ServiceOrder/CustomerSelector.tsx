@@ -22,7 +22,7 @@ interface CustomerSelectorProps {
 }
 
 const EMPTY_FORM = {
-  tipo_pessoa: 'F' as 'F' | 'J',
+  tipo_pessoa: 'pf' as 'pf' | 'pj',
   nome_razao: '',
   nome_fantasia: '',
   cpf: '',
@@ -152,7 +152,7 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
       if (form.whatsapp) payload.whatsapp = form.whatsapp
       if (form.observacoes) payload.observacoes = form.observacoes
 
-      if (form.tipo_pessoa === 'F') {
+      if (form.tipo_pessoa === 'pf') {
         if (form.cpf) payload.cpf = form.cpf
         if (form.rg) payload.rg = form.rg
         if (form.data_nascimento) payload.data_nascimento = form.data_nascimento
@@ -338,7 +338,7 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
               <div>
                 <label className={labelCls}>Tipo de Pessoa</label>
                 <div className="flex gap-3">
-                  {(['F', 'J'] as const).map(t => (
+                  {(['pf', 'pj'] as const).map(t => (
                     <button
                       key={t}
                       onClick={() => setForm(p => ({ ...p, tipo_pessoa: t }))}
@@ -348,7 +348,7 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
                           : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                     >
-                      {t === 'F' ? 'Pessoa Física' : 'Pessoa Jurídica'}
+                      {t === 'pf' ? 'Pessoa Física' : 'Pessoa Jurídica'}
                     </button>
                   ))}
                 </div>
@@ -356,7 +356,7 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
 
               <div>
                 <label className={labelCls}>
-                  {form.tipo_pessoa === 'F' ? 'Nome Completo' : 'Razão Social'} <span className="text-red-500">*</span>
+                  {form.tipo_pessoa === 'pf' ? 'Nome Completo' : 'Razão Social'} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -368,7 +368,7 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
                 />
               </div>
 
-              {form.tipo_pessoa === 'J' && (
+              {form.tipo_pessoa === 'pj' && (
                 <div>
                   <label className={labelCls}>Nome Fantasia</label>
                   <input
@@ -383,34 +383,34 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={labelCls}>{form.tipo_pessoa === 'F' ? 'CPF' : 'CNPJ'}</label>
+                  <label className={labelCls}>{form.tipo_pessoa === 'pf' ? 'CPF' : 'CNPJ'}</label>
                   <input
                     type="text"
-                    value={form.tipo_pessoa === 'F' ? form.cpf : form.cnpj}
+                    value={form.tipo_pessoa === 'pf' ? form.cpf : form.cnpj}
                     onChange={(e) => {
-                      const v = form.tipo_pessoa === 'F' ? maskCpf(e.target.value) : maskCnpj(e.target.value)
-                      setForm(p => form.tipo_pessoa === 'F' ? { ...p, cpf: v } : { ...p, cnpj: v })
+                      const v = form.tipo_pessoa === 'pf' ? maskCpf(e.target.value) : maskCnpj(e.target.value)
+                      setForm(p => form.tipo_pessoa === 'pf' ? { ...p, cpf: v } : { ...p, cnpj: v })
                     }}
                     className={inputCls}
-                    placeholder={form.tipo_pessoa === 'F' ? '000.000.000-00' : '00.000.000/0001-00'}
+                    placeholder={form.tipo_pessoa === 'pf' ? '000.000.000-00' : '00.000.000/0001-00'}
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>{form.tipo_pessoa === 'F' ? 'RG' : 'Inscrição Estadual'}</label>
+                  <label className={labelCls}>{form.tipo_pessoa === 'pf' ? 'RG' : 'Inscrição Estadual'}</label>
                   <input
                     type="text"
-                    value={form.tipo_pessoa === 'F' ? form.rg : form.inscricao_estadual}
+                    value={form.tipo_pessoa === 'pf' ? form.rg : form.inscricao_estadual}
                     onChange={(e) => {
                       const v = e.target.value
-                      setForm(p => form.tipo_pessoa === 'F' ? { ...p, rg: v } : { ...p, inscricao_estadual: v })
+                      setForm(p => form.tipo_pessoa === 'pf' ? { ...p, rg: v } : { ...p, inscricao_estadual: v })
                     }}
                     className={inputCls}
-                    placeholder={form.tipo_pessoa === 'F' ? 'RG' : 'Inscrição estadual'}
+                    placeholder={form.tipo_pessoa === 'pf' ? 'RG' : 'Inscrição estadual'}
                   />
                 </div>
               </div>
 
-              {form.tipo_pessoa === 'J' && (
+              {form.tipo_pessoa === 'pj' && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Inscrição Municipal</label>
@@ -434,7 +434,7 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
                 </div>
               )}
 
-              {form.tipo_pessoa === 'F' && (
+              {form.tipo_pessoa === 'pf' && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Data de Nascimento</label>
