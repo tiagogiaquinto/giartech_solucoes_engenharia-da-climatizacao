@@ -110,6 +110,7 @@ import DocumentCenter from './pages/DocumentCenter'
 import ThomazDashboard from './pages/ThomazDashboard'
 import AIProvidersSettings from './pages/AIProvidersSettings'
 import TemplateManager from './pages/TemplateManager'
+import Customer360 from './pages/Customer360'
 
 // Protected route component - DESABILITADO para acesso livre
 // const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -462,7 +463,15 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
+          <Route path="/clientes/:id/360" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <Customer360 />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/visual-customization" element={
             <ProtectedRoute>
               <WebLayout>

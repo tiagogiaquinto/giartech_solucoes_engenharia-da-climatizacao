@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { X, Save, Loader2, FileText } from 'lucide-react'
+import { X, Save, Loader2, FileText, GitBranch } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { CustomerSelector } from './ServiceOrder/CustomerSelector'
 import { QuickServiceAdd } from './ServiceOrder/QuickServiceAdd'
 import { ServiceItemCard } from './ServiceOrder/ServiceItemCard'
 import { FinancialSummary } from './ServiceOrder/FinancialSummary'
 import { TemplateSelector } from './TemplateSelector'
+import { OSPipelineStepper, PipelineStage } from './ServiceOrder/OSPipelineStepper'
+import { StockCheckPanel } from './ServiceOrder/StockCheckPanel'
 
 interface ServiceItem {
   id: string
@@ -93,6 +95,9 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [showMaterialModal, setShowMaterialModal] = useState<string | null>(null)
   const [showLaborModal, setShowLaborModal] = useState<string | null>(null)
+  const [pipelineStage, setPipelineStage] = useState<PipelineStage>('orcamento')
+  const [savedOrderId, setSavedOrderId] = useState<string | null>(null)
+  const [stockRequisitionCount, setStockRequisitionCount] = useState(0)
 
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [totals, setTotals] = useState(EMPTY_TOTALS)
@@ -104,6 +109,9 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
     setTotals(EMPTY_TOTALS)
     setShowMaterialModal(null)
     setShowLaborModal(null)
+    setPipelineStage('orcamento')
+    setSavedOrderId(null)
+    setStockRequisitionCount(0)
   }, [])
 
   useEffect(() => {
@@ -194,6 +202,8 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
         warranty_period: order.warranty_period || 90,
         warranty_type: order.warranty_type || 'days'
       })
+      if (order.pipeline_stage) setPipelineStage(order.pipeline_stage as PipelineStage)
+      setSavedOrderId(order.id)
 
       if (order.items && order.items.length > 0) {
         const mappedItems: ServiceItem[] = order.items.map((item: any) => ({
@@ -442,7 +452,8 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
         custo_total: totals.custoTotal,
         lucro_total: totals.lucroTotal,
         margem_lucro: totals.margemLucro,
-        status: 'aberta'
+        status: 'aberta',
+        pipeline_stage: pipelineStage
       }
 
       let orderId = serviceOrderId
@@ -486,6 +497,50 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
           status: 'a_fazer',
           priority: 'medium'
         })
+
+        // Auto-create CRM opportunity when OS is saved
+        try {
+          const { data: pipelines } = await supabase
+            .from('crm_pipelines')
+            .select('id, stages:crm_stages(id, name, position)')
+            .limit(1)
+            .maybeSingle()
+
+          if (pipelines) {
+            const stages = (pipelines.stages || []).sort((a: any, b: any) => a.position - b.position)
+            const firstStage = stages[0]
+            if (firstStage) {
+              const { data: opp } = await supabase
+                .from('crm_opportunities')
+                .insert({
+                  titulo: `OS: ${selectedCustomer.nome_razao}${serviceTitles ? ` — ${serviceTitles}` : ''}`,
+                  customer_id: selectedCustomer.id,
+                  pipeline_id: pipelines.id,
+                  stage_id: firstStage.id,
+                  valor: totals.total,
+                  service_order_id: orderId,
+                  origem_os: true,
+                  status: 'aberto',
+                  temperatura: 'quente',
+                  prioridade: 'alta',
+                  descricao: formData.description || null
+                })
+                .select()
+                .maybeSingle()
+
+              if (opp) {
+                await supabase
+                  .from('service_orders')
+                  .update({ crm_opportunity_id: opp.id })
+                  .eq('id', orderId)
+              }
+            }
+          }
+        } catch {
+          // CRM creation is non-blocking
+        }
+
+        setSavedOrderId(orderId as string)
       }
 
       for (const item of serviceItems) {
@@ -560,6 +615,8 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
         }
       }
 
+      if (orderId) setSavedOrderId(orderId)
+
       if (onSave && orderId) {
         onSave(orderId)
       }
@@ -579,13 +636,20 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
-            <h2 className="text-2xl font-bold text-white">
-              {serviceOrderId ? 'Editar' : 'Nova'} Ordem de Serviço
-            </h2>
+          <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-600 to-blue-700">
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-white mb-2">
+                {serviceOrderId ? 'Editar' : 'Nova'} Ordem de Serviço
+              </h2>
+              <OSPipelineStepper
+                currentStage={pipelineStage}
+                onChange={setPipelineStage}
+                compact
+              />
+            </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-blue-500 rounded-lg transition-colors text-white"
+              className="p-2 hover:bg-blue-500 rounded-lg transition-colors text-white ml-4"
             >
               <X className="h-6 w-6" />
             </button>
@@ -652,6 +716,23 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {savedOrderId && (
+                    <StockCheckPanel
+                      serviceOrderId={savedOrderId}
+                      serviceItems={serviceItems}
+                      onRequisitionCreated={(count) => setStockRequisitionCount(count)}
+                    />
+                  )}
+
+                  {stockRequisitionCount > 0 && (
+                    <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                      <GitBranch className="h-5 w-5 text-amber-600 shrink-0" />
+                      <p className="text-sm text-amber-800">
+                        <strong>{stockRequisitionCount} requisição(ões) de compra</strong> criada(s) automaticamente e vinculada(s) a esta OS. Acompanhe no módulo de Compras.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
                     <h3 className="text-lg font-semibold">Informações Adicionais</h3>

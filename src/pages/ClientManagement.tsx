@@ -788,6 +788,13 @@ const ClientManagement = () => {
 
                 <div className="flex space-x-2">
                   <button
+                    onClick={() => navigate(`/clientes/${client.id}/360`)}
+                    className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center space-x-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span>Perfil 360°</span>
+                  </button>
+                  <button
                     onClick={() => {
                       setEditingClient(client)
                       setEditingCustomerId(client.id)
