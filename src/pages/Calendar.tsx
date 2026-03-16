@@ -260,18 +260,109 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
     }
   }
 
+  // Optimistic update: immediately replace the event in local state,
+  // then persist to DB and do a background refresh to reconcile.
+  const applyOptimisticUpdate = (eventId: string, updatedEvent: Event) => {
+    setEvents(prev => {
+      const baseId = (updatedEvent as any).originalId || updatedEvent.id
+      // Remove all expanded instances of this event (multi-day variants share originalId or id)
+      const filtered = prev.filter(e => {
+        const eBase = (e as any).originalId || e.id
+        return eBase !== baseId
+      })
+      // Re-expand the updated event and append
+      const reExpanded = expandMultiDayEvents([updatedEvent])
+      return [...filtered, ...reExpanded]
+    })
+  }
+
+  // Check for scheduling conflicts: returns any event that overlaps with newStart–newEnd
+  // excluding the event being moved (identified by baseId)
+  const findConflicts = (baseId: string, newStart: Date, newEnd: Date): Event[] => {
+    return events.filter(e => {
+      const eBase = (e as any).originalId || e.id
+      if (eBase === baseId) return false
+      const eStart = new Date(e.start)
+      const eEnd = new Date(e.end)
+      // Overlap: starts before other ends AND ends after other starts
+      return newStart < eEnd && newEnd > eStart
+    })
+  }
+
   const handleUpdateEvent = async () => {
     if (showEditModal) {
+      const eventId = (showEditModal as any).originalId || showEditModal.id
       try {
         const updates = mapCalendarEventToAgendaEvent(showEditModal)
-        const eventId = (showEditModal as any).originalId || showEditModal.id
-        await updateAgendaEvent(eventId, updates)
-        await loadEvents()
+
+        // Optimistic update before DB call
+        applyOptimisticUpdate(eventId, showEditModal)
         setShowEditModal(null)
+
+        await updateAgendaEvent(eventId, updates)
+        // Background refresh to reconcile with DB truth
+        loadEvents()
       } catch (error) {
         console.error('Error updating event:', error)
+        // Rollback by re-fetching on error
+        loadEvents()
         alert('Erro ao atualizar evento')
       }
+    }
+  }
+
+  // Drop handler for calendar grid cells (monthly / weekly views)
+  const handleDropOnDate = async (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault()
+    e.stopPropagation()
+    try {
+      const rawData = e.dataTransfer.getData('application/calendar-event')
+      if (!rawData) return
+      const eventData: Event = JSON.parse(rawData)
+      const baseId = (eventData as any).originalId || eventData.id
+
+      const originalStart = new Date(eventData.start)
+      const originalEnd = new Date(eventData.end)
+      const durationMs = originalEnd.getTime() - originalStart.getTime()
+
+      const newStart = new Date(targetDate)
+      newStart.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0)
+      const newEnd = new Date(newStart.getTime() + durationMs)
+
+      // No-op if same day
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+      if (toDateStr(newStart) === toDateStr(originalStart)) return
+
+      // Conflict check
+      const conflicts = findConflicts(baseId, newStart, newEnd)
+      if (conflicts.length > 0) {
+        const conflictTitles = conflicts.slice(0, 2).map(c => c.title).join(', ')
+        if (!confirm(`Conflito detectado com: ${conflictTitles}.\nDeseja mover mesmo assim?`)) return
+      }
+
+      const updatedEvent: Event = {
+        ...eventData,
+        id: baseId,
+        originalId: undefined,
+        start: newStart,
+        end: newEnd,
+        date: toDateStr(newStart),
+        endDate: toDateStr(newEnd),
+        time: `${pad(newStart.getHours())}:${pad(newStart.getMinutes())}`,
+        endTime: `${pad(newEnd.getHours())}:${pad(newEnd.getMinutes())}`,
+      }
+
+      // Optimistic update first
+      applyOptimisticUpdate(baseId, updatedEvent)
+
+      const updates = mapCalendarEventToAgendaEvent(updatedEvent)
+      await updateAgendaEvent(baseId, updates)
+      // Background reconcile
+      loadEvents()
+    } catch (err) {
+      console.error('Error on date drop:', err)
+      loadEvents()
     }
   }
 
@@ -524,11 +615,13 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
         {days.map((day, index) => {
           const dayEvents = getEventsForDate(day.date)
           const isToday = day.date.toDateString() === new Date().toDateString()
-          
+
           return (
             <div
               key={index}
               onClick={() => handleDateClick(day.date)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDropOnDate(e, day.date)}
               className={`min-h-[70px] p-1 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors ${
                 !day.isCurrentMonth ? 'bg-gray-100 text-gray-400' : 'bg-white'
               } ${isToday ? 'bg-blue-50 border-blue-300' : ''}`}
@@ -542,11 +635,16 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                 {dayEvents.slice(0, 2).map(event => (
                   <div
                     key={event.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.stopPropagation()
+                      handleDragStart(e, event)
+                    }}
                     onClick={(e) => {
                       e.stopPropagation()
                       setShowEditModal(event)
                     }}
-                    className={`text-xs p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity ${getEventTypeColor(event.type)}`}
+                    className={`text-xs p-1 rounded text-white truncate cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity ${getEventTypeColor(event.type)}`}
                   >
                     {event.time} {event.title}
                   </div>
@@ -591,11 +689,13 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
           {weekDays.map((day, index) => {
             const dayEvents = getEventsForDate(day)
             const isToday = day.toDateString() === new Date().toDateString()
-            
+
             return (
               <div
                 key={index}
                 onClick={() => handleDateClick(day)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDropOnDate(e, day)}
                 className={`min-h-[100px] p-2 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors ${
                   isToday ? 'bg-blue-50 border-blue-300' : 'bg-white'
                 }`}
@@ -609,7 +709,16 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                   {dayEvents.map(event => (
                     <div
                       key={event.id}
-                      className={`text-xs p-1 rounded text-white truncate ${getEventTypeColor(event.type)}`}
+                      draggable
+                      onDragStart={(e) => {
+                        e.stopPropagation()
+                        handleDragStart(e, event)
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowEditModal(event)
+                      }}
+                      className={`text-xs p-1 rounded text-white truncate cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity ${getEventTypeColor(event.type)}`}
                     >
                       {event.time} {event.title}
                     </div>
@@ -779,7 +888,10 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
 
   const handleDragStart = (e: React.DragEvent, event: Event) => {
     e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/html', JSON.stringify(event))
+    // Store in both MIME types: generic one for board, specific one for calendar grid
+    const payload = JSON.stringify(event)
+    e.dataTransfer.setData('text/html', payload)
+    e.dataTransfer.setData('application/calendar-event', payload)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -790,16 +902,23 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
   const handleDrop = async (e: React.DragEvent, targetStatus: Event['status']) => {
     e.preventDefault()
     try {
-      const eventData = JSON.parse(e.dataTransfer.getData('text/html')) as Event
+      const raw = e.dataTransfer.getData('application/calendar-event') ||
+                  e.dataTransfer.getData('text/html')
+      const eventData = JSON.parse(raw) as Event
       if (eventData.status === targetStatus) return
 
-      const updatedEvent: Event = { ...eventData, status: targetStatus }
-      const agendaEvent = mapCalendarEventToAgendaEvent(updatedEvent)
-      await updateAgendaEvent(eventData.id, agendaEvent)
+      const baseId = (eventData as any).originalId || eventData.id
+      const updatedEvent: Event = { ...eventData, id: baseId, status: targetStatus }
 
-      await loadEvents()
+      // Optimistic update
+      applyOptimisticUpdate(baseId, updatedEvent)
+
+      const agendaEvent = mapCalendarEventToAgendaEvent(updatedEvent)
+      await updateAgendaEvent(baseId, agendaEvent)
+      loadEvents()
     } catch (error) {
       console.error('Error updating event status:', error)
+      loadEvents()
     }
   }
 
