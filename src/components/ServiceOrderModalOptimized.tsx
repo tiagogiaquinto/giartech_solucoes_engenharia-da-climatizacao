@@ -123,29 +123,33 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
       const [customersRes, catalogRes, materialsRes, staffRes] = await Promise.all([
         supabase.from('customers').select('*').order('nome_razao'),
         supabase.from('service_catalog').select(`
-          *,
-          materiais:service_catalog_materials(
-            material_id,
-            quantidade,
-            material:materials(*)
+          id, name, description, category, base_price, estimated_time_minutes, active,
+          service_catalog_materials(
+            id, material_id, quantity, material_name, material_unit,
+            unit_cost_at_time, unit_sale_price
           )
-        `).order('nome'),
-        supabase.from('materials').select('*').order('nome'),
+        `).eq('active', true).order('name'),
+        supabase.from('materials').select('id, name, unit, unit_cost, sale_price, unit_of_measure').order('name'),
         supabase.from('employees').select('id, name, custo_hora').eq('active', true).order('name')
       ])
 
       if (customersRes.data) setCustomers(customersRes.data)
       if (catalogRes.data) {
-        const mappedCatalog = catalogRes.data.map(item => ({
-          ...item,
-          materiais: item.materiais?.map((m: any) => ({
+        const mappedCatalog = catalogRes.data.map((item: any) => ({
+          id: item.id,
+          nome: item.name,
+          descricao: item.description,
+          categoria: item.category,
+          preco_base: item.base_price,
+          tempo_estimado_minutos: item.estimated_time_minutes,
+          materiais: (item.service_catalog_materials || []).map((m: any) => ({
             material_id: m.material_id,
-            quantidade: m.quantidade,
-            nome: m.material?.nome,
-            unidade_medida: m.material?.unidade_medida,
-            preco_compra: m.material?.preco_compra,
-            preco_venda: m.material?.preco_venda
-          })) || []
+            quantidade: parseFloat(m.quantity || 1),
+            nome: m.material_name || '',
+            unidade_medida: m.material_unit || 'un',
+            preco_compra: parseFloat(m.unit_cost_at_time || 0),
+            preco_venda: parseFloat(m.unit_sale_price || m.unit_cost_at_time || 0)
+          }))
         }))
         setServiceCatalog(mappedCatalog)
       }
@@ -553,6 +557,7 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
                     customers={customers}
                     selectedCustomer={selectedCustomer}
                     onSelect={setSelectedCustomer}
+                    onCustomerCreated={(c) => setCustomers(prev => [c, ...prev])}
                   />
 
                   <div className="bg-white rounded-xl p-6 shadow-sm border">
