@@ -4,9 +4,10 @@ import { supabase } from '../lib/supabase'
 import {
   ArrowLeft, User, Phone, Mail, FileText, TrendingUp, Package,
   Calendar, DollarSign, Clock, CheckCircle, XCircle, AlertCircle,
-  Loader2, Star, BarChart2, ShoppingBag, Repeat
+  Loader2, BarChart2, ShoppingBag, Repeat, ShoppingCart
 } from 'lucide-react'
 import { OSPipelineStepper } from '../components/ServiceOrder/OSPipelineStepper'
+import { CustomerTimeline } from '../components/CustomerTimeline'
 
 interface Customer360Data {
   customer: any
@@ -19,10 +20,13 @@ interface Customer360Data {
     ticket_medio: number
     ultima_os: string | null
   }
+  recurrence: any | null
+  timeline: any[]
   recent_orders: any[]
   crm_opportunities: any[]
   materials_used: any[]
   agenda_events: any[]
+  purchase_requests: any[]
   finance_summary: {
     total_receitas: number
     total_pendente: number
@@ -50,7 +54,7 @@ export default function Customer360() {
   const navigate = useNavigate()
   const [data, setData] = useState<Customer360Data | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'crm' | 'materials' | 'agenda'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'orders' | 'crm' | 'materials' | 'agenda' | 'purchases'>('timeline')
 
   useEffect(() => {
     if (id) loadData(id)
@@ -89,14 +93,16 @@ export default function Customer360() {
     )
   }
 
-  const { customer, os_summary, recent_orders, crm_opportunities, materials_used, agenda_events, finance_summary } = data
+  const { customer, os_summary, recurrence, timeline, recent_orders, crm_opportunities, materials_used, agenda_events, purchase_requests, finance_summary } = data
 
   const TABS = [
     { key: 'overview', label: 'Visão Geral', icon: <BarChart2 className="h-4 w-4" /> },
+    { key: 'timeline', label: 'Histórico', icon: <Repeat className="h-4 w-4" /> },
     { key: 'orders', label: `Ordens (${os_summary?.total || 0})`, icon: <FileText className="h-4 w-4" /> },
     { key: 'crm', label: `CRM (${crm_opportunities?.length || 0})`, icon: <TrendingUp className="h-4 w-4" /> },
     { key: 'materials', label: 'Materiais', icon: <Package className="h-4 w-4" /> },
     { key: 'agenda', label: 'Agenda', icon: <Calendar className="h-4 w-4" /> },
+    { key: 'purchases', label: `Compras (${purchase_requests?.length || 0})`, icon: <ShoppingCart className="h-4 w-4" /> },
   ]
 
   return (
@@ -204,6 +210,14 @@ export default function Customer360() {
         </div>
 
         <div className="p-6">
+          {/* Timeline Tab */}
+          {activeTab === 'timeline' && (
+            <CustomerTimeline
+              timeline={timeline || []}
+              recurrence={recurrence}
+            />
+          )}
+
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -404,6 +418,52 @@ export default function Customer360() {
                 <div className="text-center py-12 text-gray-400">
                   <Calendar className="h-12 w-12 mx-auto mb-3 text-gray-200" />
                   <p>Nenhum evento na agenda</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Purchases Tab */}
+          {activeTab === 'purchases' && (
+            <div className="space-y-3">
+              {(purchase_requests || []).map((pr: any) => (
+                <div key={pr.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                    pr.urgency === 'urgente' || pr.urgency === 'critica' ? 'bg-red-100' : 'bg-amber-100'
+                  }`}>
+                    <ShoppingCart className={`h-5 w-5 ${
+                      pr.urgency === 'urgente' || pr.urgency === 'critica' ? 'text-red-600' : 'text-amber-600'
+                    }`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-800 text-sm">{pr.material_name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      OS: {pr.order_number} — Qtd: {pr.quantity_to_order}
+                    </p>
+                    <p className="text-xs text-gray-400">{formatDate(pr.created_at)}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      pr.status === 'recebido' ? 'bg-green-100 text-green-700' :
+                      pr.status === 'cancelado' ? 'bg-red-100 text-red-700' :
+                      pr.status === 'pedido_feito' ? 'bg-blue-100 text-blue-700' :
+                      'bg-amber-100 text-amber-700'
+                    }`}>
+                      {pr.status === 'pendente' ? 'Pendente' :
+                       pr.status === 'aprovado' ? 'Aprovado' :
+                       pr.status === 'em_cotacao' ? 'Em Cotação' :
+                       pr.status === 'pedido_feito' ? 'Pedido Feito' :
+                       pr.status === 'recebido' ? 'Recebido' :
+                       pr.status === 'cancelado' ? 'Cancelado' : pr.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {(!purchase_requests || purchase_requests.length === 0) && (
+                <div className="text-center py-12 text-gray-400">
+                  <ShoppingCart className="h-12 w-12 mx-auto mb-3 text-gray-200" />
+                  <p>Nenhuma requisição de compra gerada</p>
+                  <p className="text-sm mt-1">Aparecem aqui quando materiais da OS estão em falta no estoque</p>
                 </div>
               )}
             </div>
