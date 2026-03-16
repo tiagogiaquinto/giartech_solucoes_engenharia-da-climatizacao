@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Target, Trophy, TrendingUp, Users, Award, Star, Zap, Calendar, DollarSign, Percent, Medal, Crown, Gift, Plus, FileEdit as Edit2, Save, X, RefreshCw, ChevronRight, Sparkles, Check, AlertCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { GoalsProgressWidget } from '../components/GoalsProgressWidget'
 
 interface CompanyGoal {
   id: string
@@ -478,6 +479,11 @@ const GoalsAndRankings = () => {
             <RefreshCw className="h-5 w-5" />
             Atualizar Progresso
           </button>
+        </div>
+
+        {/* Goals Progress Widget - Esteira de Lucro */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <GoalsProgressWidget />
         </div>
 
         <div className="bg-white rounded-xl shadow-md border border-gray-200 p-2">

@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { useDashboardData } from '../../hooks/useDashboardData'
 import ThomazContextualAssistant from '../ThomazContextualAssistant'
 import { formatDateSafe } from '../utils/format'
+import { GoalsProgressWidget } from '../GoalsProgressWidget'
 
 interface WebDashboardProps {
   onPremiumFeature: (feature: string) => void
@@ -56,6 +57,9 @@ const WebDashboard: React.FC<WebDashboardProps> = ({ onPremiumFeature }) => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Thomaz Sugestões Contextuais */}
       <ThomazContextualAssistant context="dashboard" />
+
+      {/* Goals Progress Widget */}
+      <GoalsProgressWidget compact={true} />
 
       {/* Header para Web */}
       <motion.div

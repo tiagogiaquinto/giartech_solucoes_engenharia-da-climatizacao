@@ -1,22 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  ArrowLeft,
-  FileText,
-  Package,
-  Users,
-  DollarSign,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  Edit,
-  Trash2,
-  Download,
-  Eye
-} from 'lucide-react'
+import { ArrowLeft, FileText, Package, Users, DollarSign, Clock, CheckCircle, AlertCircle, FileEdit as Edit, Trash2, Download, Eye } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
 import { formatDateSafe } from '../utils/format'
+import { OSFiscalHealth } from '../components/OSFiscalHealth'
+import { OSPaymentFlow } from '../components/OSPaymentFlow'
 
 const ServiceOrderDetails = () => {
   const { id } = useParams()
@@ -280,7 +269,7 @@ const ServiceOrderDetails = () => {
             )}
 
             {activeTab === 'financial' && (
-              <FinancialTab order={order} items={items} materials={materials} team={team} />
+              <FinancialTab order={order} items={items} materials={materials} team={team} onUpdate={loadOrderData} />
             )}
 
             {activeTab === 'documents' && (
@@ -413,68 +402,63 @@ const TeamTab = ({ team, orderId, onUpdate }: any) => (
   </div>
 )
 
-const FinancialTab = ({ order, items, materials, team }: any) => {
-  const subtotal = parseFloat(order.subtotal_value || 0)
-  const discount = parseFloat(order.discount_value || 0)
+const FinancialTab = ({ order, items, materials, team, onUpdate }: any) => {
   const total = parseFloat(order.total_value || 0)
 
+  const materialsTotal = materials.reduce((sum: number, mat: any) =>
+    sum + (parseFloat(mat.unit_cost || mat.total_cost || 0) * (mat.unit_cost ? parseFloat(mat.quantity || 1) : 1)), 0
+  )
+  const laborTotal = team.reduce((sum: number, member: any) =>
+    sum + parseFloat(member.labor_cost || 0), 0
+  )
   const itemsTotal = items.reduce((sum: number, item: any) =>
     sum + (parseFloat(item.unit_price || 0) * parseFloat(item.quantity || 1)), 0
   )
 
-  const materialsTotal = materials.reduce((sum: number, mat: any) =>
-    sum + (parseFloat(mat.unit_cost || 0) * parseFloat(mat.quantity || 1)), 0
-  )
-
-  const laborTotal = team.reduce((sum: number, member: any) =>
-    sum + parseFloat(member.labor_cost || 0), 0
-  )
-
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <p className="text-sm text-gray-600 mb-1">Serviços</p>
-          <p className="text-2xl font-bold text-blue-600">R$ {itemsTotal.toFixed(2)}</p>
+    <div className="space-y-5">
+      {/* Cost breakdown */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+          <p className="text-xs text-gray-500 mb-1">Serviços</p>
+          <p className="text-lg font-bold text-blue-600">
+            R$ {itemsTotal.toFixed(2)}
+          </p>
         </div>
-
-        <div className="bg-orange-50 p-4 rounded-lg">
-          <p className="text-sm text-gray-600 mb-1">Materiais</p>
-          <p className="text-2xl font-bold text-orange-600">R$ {materialsTotal.toFixed(2)}</p>
+        <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+          <p className="text-xs text-gray-500 mb-1">Materiais</p>
+          <p className="text-lg font-bold text-orange-600">
+            R$ {materialsTotal.toFixed(2)}
+          </p>
         </div>
-
-        <div className="bg-green-50 p-4 rounded-lg">
-          <p className="text-sm text-gray-600 mb-1">Mão de Obra</p>
-          <p className="text-2xl font-bold text-green-600">R$ {laborTotal.toFixed(2)}</p>
-        </div>
-      </div>
-
-      <div className="border-t pt-4 space-y-2">
-        <div className="flex justify-between">
-          <span className="text-gray-600">Subtotal</span>
-          <span className="font-semibold">R$ {subtotal.toFixed(2)}</span>
-        </div>
-
-        {discount > 0 && (
-          <div className="flex justify-between text-red-600">
-            <span>Desconto</span>
-            <span>- R$ {discount.toFixed(2)}</span>
-          </div>
-        )}
-
-        <div className="flex justify-between text-xl font-bold border-t pt-2">
-          <span>Total</span>
-          <span className="text-green-600">R$ {total.toFixed(2)}</span>
+        <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+          <p className="text-xs text-gray-500 mb-1">Mão de Obra</p>
+          <p className="text-lg font-bold text-purple-600">
+            R$ {laborTotal.toFixed(2)}
+          </p>
         </div>
       </div>
 
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h4 className="font-semibold mb-2">Informações de Pagamento</h4>
-        <div className="space-y-1 text-sm">
-          <p><span className="font-medium">Forma de Pagamento:</span> {order.payment_method || 'Não definido'}</p>
-          <p><span className="font-medium">Status:</span> {order.payment_status || 'Pendente'}</p>
-        </div>
-      </div>
+      {/* Fiscal Health Widget */}
+      <OSFiscalHealth
+        totalValue={total}
+        custoMateriais={materialsTotal}
+        custoMaoObra={laborTotal}
+        regime={order.regime_tributario || 'lucro_presumido'}
+        compact={false}
+      />
+
+      {/* Payment Flow Stepper */}
+      <OSPaymentFlow
+        orderId={order.id}
+        orderNumber={order.order_number || ''}
+        totalValue={total}
+        sinalPago={parseFloat(order.sinal_pago || 0)}
+        paymentStatus={order.payment_status || 'pendente'}
+        nfStatus={order.nf_status || 'nao_emitida'}
+        reciboEmitido={order.recibo_emitido || false}
+        onUpdate={onUpdate}
+      />
     </div>
   )
 }
