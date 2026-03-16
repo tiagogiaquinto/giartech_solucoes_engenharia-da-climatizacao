@@ -398,6 +398,15 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
     setShowLaborModal(itemId)
   }
 
+  const generateOrderNumber = () => {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = String(now.getMonth() + 1).padStart(2, '0')
+    const d = String(now.getDate()).padStart(2, '0')
+    const rand = String(Math.floor(Math.random() * 9000) + 1000)
+    return `OS-${y}${m}${d}-${rand}`
+  }
+
   const handleSave = async () => {
     if (!selectedCustomer) {
       alert('Selecione um cliente')
@@ -411,10 +420,15 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
 
     setSaving(true)
     try {
-      const orderData = {
+      const scheduledAt = formData.scheduled_at || new Date().toISOString()
+
+      const orderData: any = {
         customer_id: selectedCustomer.id,
+        client_name: selectedCustomer.nome_razao,
+        client_phone: selectedCustomer.telefone || selectedCustomer.celular || null,
+        client_email: selectedCustomer.email || null,
         description: formData.description,
-        scheduled_at: formData.scheduled_at || new Date().toISOString(),
+        scheduled_at: scheduledAt,
         notes: formData.notes,
         payment_method: formData.payment_method,
         payment_conditions: formData.payment_conditions,
@@ -446,6 +460,8 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
           .delete()
           .eq('service_order_id', serviceOrderId)
       } else {
+        orderData.order_number = generateOrderNumber()
+
         const { data, error } = await supabase
           .from('service_orders')
           .insert(orderData)
@@ -454,6 +470,22 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
 
         if (error) throw error
         orderId = data.id
+
+        const startDate = new Date(scheduledAt)
+        const endDate = new Date(startDate.getTime() + 60 * 60 * 1000)
+        const serviceTitles = serviceItems.map(s => s.descricao).filter(Boolean).join(', ')
+
+        await supabase.from('agenda_events').insert({
+          title: `OS: ${selectedCustomer.nome_razao}${serviceTitles ? ` — ${serviceTitles}` : ''}`,
+          description: formData.description || null,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+          event_type: 'service_order',
+          customer_id: selectedCustomer.id,
+          service_order_id: orderId,
+          status: 'a_fazer',
+          priority: 'medium'
+        })
       }
 
       for (const item of serviceItems) {
@@ -461,12 +493,17 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
           .from('service_order_items')
           .insert({
             service_order_id: orderId,
+            service_catalog_id: item.service_catalog_id || null,
             descricao: item.descricao,
             escopo_detalhado: item.escopo_detalhado,
             quantidade: item.quantidade,
+            quantity: item.quantidade,
             preco_unitario: item.preco_unitario,
+            unit_price: item.preco_unitario,
             preco_total: item.preco_total,
+            total_price: item.preco_total,
             tempo_estimado_minutos: item.tempo_estimado_minutos,
+            estimated_duration: item.tempo_estimado_minutos,
             custo_materiais: item.custo_materiais,
             custo_mao_obra: item.custo_mao_obra,
             custo_total: item.custo_total,
@@ -482,19 +519,23 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
           await supabase
             .from('service_order_materials')
             .insert(
-              item.materiais.map(m => ({
+              item.materiais.map((m: any) => ({
+                service_order_id: orderId,
                 service_order_item_id: itemData.id,
                 material_id: m.material_id || null,
                 nome_material: m.nome,
                 material_name: m.nome,
                 quantidade: m.quantidade,
+                quantity: m.quantidade,
                 material_unit: m.unidade_medida,
-                unit_cost_at_time: m.preco_compra || m.preco_compra_unitario || 0,
-                unit_sale_price: m.preco_venda || m.preco_venda_unitario || 0,
-                custo_total: m.custo_total,
-                valor_total: m.valor_total,
-                total_cost: m.custo_total,
-                total_sale_price: m.valor_total
+                unit_cost_at_time: m.preco_compra_unitario || m.preco_compra || 0,
+                unit_sale_price: m.preco_venda_unitario || m.preco_venda || 0,
+                unit_price: m.preco_venda_unitario || m.preco_venda || 0,
+                total_price: m.valor_total || 0,
+                custo_total: m.custo_total || 0,
+                valor_total: m.valor_total || 0,
+                total_cost: m.custo_total || 0,
+                total_sale_price: m.valor_total || 0
               }))
             )
         }
@@ -503,12 +544,17 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
           await supabase
             .from('service_order_labor')
             .insert(
-              item.funcionarios.map(f => ({
+              item.funcionarios.map((f: any) => ({
+                service_order_id: orderId,
                 service_order_item_id: itemData.id,
-                staff_id: f.staff_id,
+                staff_id: f.staff_id || null,
+                nome_funcionario: f.nome,
                 tempo_minutos: f.tempo_minutos,
                 custo_hora: f.custo_hora,
-                custo_total: f.custo_total
+                custo_total: f.custo_total,
+                total_cost: f.custo_total,
+                hours: (f.tempo_minutos || 0) / 60,
+                hourly_rate: f.custo_hora || 0
               }))
             )
         }
