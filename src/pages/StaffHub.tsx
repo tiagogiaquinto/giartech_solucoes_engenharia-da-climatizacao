@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, UserPlus, Search, Crown, Shield, RefreshCw, Briefcase, Mail, Phone, MapPin, ToggleLeft, ToggleRight, FileEdit as Edit2, Trash2, AlertCircle, Check, Clock, Star, Award } from 'lucide-react'
+import { Users, UserPlus, Search, Crown, Shield, RefreshCw, Briefcase, Mail, Phone, ToggleLeft, ToggleRight, FileEdit as Edit2, Trash2, AlertCircle, Check, Clock, Star, Lock, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useUser } from '../contexts/UserContext'
 import { useNavigate } from 'react-router-dom'
 import { EmployeeDetailDrawer } from '../components/EmployeeDetailDrawer'
-import CreateAccountModal from '../components/CreateAccountModal'
 
 interface Employee {
   id: string
@@ -37,6 +36,12 @@ interface AuthUser {
 }
 
 type MainView = 'employees' | 'users'
+type UserSubTab = 'list' | 'create'
+
+function generatePassword(length = 10): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$'
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Super Admin',
@@ -70,6 +75,7 @@ const StaffHub: React.FC = () => {
   const navigate = useNavigate()
 
   const [mainView, setMainView] = useState<MainView>('employees')
+  const [userSubTab, setUserSubTab] = useState<UserSubTab>('list')
   const [employees, setEmployees] = useState<Employee[]>([])
   const [authUsers, setAuthUsers] = useState<AuthUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -79,7 +85,12 @@ const StaffHub: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [toast, setToast] = useState<ToastState | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
-  const [createAccountOpen, setCreateAccountOpen] = useState(false)
+
+  const [createForm, setCreateForm] = useState({ full_name: '', email: '', password: generatePassword(), role: 'viewer' })
+  const [showPassword, setShowPassword] = useState(false)
+  const [createSaving, setCreateSaving] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [createSuccess, setCreateSuccess] = useState<{ email: string; password: string } | null>(null)
 
   useEffect(() => {
     if (!isSuperAdmin) { navigate('/'); return }
@@ -152,6 +163,38 @@ const StaffHub: React.FC = () => {
       await supabase.from('auth_accounts').update({ role }).eq('id', userId)
       setAuthUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u))
     } catch (err) { console.error(err) }
+  }
+
+  const handleCreateAccount = async () => {
+    setCreateError(null)
+    if (!createForm.email.trim()) { setCreateError('E-mail obrigatório'); return }
+    if (!createForm.password || createForm.password.length < 6) { setCreateError('Senha deve ter ao menos 6 caracteres'); return }
+
+    setCreateSaving(true)
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-admin-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          email: createForm.email.trim().toLowerCase(),
+          password: createForm.password,
+          full_name: createForm.full_name.trim(),
+          role: createForm.role,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erro ao criar usuário')
+      setCreateSuccess({ email: createForm.email.trim().toLowerCase(), password: createForm.password })
+      setCreateForm({ full_name: '', email: '', password: generatePassword(), role: 'viewer' })
+      await loadAll()
+    } catch (err: any) {
+      setCreateError(err.message || 'Erro ao criar conta')
+    } finally {
+      setCreateSaving(false)
+    }
   }
 
   const filteredEmployees = employees.filter(e => {
@@ -235,9 +278,9 @@ const StaffHub: React.FC = () => {
               <UserPlus className="h-4 w-4" /> Novo Funcionário
             </button>
           )}
-          {mainView === 'users' && (
-            <button onClick={() => setCreateAccountOpen(true)} className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors">
-              <UserPlus className="h-4 w-4" /> Nova Conta
+          {mainView === 'users' && userSubTab === 'list' && (
+            <button onClick={() => { setUserSubTab('create'); setCreateSuccess(null); setCreateError(null) }} className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors">
+              <UserPlus className="h-4 w-4" /> Criar Acesso
             </button>
           )}
         </div>
@@ -263,7 +306,7 @@ const StaffHub: React.FC = () => {
           ] as const).map(v => {
             const Icon = v.icon
             return (
-              <button key={v.id} onClick={() => setMainView(v.id)}
+              <button key={v.id} onClick={() => { setMainView(v.id); setUserSubTab('list') }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mainView === v.id ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}
               >
                 <Icon className="h-4 w-4" />{v.label}
@@ -272,14 +315,31 @@ const StaffHub: React.FC = () => {
           })}
         </div>
 
-        <div className="relative flex-1">
-          <input
-            type="text" placeholder="Buscar por nome, cargo ou e-mail..."
-            value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-          />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        </div>
+        {mainView === 'users' && (
+          <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+            <button onClick={() => setUserSubTab('list')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${userSubTab === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <Users className="h-3.5 w-3.5" /> Contas Ativas
+            </button>
+            <button onClick={() => { setUserSubTab('create'); setCreateSuccess(null); setCreateError(null) }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${userSubTab === 'create' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <UserPlus className="h-3.5 w-3.5" /> Criar Acesso
+            </button>
+          </div>
+        )}
+
+        {(mainView === 'employees' || (mainView === 'users' && userSubTab === 'list')) && (
+          <div className="relative flex-1">
+            <input
+              type="text" placeholder="Buscar por nome, cargo ou e-mail..."
+              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
+        )}
 
         {mainView === 'employees' && (
           <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
@@ -394,13 +454,18 @@ const StaffHub: React.FC = () => {
             ))}
           </div>
         )
-      ) : (
+      ) : mainView === 'users' && userSubTab === 'list' ? (
         /* SYSTEM USERS TABLE */
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
           {filteredUsers.length === 0 ? (
             <div className="p-16 text-center">
               <Shield className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-              <p className="text-gray-500">Nenhuma conta de sistema encontrada</p>
+              <p className="text-gray-500 mb-4">Nenhuma conta de sistema encontrada</p>
+              <button onClick={() => { setUserSubTab('create'); setCreateSuccess(null); setCreateError(null) }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 mx-auto"
+              >
+                <UserPlus className="h-4 w-4" /> Criar primeiro acesso
+              </button>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
@@ -450,7 +515,137 @@ const StaffHub: React.FC = () => {
             </div>
           )}
         </div>
-      )}
+      ) : mainView === 'users' && userSubTab === 'create' ? (
+        /* CREATE ACCESS FORM */
+        <div className="max-w-xl">
+          <AnimatePresence mode="wait">
+            {createSuccess ? (
+              <motion.div key="success" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center"
+              >
+                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="h-7 w-7 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Acesso criado com sucesso!</h3>
+                <p className="text-sm text-gray-500 mb-6">Compartilhe as credenciais abaixo com o usuário.</p>
+                <div className="bg-gray-50 rounded-xl p-4 text-left space-y-3 mb-6 border border-gray-200">
+                  <div>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">E-mail de acesso</p>
+                    <p className="text-sm font-medium text-gray-800 font-mono">{createSuccess.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Senha temporária</p>
+                    <p className="text-sm font-medium text-gray-800 font-mono bg-yellow-50 px-3 py-1.5 rounded-lg border border-yellow-200 tracking-wider">{createSuccess.password}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mb-5">O usuário pode alterar a senha em <strong>Configurações &gt; Perfil</strong> após o primeiro acesso.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setCreateSuccess(null)} className="flex-1 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-xl hover:bg-gray-50 font-medium">
+                    Criar outro acesso
+                  </button>
+                  <button onClick={() => setUserSubTab('list')} className="flex-1 py-2.5 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 font-medium">
+                    Ver contas
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div key="form" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="bg-white rounded-2xl shadow-sm border border-gray-200"
+              >
+                <div className="p-6 border-b border-gray-100 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
+                    <UserPlus className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-gray-900">Criar novo acesso ao sistema</h2>
+                    <p className="text-xs text-gray-500">Defina e-mail e senha temporária do usuário</p>
+                  </div>
+                </div>
+
+                <div className="p-6 space-y-5">
+                  {createError && (
+                    <div className="flex items-center gap-2 bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl border border-red-200">
+                      <AlertCircle className="h-4 w-4 flex-shrink-0" />{createError}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Nome completo</label>
+                    <div className="relative">
+                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input type="text" value={createForm.full_name}
+                        onChange={e => setCreateForm(f => ({ ...f, full_name: e.target.value }))}
+                        placeholder="Ex: Daiani Allini"
+                        className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">E-mail <span className="text-red-500">*</span></label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input type="email" value={createForm.email}
+                        onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))}
+                        placeholder="email@exemplo.com"
+                        className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Senha temporária <span className="text-red-500">*</span>
+                      <span className="ml-1.5 text-xs text-gray-400 font-normal">— usuário altera no perfil após o 1º acesso</span>
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input type={showPassword ? 'text' : 'password'} value={createForm.password}
+                        onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))}
+                        className="w-full pl-9 pr-24 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono tracking-wider"
+                      />
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        <button type="button" onClick={() => setCreateForm(f => ({ ...f, password: generatePassword() }))}
+                          className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
+                        >Gerar</button>
+                        <button type="button" onClick={() => setShowPassword(p => !p)} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+                          {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1.5">Copie e compartilhe esta senha antes de salvar</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Nível de acesso</label>
+                    <select value={createForm.role} onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    >
+                      {Object.entries(ROLE_LABELS).filter(([k]) => k !== 'super_admin').map(([v, l]) => (
+                        <option key={v} value={v}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="px-6 pb-6 flex gap-3">
+                  <button onClick={() => setUserSubTab('list')}
+                    className="flex-1 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-xl hover:bg-gray-50 font-medium"
+                  >Cancelar</button>
+                  <button onClick={handleCreateAccount} disabled={createSaving}
+                    className="flex-1 py-2.5 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 font-medium flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {createSaving
+                      ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      : <><UserPlus className="h-4 w-4" />Criar acesso</>
+                    }
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ) : null}
 
       {/* Drawer */}
       {drawerOpen && (
@@ -461,17 +656,6 @@ const StaffHub: React.FC = () => {
         />
       )}
 
-      {/* Create Account Modal */}
-      {createAccountOpen && (
-        <CreateAccountModal
-          onClose={() => setCreateAccountOpen(false)}
-          onSaved={() => {
-            setCreateAccountOpen(false)
-            loadAll()
-            showToast('Conta criada com sucesso!')
-          }}
-        />
-      )}
     </div>
   )
 }
