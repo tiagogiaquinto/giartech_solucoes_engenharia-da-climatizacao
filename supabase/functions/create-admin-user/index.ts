@@ -8,69 +8,57 @@ const corsHeaders = {
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    })
+    return new Response(null, { status: 200, headers: corsHeaders })
   }
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { email, password, nome, tipo_usuario } = await req.json()
+    const { email, password, full_name, role } = await req.json()
 
-    // Criar usuário no Auth
+    if (!email || !password) {
+      return new Response(
+        JSON.stringify({ error: 'email e password são obrigatórios' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: email,
-      password: password,
+      email,
+      password,
       email_confirm: true,
     })
 
     if (authError) throw authError
 
-    // Obter tenant padrão
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('id')
-      .limit(1)
-      .single()
+    const userId = authData.user.id
 
-    // Criar perfil
-    const { data: profileData, error: profileError } = await supabase
-      .from('user_profiles')
-      .insert({
-        user_id: authData.user.id,
-        nome: nome,
-        tipo_usuario: tipo_usuario,
-        tenant_id: tenant?.id,
-      })
-      .select()
-      .single()
+    await supabase.from('auth_accounts').upsert({
+      id: userId,
+      email,
+      full_name: full_name || email,
+      role: role || 'viewer',
+      is_active: true,
+      must_change_password: true,
+      temp_password: password,
+    }, { onConflict: 'id' })
 
-    if (profileError) throw profileError
+    await supabase.from('user_profiles').upsert({
+      user_id: userId,
+      full_name: full_name || email,
+      role: role || 'viewer',
+    }, { onConflict: 'user_id' })
 
     return new Response(
-      JSON.stringify({ success: true, user: authData.user, profile: profileData }),
-      {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
+      JSON.stringify({ success: true, user_id: userId }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error: any) {
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })

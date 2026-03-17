@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useUser } from '../contexts/UserContext'
 import { useNavigate } from 'react-router-dom'
 import { EmployeeDetailDrawer } from '../components/EmployeeDetailDrawer'
+import CreateAccountModal from '../components/CreateAccountModal'
 
 interface Employee {
   id: string
@@ -78,6 +79,7 @@ const StaffHub: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [toast, setToast] = useState<ToastState | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [createAccountOpen, setCreateAccountOpen] = useState(false)
 
   useEffect(() => {
     if (!isSuperAdmin) { navigate('/'); return }
@@ -231,6 +233,11 @@ const StaffHub: React.FC = () => {
           {mainView === 'employees' && (
             <button onClick={() => openEmployee('new')} className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors">
               <UserPlus className="h-4 w-4" /> Novo Funcionário
+            </button>
+          )}
+          {mainView === 'users' && (
+            <button onClick={() => setCreateAccountOpen(true)} className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors">
+              <UserPlus className="h-4 w-4" /> Nova Conta
             </button>
           )}
         </div>
@@ -451,6 +458,18 @@ const StaffHub: React.FC = () => {
           employeeId={selectedEmployeeId === 'new' ? null : selectedEmployeeId}
           onClose={closeDrawer}
           onSaved={onSaved}
+        />
+      )}
+
+      {/* Create Account Modal */}
+      {createAccountOpen && (
+        <CreateAccountModal
+          onClose={() => setCreateAccountOpen(false)}
+          onSaved={() => {
+            setCreateAccountOpen(false)
+            loadAll()
+            showToast('Conta criada com sucesso!')
+          }}
         />
       )}
     </div>
