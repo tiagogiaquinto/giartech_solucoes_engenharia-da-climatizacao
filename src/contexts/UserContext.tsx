@@ -97,8 +97,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     try {
       const superAdmin = authUser.email === SUPER_ADMIN_EMAIL
 
-      const { data: profileData } = await supabase
-        .from('user_profiles')
+      const { data: accountData } = await supabase
+        .from('auth_accounts')
         .select('*')
         .eq('id', authUser.id)
         .maybeSingle()
@@ -106,12 +106,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       let resolvedRole: UserRole = 'viewer'
       let isActive = true
 
-      if (profileData) {
-        resolvedRole = superAdmin ? 'super_admin' : (profileData.role as UserRole)
-        isActive = profileData.is_active ?? true
+      if (accountData) {
+        resolvedRole = superAdmin ? 'super_admin' : (accountData.role as UserRole)
+        isActive = accountData.is_active ?? true
       } else if (superAdmin) {
         resolvedRole = 'super_admin'
-        await supabase.from('user_profiles').upsert({
+        await supabase.from('auth_accounts').upsert({
           id: authUser.id,
           email: authUser.email!,
           full_name: 'Diretor',
@@ -139,8 +139,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       const userProfile: UserProfile = {
         id: authUser.id,
         email: authUser.email || '',
-        name: profileData?.full_name || authUser.email || 'Usuário',
-        full_name: profileData?.full_name || authUser.email || 'Usuário',
+        name: accountData?.full_name || authUser.email || 'Usuário',
+        full_name: accountData?.full_name || authUser.email || 'Usuário',
         role: resolvedRole,
         is_active: isActive,
         permissions

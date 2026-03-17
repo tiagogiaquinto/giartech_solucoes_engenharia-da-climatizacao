@@ -83,7 +83,7 @@ const TeamManagement: React.FC = () => {
     setLoading(true)
     try {
       const { data: profiles, error } = await supabase
-        .from('user_profiles')
+        .from('auth_accounts')
         .select('*')
         .neq('role', 'super_admin')
         .order('created_at', { ascending: false })
@@ -181,7 +181,7 @@ const TeamManagement: React.FC = () => {
   const toggleActive = async (userId: string, currentActive: boolean) => {
     try {
       const { error } = await supabase
-        .from('user_profiles')
+        .from('auth_accounts')
         .update({ is_active: !currentActive })
         .eq('id', userId)
 
@@ -195,7 +195,7 @@ const TeamManagement: React.FC = () => {
   const changeRole = async (userId: string, newRole: string) => {
     try {
       const { error } = await supabase
-        .from('user_profiles')
+        .from('auth_accounts')
         .update({ role: newRole })
         .eq('id', userId)
       if (error) throw error
@@ -230,7 +230,7 @@ const TeamManagement: React.FC = () => {
 
         const userId = fallbackSignUp.data.user?.id
         if (userId) {
-          await supabase.from('user_profiles').upsert({
+          await supabase.from('auth_accounts').upsert({
             id: userId,
             email: inviteData.email,
             full_name: inviteData.full_name,
