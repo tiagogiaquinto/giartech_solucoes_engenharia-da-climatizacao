@@ -8,6 +8,7 @@ import { FinancialSummary } from './ServiceOrder/FinancialSummary'
 import { TemplateSelector } from './TemplateSelector'
 import { OSPipelineStepper, PipelineStage } from './ServiceOrder/OSPipelineStepper'
 import { StockCheckPanel } from './ServiceOrder/StockCheckPanel'
+import { MaterialItem } from './ServiceOrder/InlineMaterialSearch'
 
 interface ServiceItem {
   id: string
@@ -25,21 +26,6 @@ interface ServiceItem {
   custo_total: number
   lucro: number
   margem_lucro: number
-}
-
-interface MaterialItem {
-  id: string
-  material_id: string
-  nome: string
-  quantidade: number
-  unidade_medida: string
-  preco_compra_unitario: number
-  preco_venda_unitario: number
-  preco_compra: number
-  preco_venda: number
-  custo_total: number
-  valor_total: number
-  lucro: number
 }
 
 interface LaborItem {
@@ -227,7 +213,13 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
             preco_venda: parseFloat(m.preco_venda_unitario || 0) * parseFloat(m.quantidade || 0),
             custo_total: parseFloat(m.custo_total || 0),
             valor_total: parseFloat(m.valor_total || 0),
-            lucro: parseFloat(m.valor_total || 0) - parseFloat(m.custo_total || 0)
+            lucro: parseFloat(m.valor_total || 0) - parseFloat(m.custo_total || 0),
+            tipo_uso: (m.tipo_uso || 'consumo') as 'consumo' | 'locacao',
+            observacoes_tecnicas: m.observacoes_tecnicas || '',
+            preco_negociado: m.preco_unitario_negociado ? parseFloat(m.preco_unitario_negociado) : null,
+            quantidade_estoque: parseFloat(m.quantidade_disponivel_estoque || 0),
+            alerta_estoque: m.alerta_estoque || false,
+            from_inventory: !!m.material_id
           })),
           funcionarios: (item.funcionarios || []).map((f: any) => ({
             id: f.id,
@@ -311,7 +303,13 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
             preco_venda: precoVendaUnit * qtd,
             custo_total: precoCompraUnit * qtd,
             valor_total: precoVendaUnit * qtd,
-            lucro: (precoVendaUnit - precoCompraUnit) * qtd
+            lucro: (precoVendaUnit - precoCompraUnit) * qtd,
+            tipo_uso: (m.tipo_uso || 'consumo') as 'consumo' | 'locacao',
+            observacoes_tecnicas: m.observacoes_tecnicas || '',
+            preco_negociado: null,
+            quantidade_estoque: 0,
+            alerta_estoque: false,
+            from_inventory: !!m.material_id
           }
         })
 
@@ -590,7 +588,12 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
                 custo_total: m.custo_total || 0,
                 valor_total: m.valor_total || 0,
                 total_cost: m.custo_total || 0,
-                total_sale_price: m.valor_total || 0
+                total_sale_price: m.valor_total || 0,
+                tipo_uso: m.tipo_uso || 'consumo',
+                observacoes_tecnicas: m.observacoes_tecnicas || null,
+                preco_unitario_negociado: m.preco_negociado || null,
+                quantidade_disponivel_estoque: m.quantidade_estoque || null,
+                alerta_estoque: m.alerta_estoque || false
               }))
             )
         }
