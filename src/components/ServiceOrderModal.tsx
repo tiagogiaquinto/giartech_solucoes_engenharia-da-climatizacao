@@ -168,7 +168,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
     try {
       const [customersRes, materialsRes, staffRes, bankAccountsRes, contractsRes, catalogRes, companyRes, taxRatesRes] = await Promise.all([
         supabase.from('customers').select('*, customer_addresses(*)').order('nome_razao'),
-        supabase.from('inventory_items').select('id, name, unit, cost, price, quantity, min_stock, sku').eq('active', true).order('name'),
+        supabase.from('inventory_items').select('id, name, unit, unit_cost, unit_price, quantity, min_quantity, code').eq('active', true).order('name'),
         supabase.from('employees').select('id, name, role, custo_hora, salary, encargos_percentual, horas_mensais, especialidade, nivel').eq('active', true).order('name'),
         supabase.from('bank_accounts').select('*').eq('active', true).order('account_name'),
         supabase.from('contract_templates').select('*').order('name'),
@@ -476,8 +476,8 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       material_id: materialId,
       nome: material.name,
       unidade_medida: material.unit || 'UN',
-      preco_compra_unitario: Number(material.cost) || Number(material.unit_cost) || 0,
-      preco_venda_unitario: Number(material.price) || Number(material.sale_price) || 0
+      preco_compra_unitario: Number(material.unit_cost) || 0,
+      preco_venda_unitario: Number(material.unit_price) || 0
     })
     setMaterialSearch('')
 
@@ -708,13 +708,13 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
         .insert([{
           name: newMaterialData.name,
           unit: newMaterialData.unit,
-          purchase_price: newMaterialData.unit_cost,
-          sale_price: newMaterialData.unit_price,
+          unit_cost: newMaterialData.unit_cost,
+          unit_price: newMaterialData.unit_price,
           quantity: newMaterialData.quantity,
           active: true,
           min_quantity: 1
         }])
-        .select()
+        .select('id, name, unit, unit_cost, unit_price, quantity, min_quantity, code')
         .single()
 
       if (error) {
@@ -949,8 +949,8 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
               material_name: matAny.nome || matAny.name || '',
               material_unit: matAny.unidade_medida || matAny.unit || 'un',
               quantity: matAny.quantidade || matAny.quantity || 0,
-              unit_cost: matAny.preco_custo || matAny.unit_cost || 0,
-              unit_price: matAny.preco_unitario || matAny.unit_price || 0,
+              unit_cost: matAny.preco_compra_unitario || matAny.preco_custo || matAny.unit_cost || 0,
+              unit_price: matAny.preco_venda_unitario || matAny.preco_unitario || matAny.unit_price || 0,
               total_cost: matAny.custo_total || matAny.total_cost || 0,
               total_price: matAny.valor_total || matAny.total_price || 0
             }
@@ -1005,8 +1005,8 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
             material_name: matAny.nome || matAny.name || '',
             material_unit: matAny.unidade_medida || matAny.unit || 'un',
             quantity: matAny.quantidade || matAny.quantity || 0,
-            unit_cost: matAny.preco_custo || matAny.unit_cost || 0,
-            unit_price: matAny.preco_unitario || matAny.unit_price || 0,
+            unit_cost: matAny.preco_compra_unitario || matAny.preco_custo || matAny.unit_cost || 0,
+            unit_price: matAny.preco_venda_unitario || matAny.preco_unitario || matAny.unit_price || 0,
             total_cost: matAny.custo_total || matAny.total_cost || 0,
             total_price: matAny.valor_total || matAny.total_price || 0
           }
@@ -1566,7 +1566,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
                               <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
                                 {materials.filter(m =>
                                   m.name.toLowerCase().includes(materialSearch.toLowerCase()) ||
-                                  (m.sku && m.sku.toLowerCase().includes(materialSearch.toLowerCase()))
+                                  (m.code && m.code.toLowerCase().includes(materialSearch.toLowerCase()))
                                 ).length === 0 ? (
                                   <div className="px-4 py-3 text-sm text-gray-500 text-center">
                                     Nenhum item encontrado
@@ -1598,9 +1598,9 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
                                         </span>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-0.5 flex gap-3">
-                                        {mat.sku && <span>SKU: {mat.sku}</span>}
-                                        <span>Custo: {formatCurrency(mat.cost || 0)}</span>
-                                        <span>Venda: {formatCurrency(mat.price || 0)}</span>
+                                        {mat.code && <span>Cód: {mat.code}</span>}
+                                        <span>Custo: {formatCurrency(mat.unit_cost || 0)}</span>
+                                        <span>Venda: {formatCurrency(mat.unit_price || 0)}</span>
                                       </div>
                                     </button>
                                   ))
