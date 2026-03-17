@@ -49,6 +49,8 @@ interface MaterialItem {
   custo_total: number
   valor_total: number
   lucro: number
+  tipo: 'estoque' | 'insumo' | 'ferramenta' | 'peca'
+  is_custom: boolean
 }
 
 interface LaborItem {
@@ -324,11 +326,13 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
           nome: mat.material_name || '',
           quantidade: mat.quantity || 0,
           unidade_medida: mat.material_unit || mat.unit || 'un',
-          preco_custo: mat.unit_cost || 0,
-          preco_unitario: mat.unit_price || 0,
+          preco_compra_unitario: mat.unit_cost || 0,
+          preco_venda_unitario: mat.unit_price || 0,
           custo_total: mat.total_cost || (mat.unit_cost || 0) * (mat.quantity || 0),
           valor_total: mat.total_price || (mat.unit_price || 0) * (mat.quantity || 0),
-          lucro: ((mat.unit_price || 0) - (mat.unit_cost || 0)) * (mat.quantity || 0)
+          lucro: ((mat.unit_price || 0) - (mat.unit_cost || 0)) * (mat.quantity || 0),
+          tipo: (mat.tipo || 'estoque') as MaterialItem['tipo'],
+          is_custom: mat.is_custom || !mat.material_id
         }))
         console.log('📦 Materiais globais:', loadedMaterials)
         setGlobalMaterials(loadedMaterials as any)
@@ -426,7 +430,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
     }))
   }
 
-  const addMaterial = () => {
+  const addMaterial = (tipo: MaterialItem['tipo'] = 'estoque') => {
     setGlobalMaterials([{
       id: crypto.randomUUID(),
       material_id: '',
@@ -437,7 +441,9 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       preco_venda_unitario: 0,
       custo_total: 0,
       valor_total: 0,
-      lucro: 0
+      lucro: 0,
+      tipo,
+      is_custom: tipo !== 'estoque'
     }, ...globalMaterials])
   }
 
@@ -1468,147 +1474,235 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
               <motion.div key="materiais" initial={{opacity: 0, x: -20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: 20}} className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold">Materiais da OS</h3>
-                    <p className="text-sm text-gray-600">Materiais que serão consumidos nesta ordem de serviço</p>
+                    <h3 className="text-lg font-semibold">Insumos, Materiais e Ferramentas</h3>
+                    <p className="text-sm text-gray-600">Adicione itens do estoque ou cadastre manualmente</p>
                   </div>
-                  <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewMaterialModal(true)}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
+                    title="Cadastrar novo item no estoque"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Novo no Estoque
+                  </button>
+                </div>
+
+                {/* Category add buttons */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {([
+                    { tipo: 'estoque' as const, label: 'Do Estoque', icon: '📦', color: 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100', desc: 'Buscar item cadastrado' },
+                    { tipo: 'insumo' as const, label: 'Insumo', icon: '🧪', color: 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100', desc: 'Fluidos, gases, consumíveis' },
+                    { tipo: 'ferramenta' as const, label: 'Ferramenta Especial', icon: '🔧', color: 'border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100', desc: 'Equipamentos e ferramentas' },
+                    { tipo: 'peca' as const, label: 'Peça / Componente', icon: '⚙️', color: 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100', desc: 'Placas, bombas, compressores' },
+                  ]).map(cat => (
                     <button
+                      key={cat.tipo}
                       type="button"
-                      onClick={() => {
-                        console.log('Abrindo modal de cadastro de novo material')
-                        setShowNewMaterialModal(true)
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-                      title="Cadastrar Novo Material no Sistema"
+                      onClick={() => addMaterial(cat.tipo)}
+                      className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all text-center ${cat.color}`}
                     >
-                      <Plus className="h-4 w-4" />
-                      Cadastrar Novo
+                      <span className="text-xl mb-1">{cat.icon}</span>
+                      <span className="text-sm font-semibold">{cat.label}</span>
+                      <span className="text-xs opacity-70 mt-0.5">{cat.desc}</span>
                     </button>
-                    <button onClick={addMaterial}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                      <Plus className="h-4 w-4" />
-                      Adicionar Material
-                    </button>
-                  </div>
+                  ))}
                 </div>
 
                 {globalMaterials.length === 0 && (
-                  <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
-                    <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p className="font-medium">Nenhum material adicionado</p>
-                    <p className="text-sm">Clique em "Adicionar Material" para começar</p>
+                  <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed">
+                    <Package className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                    <p className="font-medium text-sm">Nenhum item adicionado</p>
+                    <p className="text-xs mt-1">Use os botões acima para adicionar materiais por categoria</p>
                   </div>
                 )}
 
-                {globalMaterials.map((material, index) => (
-                  <div key={`material-${material.id}-${index}`} className="border rounded-lg p-4 bg-gray-50">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-gray-900">Material #{index + 1}</h4>
-                      <button onClick={() => removeMaterial(material.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                {globalMaterials.map((material, index) => {
+                  const tipoConfig: Record<string, { icon: string; label: string; badgeColor: string; borderColor: string }> = {
+                    estoque: { icon: '📦', label: 'Estoque', badgeColor: 'bg-blue-100 text-blue-700', borderColor: 'border-blue-200' },
+                    insumo: { icon: '🧪', label: 'Insumo', badgeColor: 'bg-amber-100 text-amber-700', borderColor: 'border-amber-200' },
+                    ferramenta: { icon: '🔧', label: 'Ferramenta', badgeColor: 'bg-slate-100 text-slate-700', borderColor: 'border-slate-200' },
+                    peca: { icon: '⚙️', label: 'Peça', badgeColor: 'bg-green-100 text-green-700', borderColor: 'border-green-200' },
+                  }
+                  const cfg = tipoConfig[material.tipo] || tipoConfig.estoque
+                  const isStock = material.tipo === 'estoque'
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="md:col-span-2 relative">
-                        <label className="block text-sm font-medium mb-1">🔍 Buscar Material</label>
-                        <div className="flex gap-2">
-                          <input type="text" value={materialSearch}
-                            onChange={(e) => setMaterialSearch(e.target.value)}
-                            className="flex-1 px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            placeholder="Digite para buscar no estoque..." />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              console.log('Abrindo modal de novo material')
-                              setShowNewMaterialModal(true)
-                            }}
-                            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2 whitespace-nowrap"
-                            title="Novo Material"
-                          >
-                            <Plus className="h-4 w-4" />
-                            Novo Material
-                          </button>
+                  return (
+                    <div key={`material-${material.id}-${index}`} className={`border-2 rounded-xl p-4 bg-white ${cfg.borderColor}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{cfg.icon}</span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.badgeColor}`}>{cfg.label}</span>
+                          <span className="text-sm text-gray-500">#{index + 1}</span>
+                        </div>
+                        <button onClick={() => removeMaterial(material.id)}
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        {/* Stock search OR custom name */}
+                        {isStock ? (
+                          <div className="md:col-span-2 relative">
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Buscar no Estoque</label>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={activeServiceSearchId === material.id ? materialSearch : (material.nome || '')}
+                                onChange={(e) => {
+                                  setActiveServiceSearchId(material.id)
+                                  setMaterialSearch(e.target.value)
+                                }}
+                                onFocus={() => {
+                                  setActiveServiceSearchId(material.id)
+                                  setMaterialSearch('')
+                                }}
+                                className="flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                placeholder="Digite para buscar..."
+                              />
+                            </div>
+                            {activeServiceSearchId === material.id && materialSearch && (
+                              <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
+                                {materials.filter(m =>
+                                  m.name.toLowerCase().includes(materialSearch.toLowerCase()) ||
+                                  (m.sku && m.sku.toLowerCase().includes(materialSearch.toLowerCase()))
+                                ).length === 0 ? (
+                                  <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                                    Nenhum item encontrado
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowNewMaterialModal(true)}
+                                      className="block w-full mt-2 text-blue-600 hover:underline text-xs"
+                                    >+ Cadastrar "{materialSearch}" no estoque</button>
+                                  </div>
+                                ) : (
+                                  materials.filter(m =>
+                                    m.name.toLowerCase().includes(materialSearch.toLowerCase()) ||
+                                    (m.sku && m.sku.toLowerCase().includes(materialSearch.toLowerCase()))
+                                  ).map(mat => (
+                                    <button
+                                      key={mat.id}
+                                      type="button"
+                                      onClick={() => {
+                                        selectMaterial(material.id, mat.id)
+                                        setActiveServiceSearchId(null)
+                                        setMaterialSearch('')
+                                      }}
+                                      className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b last:border-0 transition-colors"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium text-gray-900 text-sm">{mat.name}</span>
+                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${Number(mat.quantity) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                          {Number(mat.quantity) > 0 ? `${mat.quantity} ${mat.unit}` : 'Sem estoque'}
+                                        </span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-0.5 flex gap-3">
+                                        {mat.sku && <span>SKU: {mat.sku}</span>}
+                                        <span>Custo: {formatCurrency(mat.cost || 0)}</span>
+                                        <span>Venda: {formatCurrency(mat.price || 0)}</span>
+                                      </div>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Descrição / Nome *</label>
+                            <input
+                              type="text"
+                              value={material.nome}
+                              onChange={(e) => updateMaterial(material.id, { nome: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                              placeholder={
+                                material.tipo === 'insumo' ? 'Ex: Gás refrigerante R410A, óleo lubrificante...' :
+                                material.tipo === 'ferramenta' ? 'Ex: Manifold digital, vacuômetro, multímetro...' :
+                                'Ex: Placa eletrônica, bomba de dreno, compressor...'
+                              }
+                            />
+                          </div>
+                        )}
+
+                        {/* Qty and unit */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Quantidade</label>
+                          <input type="number" value={material.quantidade} min="0" step="0.01"
+                            onChange={(e) => updateMaterial(material.id, { quantidade: Number(e.target.value) })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
                         </div>
 
-                        {materialSearch && materials.filter(m =>
-                          m.name.toLowerCase().includes(materialSearch.toLowerCase()) ||
-                          (m.sku && m.sku.toLowerCase().includes(materialSearch.toLowerCase()))
-                        ).length > 0 && (
-                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                            {materials.filter(m =>
-                              m.name.toLowerCase().includes(materialSearch.toLowerCase()) ||
-                              (m.sku && m.sku.toLowerCase().includes(materialSearch.toLowerCase()))
-                            ).map(mat => (
-                              <button
-                                key={mat.id}
-                                type="button"
-                                onClick={() => selectMaterial(material.id, mat.id)}
-                                className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b last:border-0 transition-colors"
-                              >
-                                <div className="font-medium text-gray-900">{mat.name}</div>
-                                <div className="text-sm text-gray-600 flex items-center justify-between">
-                                  <span>{mat.sku || 'Sem SKU'} - {mat.unit}</span>
-                                  <span className="font-semibold text-blue-600">
-                                    Estoque: {mat.quantity}
-                                  </span>
-                                </div>
-                              </button>
-                            ))}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Unidade</label>
+                          {material.is_custom ? (
+                            <select
+                              value={material.unidade_medida}
+                              onChange={(e) => updateMaterial(material.id, { unidade_medida: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                            >
+                              {['UN', 'PC', 'KG', 'L', 'M', 'M²', 'CX', 'PT', 'GL', 'HR', 'SV'].map(u => (
+                                <option key={u} value={u}>{u}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input type="text" value={material.unidade_medida} readOnly
+                              className="w-full px-3 py-2 border rounded-lg text-sm bg-gray-50" />
+                          )}
+                        </div>
+
+                        {/* Cost and price */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Custo Unit. (R$)</label>
+                          <input
+                            type="number"
+                            value={material.preco_compra_unitario}
+                            readOnly={!material.is_custom}
+                            onChange={(e) => material.is_custom && updateMaterial(material.id, { preco_compra_unitario: Number(e.target.value) })}
+                            className={`w-full px-3 py-2 border rounded-lg text-sm ${material.is_custom ? 'focus:ring-2 focus:ring-blue-500' : 'bg-gray-50'}`}
+                            step="0.01" min="0"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Preço Venda (R$)</label>
+                          <input
+                            type="number"
+                            value={material.preco_venda_unitario}
+                            readOnly={!material.is_custom}
+                            onChange={(e) => material.is_custom && updateMaterial(material.id, { preco_venda_unitario: Number(e.target.value) })}
+                            className={`w-full px-3 py-2 border rounded-lg text-sm ${material.is_custom ? 'focus:ring-2 focus:ring-blue-500' : 'bg-gray-50'}`}
+                            step="0.01" min="0"
+                          />
+                        </div>
+
+                        {/* Note for custom items */}
+                        {material.is_custom && (
+                          <div className="md:col-span-4">
+                            <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+                              Item personalizado — não vinculado ao estoque. Apenas para registro de custo na OS.
+                            </p>
                           </div>
                         )}
                       </div>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-1">Nome do Material *</label>
-                        <input type="text" value={material.nome} readOnly
-                          className="w-full px-4 py-2 border rounded-lg bg-gray-100"
-                          placeholder="Selecione um material" />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Quantidade *</label>
-                        <input type="number" value={material.quantidade} min="0" step="0.01"
-                          onChange={(e) => updateMaterial(material.id, {quantidade: Number(e.target.value)})}
-                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Unidade</label>
-                        <input type="text" value={material.unidade_medida} readOnly
-                          className="w-full px-4 py-2 border rounded-lg bg-gray-100" />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Custo Unit. (Compra)</label>
-                        <input type="number" value={material.preco_compra_unitario} readOnly
-                          className="w-full px-4 py-2 border rounded-lg bg-gray-100" />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Preço Unit. (Venda)</label>
-                        <input type="number" value={material.preco_venda_unitario} readOnly
-                          className="w-full px-4 py-2 border rounded-lg bg-gray-100" />
+                      <div className="mt-3 grid grid-cols-3 gap-3">
+                        <div className="bg-red-50 rounded-lg p-3 border border-red-100">
+                          <span className="text-xs text-red-600">Custo Total</span>
+                          <p className="text-base font-bold text-red-700">{formatCurrency(material.custo_total)}</p>
+                        </div>
+                        <div className="bg-green-50 rounded-lg p-3 border border-green-100">
+                          <span className="text-xs text-green-600">Valor Total</span>
+                          <p className="text-base font-bold text-green-700">{formatCurrency(material.valor_total)}</p>
+                        </div>
+                        <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                          <span className="text-xs text-blue-600">Lucro</span>
+                          <p className="text-base font-bold text-blue-700">{formatCurrency(material.lucro)}</p>
+                        </div>
                       </div>
                     </div>
-
-                    <div className="mt-4 grid grid-cols-3 gap-4">
-                      <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                        <span className="text-xs text-red-700">Custo Total:</span>
-                        <p className="text-lg font-bold text-red-700">{formatCurrency(material.custo_total)}</p>
-                      </div>
-                      <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                        <span className="text-xs text-green-700">Valor Total:</span>
-                        <p className="text-lg font-bold text-green-700">{formatCurrency(material.valor_total)}</p>
-                      </div>
-                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                        <span className="text-xs text-blue-700">Lucro:</span>
-                        <p className="text-lg font-bold text-blue-700">{formatCurrency(material.lucro)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </motion.div>
             )}
 
