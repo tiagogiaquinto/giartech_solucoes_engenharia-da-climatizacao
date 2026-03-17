@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Save, User, Mail, Phone, MapPin, Briefcase, Calendar,
   DollarSign, FileText, Shield, Star, Upload, Clock,
   CreditCard, AlertTriangle, Lock, ChevronRight, BadgeCheck,
-  ToggleLeft, ToggleRight, Check, AlertCircle, Award
+  ToggleLeft, ToggleRight, Check, AlertCircle, Award, ImagePlus, Trash2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { maskCPF, maskPhone, maskCEP, unmask } from '../utils/masks'
@@ -68,6 +68,116 @@ const MEDALS = [
   { id: 'teamwork', label: 'Trabalho em Equipe', icon: '🤝' },
   { id: 'innovation', label: 'Inovação', icon: '💡' },
 ]
+
+interface PhotoDropZoneProps {
+  currentUrl: string
+  onUploaded: (url: string) => void
+  employeeId: string | null
+}
+
+const PhotoDropZone: React.FC<PhotoDropZoneProps> = ({ currentUrl, onUploaded, employeeId }) => {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const [preview, setPreview] = useState<string>(currentUrl)
+
+  useEffect(() => { setPreview(currentUrl) }, [currentUrl])
+
+  const uploadFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) return
+    if (file.size > 5 * 1024 * 1024) { alert('Imagem deve ter no máximo 5MB'); return }
+
+    const localPreview = URL.createObjectURL(file)
+    setPreview(localPreview)
+    setUploading(true)
+
+    try {
+      const ext = file.name.split('.').pop() || 'jpg'
+      const filename = `${employeeId || `new-${Date.now()}`}-${Date.now()}.${ext}`
+
+      const { error: upErr } = await supabase.storage
+        .from('employee-photos')
+        .upload(filename, file, { upsert: true, contentType: file.type })
+
+      if (upErr) throw upErr
+
+      const { data } = supabase.storage.from('employee-photos').getPublicUrl(filename)
+      onUploaded(data.publicUrl)
+    } catch (err: any) {
+      setPreview(currentUrl)
+      alert(err.message || 'Erro ao fazer upload')
+    } finally {
+      setUploading(false)
+    }
+  }, [employeeId, currentUrl, onUploaded])
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) uploadFile(file)
+  }
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) uploadFile(file)
+    e.target.value = ''
+  }
+
+  const clearPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setPreview('')
+    onUploaded('')
+  }
+
+  return (
+    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+      {/* Avatar preview */}
+      <div className="relative flex-shrink-0">
+        <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+          {preview ? (
+            <img src={preview} alt="Foto" className="w-full h-full object-cover" />
+          ) : (
+            <User className="h-8 w-8 text-blue-400" />
+          )}
+        </div>
+        {uploading && (
+          <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
+            <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+          </div>
+        )}
+        {preview && !uploading && (
+          <button onClick={clearPhoto} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-md transition-colors" title="Remover foto">
+            <Trash2 className="h-2.5 w-2.5 text-white" />
+          </button>
+        )}
+      </div>
+
+      {/* Drop zone */}
+      <div
+        className={`flex-1 border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all select-none ${dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-300 hover:bg-gray-100'}`}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+      >
+        {uploading ? (
+          <p className="text-sm text-blue-600 font-medium">Enviando foto...</p>
+        ) : (
+          <>
+            <ImagePlus className={`h-6 w-6 mx-auto mb-1.5 ${dragOver ? 'text-blue-500' : 'text-gray-400'}`} />
+            <p className={`text-sm font-medium ${dragOver ? 'text-blue-600' : 'text-gray-600'}`}>
+              {dragOver ? 'Solte aqui' : 'Arraste ou clique para enviar'}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP — máx. 5MB</p>
+          </>
+        )}
+      </div>
+
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+    </div>
+  )
+}
 
 interface EmployeeDrawerProps {
   employeeId: string | null
@@ -362,21 +472,11 @@ export const EmployeeDetailDrawer: React.FC<EmployeeDrawerProps> = ({ employeeId
             {activeTab === 'personal' && (
               <div className="p-6 space-y-5">
                 {/* Foto */}
-                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                  <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-200">
-                    {form.photo_url ? (
-                      <img src={form.photo_url} alt="Foto" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-bold">
-                        {form.name?.[0]?.toUpperCase() || '?'}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-700 mb-1">URL da Foto de Perfil</p>
-                    <input type="url" value={form.photo_url} onChange={e => f('photo_url', e.target.value)} className={inputCls} placeholder="https://..." />
-                  </div>
-                </div>
+                <PhotoDropZone
+                  currentUrl={form.photo_url}
+                  employeeId={employeeId}
+                  onUploaded={url => f('photo_url', url)}
+                />
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
