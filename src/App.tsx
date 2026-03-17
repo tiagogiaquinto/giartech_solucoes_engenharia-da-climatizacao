@@ -112,6 +112,7 @@ import AIProvidersSettings from './pages/AIProvidersSettings'
 import TemplateManager from './pages/TemplateManager'
 import Customer360 from './pages/Customer360'
 import TeamManagement from './pages/TeamManagement'
+import StaffHub from './pages/StaffHub'
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
   const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
@@ -432,10 +433,12 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/team-management" element={
+          <Route path="/team-management" element={<Navigate to="/staff" replace />} />
+
+          <Route path="/staff" element={
             <ProtectedRoute>
               <WebLayout>
-                <TeamManagement />
+                <StaffHub />
               </WebLayout>
             </ProtectedRoute>
           } />
@@ -448,21 +451,8 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/people" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <PeopleManagement />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/users" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <PeopleManagement />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/people" element={<Navigate to="/staff" replace />} />
+          <Route path="/users" element={<Navigate to="/staff" replace />} />
           
           <Route path="/service-catalog" element={
             <ProtectedRoute>

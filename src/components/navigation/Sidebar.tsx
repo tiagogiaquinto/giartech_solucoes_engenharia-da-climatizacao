@@ -82,12 +82,11 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'thomaz-metrics', path: '/thomaz-metrics', icon: Brain, label: 'Métricas Thomaz', description: 'Performance da IA', moduleCode: 'thomaz' },
   { id: 'email', path: '/email/inbox', icon: Mail, label: 'Email Corporativo', description: 'Enviar e receber emails', moduleCode: 'email' },
   { id: 'library', path: '/digital-library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos', moduleCode: 'biblioteca' },
-  { id: 'people', path: '/people', icon: Users, label: 'Gestão de Pessoas', description: 'Funcionários, usuários, acessos e convites', moduleCode: 'pessoas' },
+  { id: 'staff', path: '/staff', icon: Users, label: 'Hub de Equipe', description: 'Funcionários, permissões e engajamento', moduleCode: 'pessoas', superAdminOnly: true },
   { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações', moduleCode: 'auditoria' },
   { id: 'document-templates', path: '/document-templates', icon: FileText, label: 'Templates de Documentos', description: 'Gerenciar templates de OS, contratos e propostas', moduleCode: 'templates' },
   { id: 'template-manager', path: '/template-manager', icon: FileText, label: 'Templates HVAC', description: 'Modelos profissionais editáveis', moduleCode: 'templates' },
   { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais', moduleCode: 'configuracoes' },
-  { id: 'team-management', path: '/team-management', icon: Crown, label: 'Gestão de Equipe', description: 'Controle de usuários e permissões', superAdminOnly: true }
 ]
 
 const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
