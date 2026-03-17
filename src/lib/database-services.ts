@@ -628,22 +628,39 @@ export interface InventoryItem {
   updated_at?: string
 }
 
+const mapInventoryItemToDb = (item: Partial<InventoryItem>) => {
+  const mapped: Record<string, any> = { ...item }
+  if ('min_stock' in mapped) { mapped.min_quantity = mapped.min_stock; delete mapped.min_stock }
+  if ('price' in mapped) { mapped.unit_price = mapped.price; delete mapped.price }
+  if ('cost' in mapped) { mapped.unit_cost = mapped.cost; delete mapped.cost }
+  if ('sku' in mapped) { mapped.code = mapped.sku; delete mapped.sku }
+  return mapped
+}
+
+const mapDbToInventoryItem = (row: any): InventoryItem => ({
+  ...row,
+  min_stock: row.min_quantity,
+  price: row.unit_price,
+  cost: row.unit_cost,
+  sku: row.code,
+})
+
 export const getInventoryItems = async (): Promise<InventoryItem[]> => {
-  const { data, error } = await supabase.from('inventory_items').select('*').order('name', { ascending: true })
+  const { data, error } = await supabase.from('inventory_items').select('*').eq('active', true).order('name', { ascending: true })
   if (error) throw error
-  return data || []
+  return (data || []).map(mapDbToInventoryItem)
 }
 
 export const createInventoryItem = async (item: Partial<InventoryItem>): Promise<InventoryItem> => {
-  const { data, error } = await supabase.from('inventory_items').insert([item]).select().single()
+  const { data, error } = await supabase.from('inventory_items').insert([mapInventoryItemToDb(item)]).select().single()
   if (error) throw error
-  return data
+  return mapDbToInventoryItem(data)
 }
 
 export const updateInventoryItem = async (id: string, updates: Partial<InventoryItem>): Promise<InventoryItem> => {
-  const { data, error } = await supabase.from('inventory_items').update(updates).eq('id', id).select().single()
+  const { data, error } = await supabase.from('inventory_items').update(mapInventoryItemToDb(updates)).eq('id', id).select().single()
   if (error) throw error
-  return data
+  return mapDbToInventoryItem(data)
 }
 
 export const deleteInventoryItem = async (id: string): Promise<void> => {
