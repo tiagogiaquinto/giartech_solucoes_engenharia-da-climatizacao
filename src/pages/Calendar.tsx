@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, Users, MapPin, X, Save, CheckCircle, AlertCircle, CreditCard as Edit, Trash2, ArrowRight, Flag, List, LayoutGrid, GitBranch, Search, User, FileText, Phone, Mail } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
@@ -22,38 +22,37 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+  const loadingRef = useRef(false)
 
-  // Carregar eventos do banco de dados
-  useEffect(() => {
-    loadEvents()
-  }, [])
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
+    if (loadingRef.current) return
+    loadingRef.current = true
     try {
       setLoading(true)
-      console.log('🔄 Loading agenda events...')
 
       const agendaEvents = await getAgendaEvents()
-      console.log(`📥 Received ${agendaEvents.length} events from database`)
 
       const calendarEvents = agendaEvents
         .map(mapAgendaEventToCalendarEvent)
         .filter(event => event !== null)
+
+      const expandedEvents = expandMultiDayEvents(calendarEvents)
       console.log(`📅 Mapped ${calendarEvents.length} calendar events`)
 
-      // Expandir eventos multi-dia para aparecerem em todos os dias
-      const expandedEvents = expandMultiDayEvents(calendarEvents)
-      console.log(`📊 Expanded to ${expandedEvents.length} events (multi-day)`)
-
       setEvents(expandedEvents)
-      console.log('✅ Events loaded successfully')
     } catch (error) {
       console.error('❌ Error loading events:', error)
       setEvents([])
     } finally {
       setLoading(false)
+      loadingRef.current = false
     }
-  }
+  }, [])
+
+  // Carregar eventos do banco de dados
+  useEffect(() => {
+    loadEvents()
+  }, [loadEvents])
 
   const [newEvent, setNewEvent] = useState({
     title: '',
@@ -1810,7 +1809,17 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                   <input
                     type="time"
                     value={newEvent.time}
-                    onChange={(e) => setNewEvent({...newEvent, time: e.target.value})}
+                    onChange={(e) => {
+                      const newTime = e.target.value
+                      const updates: any = { time: newTime }
+                      if (!newEvent.endTime || newEvent.endTime <= newTime) {
+                        const [h, m] = newTime.split(':').map(Number)
+                        const endH = String((h + 1) % 24).padStart(2, '0')
+                        updates.endTime = `${endH}:${String(m).padStart(2, '0')}`
+                        if (h >= 23) updates.endDate = ''
+                      }
+                      setNewEvent({...newEvent, ...updates})
+                    }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -1824,6 +1833,7 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                   <input
                     type="date"
                     value={newEvent.endDate}
+                    min={newEvent.date}
                     onChange={(e) => setNewEvent({...newEvent, endDate: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />

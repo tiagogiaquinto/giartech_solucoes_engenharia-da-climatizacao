@@ -97,7 +97,7 @@ export const mapCalendarEventToAgendaEvent = (event: CalendarEvent | any) => {
 
   if (typeof event.start === 'string' || !event.start) {
     const dateStr = event.date || getLocalDateString(new Date())
-    const timeStr = event.time || '00:00'
+    const timeStr = event.time || '09:00'
     startDate = createDateFromLocalString(dateStr, timeStr)
 
     const endDateStr = event.endDate || dateStr
@@ -115,8 +115,8 @@ export const mapCalendarEventToAgendaEvent = (event: CalendarEvent | any) => {
     throw new Error('Data de término inválida')
   }
 
-  if (endDate < startDate) {
-    throw new Error('Data de término não pode ser anterior à data de início')
+  if (endDate <= startDate) {
+    endDate = new Date(startDate.getTime() + 60 * 60 * 1000)
   }
 
   const isValidUUID = (value: any): boolean => {
