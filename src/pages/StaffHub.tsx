@@ -23,6 +23,7 @@ interface Employee {
   gamification_medals: string[]
   admission_date: string | null
   created_at: string
+  auth_account_id: string | null
 }
 
 interface AuthUser {
@@ -91,6 +92,10 @@ const StaffHub: React.FC = () => {
   const [createSaving, setCreateSaving] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [createSuccess, setCreateSuccess] = useState<{ email: string; password: string } | null>(null)
+
+  const [linkModal, setLinkModal] = useState<{ employeeId: string; employeeName: string } | null>(null)
+  const [linkAccountId, setLinkAccountId] = useState('')
+  const [linkSaving, setLinkSaving] = useState(false)
 
   useEffect(() => {
     if (!isSuperAdmin) { navigate('/'); return }
@@ -197,6 +202,45 @@ const StaffHub: React.FC = () => {
     }
   }
 
+  const handleLinkAccount = async () => {
+    if (!linkModal) return
+    setLinkSaving(true)
+    try {
+      const value = linkAccountId === '__unlink__' ? null : linkAccountId || null
+      const { error } = await supabase
+        .from('employees')
+        .update({ auth_account_id: value })
+        .eq('id', linkModal.employeeId)
+      if (error) throw error
+      setEmployees(prev => prev.map(e => e.id === linkModal.employeeId ? { ...e, auth_account_id: value } : e))
+      showToast(value ? 'Conta vinculada com sucesso!' : 'Vínculo removido.')
+      setLinkModal(null)
+      setLinkAccountId('')
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao vincular conta', 'error')
+    } finally {
+      setLinkSaving(false)
+    }
+  }
+
+  const handleAutoLink = async () => {
+    let linked = 0
+    for (const emp of employees) {
+      if (emp.auth_account_id || !emp.email) continue
+      const match = authUsers.find(u => u.email.toLowerCase() === emp.email.toLowerCase())
+      if (match) {
+        await supabase.from('employees').update({ auth_account_id: match.id }).eq('id', emp.id)
+        linked++
+      }
+    }
+    if (linked > 0) {
+      await loadAll()
+      showToast(`${linked} funcionário(s) vinculado(s) automaticamente!`)
+    } else {
+      showToast('Nenhum novo vínculo encontrado por e-mail.')
+    }
+  }
+
   const filteredEmployees = employees.filter(e => {
     const matchSearch = e.name?.toLowerCase().includes(searchQuery.toLowerCase()) || e.email?.toLowerCase().includes(searchQuery.toLowerCase()) || e.role?.toLowerCase().includes(searchQuery.toLowerCase())
     const matchStatus = filterStatus === 'all' || (filterStatus === 'active' ? e.active : !e.active)
@@ -274,9 +318,14 @@ const StaffHub: React.FC = () => {
             <RefreshCw className="h-4 w-4" /> Atualizar
           </button>
           {mainView === 'employees' && (
-            <button onClick={() => openEmployee('new')} className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors">
-              <UserPlus className="h-4 w-4" /> Novo Funcionário
-            </button>
+            <>
+              <button onClick={handleAutoLink} className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors">
+                <Shield className="h-4 w-4" /> Auto-vincular
+              </button>
+              <button onClick={() => openEmployee('new')} className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors">
+                <UserPlus className="h-4 w-4" /> Novo Funcionário
+              </button>
+            </>
           )}
           {mainView === 'users' && userSubTab === 'list' && (
             <button onClick={() => { setUserSubTab('create'); setCreateSuccess(null); setCreateError(null) }} className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors">
@@ -450,6 +499,26 @@ const StaffHub: React.FC = () => {
                     })}
                   </div>
                 )}
+
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                  {emp.auth_account_id ? (
+                    <span className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
+                      <Shield className="h-3 w-3" />
+                      {authUsers.find(u => u.id === emp.auth_account_id)?.email || 'Com acesso'}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 border border-gray-200 px-2 py-1 rounded-full">
+                      <Lock className="h-3 w-3" />
+                      Sem acesso ao sistema
+                    </span>
+                  )}
+                  <button
+                    onClick={e => { e.stopPropagation(); setLinkModal({ employeeId: emp.id, employeeName: emp.name }); setLinkAccountId(emp.auth_account_id || '') }}
+                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline ml-2 flex-shrink-0"
+                  >
+                    {emp.auth_account_id ? 'Alterar' : 'Vincular'}
+                  </button>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -485,9 +554,21 @@ const StaffHub: React.FC = () => {
                         {ROLE_LABELS[user.role] || user.role}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 mt-0.5">
+                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                       <span className="text-xs text-gray-500 flex items-center gap-1"><Mail className="h-3 w-3" />{user.email}</span>
                       <span className="text-xs text-gray-400 flex items-center gap-1"><Clock className="h-3 w-3" />Último: {formatDate(user.last_login)}</span>
+                      {(() => {
+                        const linked = employees.find(e => e.auth_account_id === user.id)
+                        return linked ? (
+                          <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                            <Users className="h-3 w-3" />{linked.name}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded-full">
+                            Sem funcionário vinculado
+                          </span>
+                        )
+                      })()}
                     </div>
                   </div>
 
@@ -655,6 +736,92 @@ const StaffHub: React.FC = () => {
           onSaved={onSaved}
         />
       )}
+
+      {/* Link Account Modal */}
+      <AnimatePresence>
+        {linkModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setLinkModal(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-gray-100 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
+                  <Shield className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-gray-900">Vincular Conta de Acesso</h2>
+                  <p className="text-xs text-gray-500">{linkModal.employeeName}</p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-gray-600">
+                  Selecione a conta de sistema que corresponde a este funcionário. O vínculo permite rastrear atividades e sincronizar dados de perfil.
+                </p>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Conta de sistema</label>
+                  <select
+                    value={linkAccountId}
+                    onChange={e => setLinkAccountId(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  >
+                    <option value="">-- Selecionar conta --</option>
+                    {authUsers.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name ? `${u.full_name} (${u.email})` : u.email} — {ROLE_LABELS[u.role] || u.role}
+                      </option>
+                    ))}
+                    {employees.find(e => e.id === linkModal.employeeId)?.auth_account_id && (
+                      <option value="__unlink__">Remover vínculo</option>
+                    )}
+                  </select>
+                </div>
+
+                {linkAccountId && linkAccountId !== '__unlink__' && (() => {
+                  const acc = authUsers.find(u => u.id === linkAccountId)
+                  const alreadyLinked = employees.find(e => e.auth_account_id === linkAccountId && e.id !== linkModal.employeeId)
+                  return acc ? (
+                    <div className={`rounded-xl p-3 border text-sm ${alreadyLinked ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
+                      {alreadyLinked
+                        ? `Atenção: esta conta já está vinculada a "${alreadyLinked.name}".`
+                        : `Esta conta tem acesso como ${ROLE_LABELS[acc.role] || acc.role} e está ${acc.is_active ? 'ativa' : 'inativa'}.`
+                      }
+                    </div>
+                  ) : null
+                })()}
+              </div>
+
+              <div className="px-6 pb-6 flex gap-3">
+                <button
+                  onClick={() => { setLinkModal(null); setLinkAccountId('') }}
+                  className="flex-1 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-xl hover:bg-gray-50 font-medium"
+                >Cancelar</button>
+                <button
+                  onClick={handleLinkAccount}
+                  disabled={linkSaving || !linkAccountId}
+                  className="flex-1 py-2.5 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {linkSaving
+                    ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    : <><Check className="h-4 w-4" />{linkAccountId === '__unlink__' ? 'Remover vínculo' : 'Vincular'}</>
+                  }
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   )
