@@ -42,6 +42,7 @@ import {
 } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { supabase } from '../../lib/supabase'
+import { Crown } from 'lucide-react'
 
 interface SidebarProps {
   onCollapse?: (collapsed: boolean) => void
@@ -53,42 +54,45 @@ interface MenuItem {
   icon: React.ElementType
   label: string
   description: string
+  moduleCode?: string
+  superAdminOnly?: boolean
 }
 
 const DEFAULT_MENU_ITEMS: MenuItem[] = [
-  { id: 'inicio', path: '/', icon: BarChart3, label: 'Dashboard CFO', description: '20+ KPIs executivos em tempo real para decisões estratégicas' },
-  { id: 'agenda', path: '/calendar', icon: Calendar, label: 'Agenda', description: 'Compromissos e eventos' },
-  { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes', description: 'Gestão de clientes PF/PJ' },
-  { id: 'crm-professional', path: '/crm-professional', icon: Target, label: 'CRM Profissional', description: 'Pipeline de vendas e pós-venda completo com lead scoring, automação de follow-ups e gestão inteligente de clientes' },
-  { id: 'crm-templates', path: '/crm-templates', icon: MessageSquare, label: 'Mensagens do CRM', description: 'Configure mensagens personalizadas para WhatsApp, Email e SMS' },
-  { id: 'customer-gamification', path: '/customer-gamification', icon: Star, label: 'Gamificação de Clientes', description: 'Sistema de pontos, níveis, badges e benefícios para fidelização de clientes' },
-  { id: 'customer-gamification-manager', path: '/customer-gamification-manager', icon: Settings, label: 'Gerenciar Gamificação', description: 'Controle quais clientes participam e quais OSs geram pontos' },
-  { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores' },
-  { id: 'compras', path: '/purchasing', icon: ShoppingCart, label: 'Compras', description: 'Pedidos e alertas de estoque' },
-  { id: 'service-orders', path: '/service-orders', icon: ClipboardList, label: 'Ordens de Serviço', description: 'Gestão de OS' },
-  { id: 'rotas', path: '/rotas', icon: Navigation, label: 'Rotas', description: 'Rastreamento e gestão de rotas' },
-  { id: 'financeiro', path: '/financeiro', icon: DollarSign, label: 'Financeiro', description: 'Centro financeiro completo com dashboard, movimentações, análises, contas e categorias' },
-  { id: 'salarios', path: '/salary-management', icon: DollarSign, label: 'Gestão de Salários', description: 'Controle de pagamentos de salários com suporte a parcelas e histórico completo' },
-  { id: 'metas-rankings', path: '/goals-rankings', icon: Trophy, label: 'Metas & Rankings', description: 'Sistema de metas individuais, supermetas, bônus, rankings e gamificação da equipe' },
-  { id: 'documentos', path: '/documents', icon: FileText, label: 'Centro de Documentos', description: 'Gerencie todos os documentos: PMOC, contratos, orçamentos, garantias, laudos e relatórios técnicos' },
-  { id: 'relatorios', path: '/relatorios', icon: FileText, label: 'Relatórios', description: 'Todos os relatórios: dashboards interativos, PDFs profissionais e análises customizadas' },
-  { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis' },
-  { id: 'inventory', path: '/inventory', icon: Package, label: 'Estoque', description: 'Controle de materiais' },
-  { id: 'automacoes', path: '/automacoes', icon: Activity, label: 'Automações', description: 'Workflows e automações' },
-  { id: 'thomaz', path: '/thomaz', icon: Brain, label: 'Thomaz AI', description: 'Consultor Empresarial' },
-  { id: 'thomaz-metrics', path: '/thomaz-metrics', icon: Brain, label: 'Métricas Thomaz', description: 'Performance da IA' },
-  { id: 'email', path: '/email/inbox', icon: Mail, label: 'Email Corporativo', description: 'Enviar e receber emails' },
-  { id: 'library', path: '/digital-library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos' },
-  { id: 'people', path: '/people', icon: Users, label: 'Gestão de Pessoas', description: 'Funcionários, usuários, acessos e convites unificados' },
-  { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações' },
-  { id: 'document-templates', path: '/document-templates', icon: FileText, label: 'Templates de Documentos', description: 'Gerenciar templates de OS, contratos e propostas' },
-  { id: 'template-manager', path: '/template-manager', icon: FileText, label: 'Templates HVAC', description: 'Modelos profissionais editáveis para refrigeração e climatização' },
-  { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais' }
+  { id: 'inicio', path: '/', icon: BarChart3, label: 'Dashboard CFO', description: '20+ KPIs executivos em tempo real para decisões estratégicas', moduleCode: 'dashboard' },
+  { id: 'agenda', path: '/calendar', icon: Calendar, label: 'Agenda', description: 'Compromissos e eventos', moduleCode: 'agenda' },
+  { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes', description: 'Gestão de clientes PF/PJ', moduleCode: 'clientes' },
+  { id: 'crm-professional', path: '/crm-professional', icon: Target, label: 'CRM Profissional', description: 'Pipeline de vendas e pós-venda completo', moduleCode: 'crm' },
+  { id: 'crm-templates', path: '/crm-templates', icon: MessageSquare, label: 'Mensagens do CRM', description: 'Configure mensagens personalizadas para WhatsApp, Email e SMS', moduleCode: 'mensagens_crm' },
+  { id: 'customer-gamification', path: '/customer-gamification', icon: Star, label: 'Gamificação de Clientes', description: 'Sistema de pontos, níveis, badges e benefícios', moduleCode: 'gamificacao' },
+  { id: 'customer-gamification-manager', path: '/customer-gamification-manager', icon: Settings, label: 'Gerenciar Gamificação', description: 'Controle quais clientes participam', moduleCode: 'gamificacao' },
+  { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores', moduleCode: 'fornecedores' },
+  { id: 'compras', path: '/purchasing', icon: ShoppingCart, label: 'Compras', description: 'Pedidos e alertas de estoque', moduleCode: 'compras' },
+  { id: 'service-orders', path: '/service-orders', icon: ClipboardList, label: 'Ordens de Serviço', description: 'Gestão de OS', moduleCode: 'service_orders' },
+  { id: 'rotas', path: '/rotas', icon: Navigation, label: 'Rotas', description: 'Rastreamento e gestão de rotas', moduleCode: 'rotas' },
+  { id: 'financeiro', path: '/financeiro', icon: DollarSign, label: 'Financeiro', description: 'Centro financeiro completo', moduleCode: 'financeiro' },
+  { id: 'salarios', path: '/salary-management', icon: DollarSign, label: 'Gestão de Salários', description: 'Controle de pagamentos de salários', moduleCode: 'salarios' },
+  { id: 'metas-rankings', path: '/goals-rankings', icon: Trophy, label: 'Metas & Rankings', description: 'Metas individuais, supermetas, bônus, rankings', moduleCode: 'metas' },
+  { id: 'documentos', path: '/documents', icon: FileText, label: 'Centro de Documentos', description: 'PMOC, contratos, orçamentos, garantias, laudos', moduleCode: 'documentos' },
+  { id: 'relatorios', path: '/relatorios', icon: FileText, label: 'Relatórios', description: 'Dashboards interativos, PDFs e análises', moduleCode: 'relatorios' },
+  { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis', moduleCode: 'catalogo' },
+  { id: 'inventory', path: '/inventory', icon: Package, label: 'Estoque', description: 'Controle de materiais', moduleCode: 'estoque' },
+  { id: 'automacoes', path: '/automacoes', icon: Activity, label: 'Automações', description: 'Workflows e automações', moduleCode: 'automacoes' },
+  { id: 'thomaz', path: '/thomaz', icon: Brain, label: 'Thomaz AI', description: 'Consultor Empresarial', moduleCode: 'thomaz' },
+  { id: 'thomaz-metrics', path: '/thomaz-metrics', icon: Brain, label: 'Métricas Thomaz', description: 'Performance da IA', moduleCode: 'thomaz' },
+  { id: 'email', path: '/email/inbox', icon: Mail, label: 'Email Corporativo', description: 'Enviar e receber emails', moduleCode: 'email' },
+  { id: 'library', path: '/digital-library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos', moduleCode: 'biblioteca' },
+  { id: 'people', path: '/people', icon: Users, label: 'Gestão de Pessoas', description: 'Funcionários, usuários, acessos e convites', moduleCode: 'pessoas' },
+  { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações', moduleCode: 'auditoria' },
+  { id: 'document-templates', path: '/document-templates', icon: FileText, label: 'Templates de Documentos', description: 'Gerenciar templates de OS, contratos e propostas', moduleCode: 'templates' },
+  { id: 'template-manager', path: '/template-manager', icon: FileText, label: 'Templates HVAC', description: 'Modelos profissionais editáveis', moduleCode: 'templates' },
+  { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais', moduleCode: 'configuracoes' },
+  { id: 'team-management', path: '/team-management', icon: Crown, label: 'Gestão de Equipe', description: 'Controle de usuários e permissões', superAdminOnly: true }
 ]
 
 const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
   const location = useLocation()
-  const { user, logout } = useUser()
+  const { user, logout, isSuperAdmin, hasModuleAccess } = useUser()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [menuItems, setMenuItems] = useState<MenuItem[]>(DEFAULT_MENU_ITEMS)
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
@@ -301,7 +305,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-        {menuItems.map((item) => {
+        {menuItems.filter(item => {
+          if (item.superAdminOnly) return isSuperAdmin
+          if (!item.moduleCode) return true
+          if (isSuperAdmin) return true
+          if (!user) return false
+          return hasModuleAccess(item.moduleCode, 'view')
+        }).map((item) => {
           const Icon = item.icon
           const active = isActive(item.path)
 

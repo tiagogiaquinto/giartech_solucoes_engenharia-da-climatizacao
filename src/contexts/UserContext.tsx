@@ -2,18 +2,24 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '../lib/supabase'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
-export type UserRole = 'admin' | 'manager' | 'technician' | 'external' | 'viewer'
+export type UserRole = 'super_admin' | 'admin' | 'manager' | 'technician' | 'sales' | 'financial' | 'viewer'
+
+export interface ModulePermission {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_edit: boolean
+  can_delete: boolean
+}
 
 interface UserProfile {
   id: string
   email: string
   name: string
+  full_name: string
   role: UserRole
-  avatar?: string
-  status: string
-  department_id?: string
-  phone?: string
-  permissions?: string[]
+  is_active: boolean
+  permissions: ModulePermission[]
 }
 
 interface User extends UserProfile {
@@ -25,16 +31,22 @@ interface UserContextType {
   profile: UserProfile | null
   isLoading: boolean
   isAdmin: boolean
+  isSuperAdmin: boolean
   isManager: boolean
   isTechnician: boolean
   isExternal: boolean
   isPremium: boolean
   isEnterprise: boolean
   hasPermission: (permission: string) => boolean
+  hasModuleAccess: (moduleCode: string, action?: 'view' | 'create' | 'edit' | 'delete') => boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   onPremiumFeature?: (feature: string) => void
+  refreshPermissions: () => Promise<void>
+  employee_id?: string
 }
+
+const SUPER_ADMIN_EMAIL = 'diretor.giartechsolucoes@gmail.com'
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
 
@@ -56,104 +68,86 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Simular usuário admin logado automaticamente
-    // Usar UUID válido para compatibilidade com banco de dados
-    const mockAdminId = '00000000-0000-0000-0000-000000000001'
-
-    const mockAdminProfile: UserProfile = {
-      id: mockAdminId,
-      email: 'admin@sistema.com',
-      name: 'Administrador',
-      role: 'admin',
-      avatar: undefined,
-      status: 'active',
-      department_id: undefined,
-      phone: undefined,
-      permissions: ['view_dashboard', 'manage_orders', 'view_orders', 'manage_clients', 'view_clients',
-                   'manage_inventory', 'view_inventory', 'manage_financial', 'view_financial',
-                   'view_bank_balances', 'manage_users', 'system_settings']
-    }
-
-    const mockAuthUser = {
-      id: mockAdminId,
-      email: 'admin@sistema.com',
-      aud: 'authenticated',
-      role: 'authenticated',
-      created_at: new Date().toISOString(),
-      app_metadata: {},
-      user_metadata: {},
-    } as SupabaseUser
-
-    setProfile(mockAdminProfile)
-    setUser({
-      ...mockAdminProfile,
-      authUser: mockAuthUser
-    })
-    setIsLoading(false)
-
-    // Comentado: autenticação real
-    // checkUser()
-    // const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-    //   (async () => {
-    //     if (session?.user) {
-    //       await loadUserProfile(session.user)
-    //     } else {
-    //       setUser(null)
-    //       setProfile(null)
-    //       setIsLoading(false)
-    //     }
-    //   })()
-    // })
-    // return () => {
-    //   authListener?.subscription.unsubscribe()
-    // }
-  }, [])
-
-  const checkUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        await loadUserProfile(session.user)
+        loadUserProfile(session.user).finally(() => setIsLoading(false))
+      } else {
+        setIsLoading(false)
       }
-    } catch (error) {
-      console.error('Error checking user:', error)
-    } finally {
-      setIsLoading(false)
+    })
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      (async () => {
+        if (session?.user) {
+          await loadUserProfile(session.user)
+        } else {
+          setUser(null)
+          setProfile(null)
+          setIsLoading(false)
+        }
+      })()
+    })
+
+    return () => {
+      authListener?.subscription.unsubscribe()
     }
-  }
+  }, [])
 
   const loadUserProfile = async (authUser: SupabaseUser) => {
     try {
-      const { data, error } = await supabase
+      const superAdmin = authUser.email === SUPER_ADMIN_EMAIL
+
+      const { data: profileData } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('user_id', authUser.id)
+        .eq('id', authUser.id)
         .maybeSingle()
 
-      if (error) {
-        console.error('Error loading user profile:', error)
-        throw error
+      let resolvedRole: UserRole = 'viewer'
+      let isActive = true
+
+      if (profileData) {
+        resolvedRole = superAdmin ? 'super_admin' : (profileData.role as UserRole)
+        isActive = profileData.is_active ?? true
+      } else if (superAdmin) {
+        resolvedRole = 'super_admin'
+        await supabase.from('user_profiles').upsert({
+          id: authUser.id,
+          email: authUser.email!,
+          full_name: 'Diretor',
+          role: 'super_admin',
+          is_active: true
+        }, { onConflict: 'id' })
       }
 
-      if (data) {
-        const userProfile: UserProfile = {
-          id: data.id,
-          email: authUser.email || '',
-          name: data.nome || 'Usuário',
-          role: (data.tipo_usuario as UserRole) || 'viewer',
-          avatar: undefined,
-          status: 'active',
-          department_id: data.empresa_id,
-          phone: data.telefone
-        }
-        setProfile(userProfile)
-        setUser({
-          ...userProfile,
-          authUser
-        })
-      } else {
-        console.error('No user profile found for authenticated user')
+      if (!isActive && !superAdmin) {
+        await supabase.auth.signOut()
+        setUser(null)
+        setProfile(null)
+        return
       }
+
+      let permissions: ModulePermission[] = []
+      if (!superAdmin) {
+        const { data: perms } = await supabase
+          .from('module_permissions')
+          .select('module_code, can_view, can_create, can_edit, can_delete')
+          .eq('user_id', authUser.id)
+        permissions = perms || []
+      }
+
+      const userProfile: UserProfile = {
+        id: authUser.id,
+        email: authUser.email || '',
+        name: profileData?.full_name || authUser.email || 'Usuário',
+        full_name: profileData?.full_name || authUser.email || 'Usuário',
+        role: resolvedRole,
+        is_active: isActive,
+        permissions
+      }
+
+      setProfile(userProfile)
+      setUser({ ...userProfile, authUser })
     } catch (error) {
       console.error('Error loading user profile:', error)
       setUser(null)
@@ -161,42 +155,54 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   }
 
-  const isAdmin = profile?.role === 'admin'
-  const isManager = profile?.role === 'manager'
-  const isTechnician = profile?.role === 'technician'
-  const isExternal = profile?.role === 'external'
+  const refreshPermissions = async () => {
+    if (user?.authUser) {
+      await loadUserProfile(user.authUser)
+    }
+  }
 
-  const isPremium = isAdmin || isManager
+  const isSuperAdmin = profile?.role === 'super_admin'
+  const isAdmin = isSuperAdmin || profile?.role === 'admin'
+  const isManager = isAdmin || profile?.role === 'manager'
+  const isTechnician = profile?.role === 'technician'
+  const isExternal = profile?.role === 'viewer'
+  const isPremium = isManager
   const isEnterprise = isAdmin
 
+  const hasModuleAccess = (
+    moduleCode: string,
+    action: 'view' | 'create' | 'edit' | 'delete' = 'view'
+  ): boolean => {
+    if (!profile) return false
+    if (isSuperAdmin) return true
+
+    const perm = profile.permissions.find(p => p.module_code === moduleCode)
+    if (!perm) return false
+
+    switch (action) {
+      case 'view': return perm.can_view
+      case 'create': return perm.can_create
+      case 'edit': return perm.can_edit
+      case 'delete': return perm.can_delete
+      default: return false
+    }
+  }
+
   const hasPermission = (permission: string): boolean => {
-    if (isAdmin) return true
-    return profile?.permissions?.includes(permission) || false
+    if (!profile) return false
+    if (isSuperAdmin) return true
+    return profile.permissions.some(p => p.module_code === permission && p.can_view)
   }
 
   const login = async (email: string, password: string) => {
-    // Login simulado - sempre bem-sucedido
-    console.log('Login simulado:', email)
-
-    // Comentado: login real
-    // const { data, error } = await supabase.auth.signInWithPassword({
-    //   email,
-    //   password
-    // })
-    // if (error) throw error
-    // if (data.user) {
-    //   await loadUserProfile(data.user)
-    // }
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
   }
 
   const logout = async () => {
-    // Logout simulado - não faz nada
-    console.log('Logout simulado')
-
-    // Comentado: logout real
-    // await supabase.auth.signOut()
-    // setUser(null)
-    // setProfile(null)
+    await supabase.auth.signOut()
+    setUser(null)
+    setProfile(null)
   }
 
   const onPremiumFeature = (feature: string) => {
@@ -209,15 +215,18 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       profile,
       isLoading,
       isAdmin,
+      isSuperAdmin,
       isManager,
       isTechnician,
       isExternal,
       isPremium,
       isEnterprise,
       hasPermission,
+      hasModuleAccess,
       login,
       logout,
-      onPremiumFeature
+      onPremiumFeature,
+      refreshPermissions
     }}>
       {children}
     </UserContext.Provider>

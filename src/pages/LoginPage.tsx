@@ -1,11 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
+import { BarChart3, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { useUser } from '../contexts/UserContext'
 import { useNavigate } from 'react-router-dom'
 
 const LoginPage = () => {
-  const { login, isAuthenticated } = useAuth()
+  const { login, user, isLoading } = useUser()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -13,157 +13,147 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/')
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate('/', { replace: true })
     }
-  }, [isAuthenticated, navigate])
+  }, [user, isLoading, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
       await login(email, password)
-      navigate('/')
     } catch (err: any) {
-      setError(err.message || 'Erro ao fazer login')
+      const msg = err.message || ''
+      if (msg.includes('Invalid login credentials') || msg.includes('invalid_credentials')) {
+        setError('E-mail ou senha incorretos.')
+      } else if (msg.includes('Email not confirmed')) {
+        setError('E-mail não confirmado. Verifique sua caixa de entrada.')
+      } else {
+        setError(msg || 'Erro ao fazer login. Tente novamente.')
+      }
     } finally {
       setLoading(false)
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center py-12 px-4">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full space-y-8"
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-md"
       >
-        <div className="text-center">
+        {/* Logo */}
+        <div className="text-center mb-8">
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-            className="mx-auto w-24 h-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-xl"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 shadow-lg mb-4"
           >
-            <Shield className="h-12 w-12 text-white" />
+            <BarChart3 className="h-9 w-9 text-white" />
           </motion.div>
-          <h2 className="text-4xl font-extrabold text-gray-900 mb-2">
-            Bem-vindo de volta
-          </h2>
-          <p className="text-gray-600">
-            Faça login para acessar o sistema
-          </p>
+          <h1 className="text-3xl font-bold text-white">GiarTech</h1>
+          <p className="text-gray-400 text-sm mt-1">Sistema de Gestão Integrada</p>
         </div>
 
+        {/* Card */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100"
+          className="bg-white rounded-2xl shadow-2xl p-8"
         >
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Entrar na sua conta</h2>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <motion.div
-                initial={{ opacity: 0, y: -10 }}
+                initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center space-x-2"
+                className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"
               >
-                <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
               </motion.div>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                E-mail
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   id="email"
-                  name="email"
                   type="email"
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="seu@email.com"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Senha
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   id="password"
-                  name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  tabIndex={-1}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  )}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02]"
-              >
-                {loading ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Entrando...</span>
-                  </div>
-                ) : (
-                  'Entrar'
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Entrando...
+                </>
+              ) : 'Entrar'}
+            </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Esqueceu sua senha?{' '}
-              <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
-                Recuperar acesso
-              </a>
-            </p>
-          </div>
-        </motion.div>
-
-        <div className="text-center">
-          <p className="text-xs text-gray-500">
-            Sistema de Gestão Integrada © 2024
+          <p className="text-center text-xs text-gray-400 mt-6">
+            Acesso restrito a usuários cadastrados pela empresa.
           </p>
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   )

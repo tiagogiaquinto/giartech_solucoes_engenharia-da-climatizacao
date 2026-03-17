@@ -111,22 +111,38 @@ import ThomazDashboard from './pages/ThomazDashboard'
 import AIProvidersSettings from './pages/AIProvidersSettings'
 import TemplateManager from './pages/TemplateManager'
 import Customer360 from './pages/Customer360'
+import TeamManagement from './pages/TeamManagement'
 
-// Protected route component - DESABILITADO para acesso livre
-// const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-//   const { user } = useUser();
-//   const location = useLocation();
+const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
+  const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
+  const location = useLocation()
 
-//   if (!user) {
-//     return <Navigate to="/login" state={{ from: location }} replace />;
-//   }
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+      </div>
+    )
+  }
 
-//   return <>{children}</>;
-// };
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
 
-// Componente que sempre permite acesso
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  return <>{children}</>;
+  if (moduleCode && !isSuperAdmin && !hasModuleAccess(moduleCode, 'view')) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Acesso Restrito</h2>
+          <p className="text-gray-500">Você não tem permissão para acessar este módulo.</p>
+          <p className="text-gray-400 text-sm mt-1">Contate o administrador do sistema.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <>{children}</>
 };
 
 function App() {
@@ -416,6 +432,14 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/team-management" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <TeamManagement />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/ai-providers" element={
             <ProtectedRoute>
               <WebLayout>
@@ -645,7 +669,7 @@ function App() {
           } />
 
           <Route path="/financeiro" element={
-            <ProtectedRoute>
+            <ProtectedRoute moduleCode="financeiro">
               <WebLayout>
                 <FinanceiroConsolidado />
               </WebLayout>
