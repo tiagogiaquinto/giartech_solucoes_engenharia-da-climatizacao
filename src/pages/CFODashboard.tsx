@@ -110,46 +110,79 @@ interface CustomerIntelligence {
   churn_probability: number
 }
 
+interface PeriodKPIs {
+  periodo_inicio: string
+  periodo_fim: string
+  faturamento_bruto: number
+  total_impostos: number
+  aliquota_impostos: number
+  custo_materiais: number
+  custo_mao_obra: number
+  custo_extras: number
+  custo_total_pessoal: number
+  total_despesas_fixas: number
+  lucro_liquido: number
+  ebitda: number
+  ebitda_margem: number
+  margem_liquida_pct: number
+  qtd_os_fechadas: number
+  qtd_clientes_atendidos: number
+  ticket_medio: number
+}
+
+const getDateRange = (period: 'month' | 'quarter' | 'year' | 'custom', customStart?: string, customEnd?: string) => {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+
+  if (period === 'custom' && customStart && customEnd) return { start: customStart, end: customEnd }
+  if (period === 'month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    return { start: fmt(start), end: fmt(now) }
+  }
+  if (period === 'quarter') {
+    const q = Math.floor(now.getMonth() / 3)
+    const start = new Date(now.getFullYear(), q * 3, 1)
+    return { start: fmt(start), end: fmt(now) }
+  }
+  const start = new Date(now.getFullYear(), 0, 1)
+  return { start: fmt(start), end: fmt(now) }
+}
+
 const CFODashboard = () => {
   const navigate = useNavigate()
   const [kpis, setKpis] = useState<CFOKPIs | null>(null)
+  const [periodKpis, setPeriodKpis] = useState<PeriodKPIs | null>(null)
   const [alerts, setAlerts] = useState<FinancialAlert[]>([])
   const [topCustomers, setTopCustomers] = useState<CustomerIntelligence[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter' | 'year'>('month')
+  const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter' | 'year' | 'custom'>('month')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
   const [availablePeriods, setAvailablePeriods] = useState<any[]>([])
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null)
   const [useCustomPeriod, setUseCustomPeriod] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   useEffect(() => {
     loadAvailablePeriods()
   }, [])
 
   useEffect(() => {
-    if (availablePeriods.length > 0 || !useCustomPeriod) {
-      loadCFOData()
-    }
-
-    // Refresh automático a cada 5 minutos
+    loadCFOData()
     const interval = setInterval(loadCFOData, 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [selectedPeriod, selectedPeriodId, useCustomPeriod])
+  }, [selectedPeriod, selectedPeriodId, useCustomPeriod, customStart, customEnd])
 
   const loadAvailablePeriods = async () => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('financial_periods')
         .select('id, period_name, period_type, start_date, end_date, fiscal_year')
         .order('start_date', { ascending: false })
         .limit(24)
-
-      if (error) throw error
       setAvailablePeriods(data || [])
-
-      // Selecionar o período mais recente por padrão
-      if (data && data.length > 0) {
-        setSelectedPeriodId(data[0].id)
-      }
+      if (data && data.length > 0) setSelectedPeriodId(data[0].id)
     } catch (error: any) {
       console.error('Erro ao carregar períodos:', error)
     }
@@ -159,63 +192,27 @@ const CFODashboard = () => {
     try {
       setLoading(true)
 
-      let kpisData = null
+      const { start, end } = getDateRange(
+        selectedPeriod === 'custom' ? 'custom' : selectedPeriod,
+        customStart || undefined,
+        customEnd || undefined
+      )
 
-      if (useCustomPeriod && selectedPeriodId) {
-        // Usar período específico via RPC
-        const selectedPeriodData = availablePeriods.find(p => p.id === selectedPeriodId)
-        if (selectedPeriodData) {
-          const { data, error } = await supabase.rpc('get_cfo_kpis_by_period', {
-            p_start_date: selectedPeriodData.start_date,
-            p_end_date: selectedPeriodData.end_date
-          })
+      const [periodRes, alertsRes, customersRes, kpisRes] = await Promise.all([
+        supabase.rpc('get_cfo_kpis_period', { p_start_date: start, p_end_date: end }),
+        supabase.from('financial_alerts').select('*').eq('is_active', true)
+          .order('severity', { ascending: true }).order('created_at', { ascending: false }).limit(10),
+        supabase.from('v_customer_intelligence').select('*').order('total_revenue', { ascending: false }).limit(10),
+        supabase.from('v_cfo_kpis').select('*').maybeSingle()
+      ])
 
-          if (error) throw error
-          kpisData = data && data.length > 0 ? data[0] : null
-        }
-      } else {
-        // Usar view padrão (ano atual)
-        const { data, error } = await supabase
-          .from('v_cfo_kpis')
-          .select('*')
-          .maybeSingle()
-
-        if (error) throw error
-        kpisData = data
-      }
-
-      if (!kpisData) {
-        console.warn('Nenhum dado de KPI encontrado')
-      }
-
-      // Carregar alertas ativos
-      const { data: alertsData, error: alertsError } = await supabase
-        .from('financial_alerts')
-        .select('*')
-        .eq('is_active', true)
-        .order('severity', { ascending: true })
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      if (alertsError) throw alertsError
-
-      // Carregar inteligência de clientes (Top 10)
-      const { data: customersData, error: customersError } = await supabase
-        .from('v_customer_intelligence')
-        .select('*')
-        .order('total_revenue', { ascending: false })
-        .limit(10)
-
-      if (customersError) throw customersError
-
-      console.log('KPIs carregados:', kpisData)
-      setKpis(kpisData)
-      setAlerts(alertsData || [])
-      setTopCustomers(customersData || [])
-
+      if (periodRes.data) setPeriodKpis(periodRes.data as PeriodKPIs)
+      setAlerts(alertsRes.data || [])
+      setTopCustomers(customersRes.data || [])
+      if (kpisRes.data) setKpis(kpisRes.data)
+      setLastUpdated(new Date())
     } catch (error: any) {
       console.error('Erro ao carregar dados CFO:', error)
-      alert(`Erro ao carregar Dashboard CFO: ${error.message}`)
     } finally {
       setLoading(false)
     }
@@ -344,55 +341,38 @@ const CFODashboard = () => {
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard CFO</h1>
             <p className="text-gray-600">Inteligência Financeira Executiva</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2">
-              <input
-                type="checkbox"
-                id="useCustomPeriod"
-                checked={useCustomPeriod}
-                onChange={(e) => setUseCustomPeriod(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-              />
-              <label htmlFor="useCustomPeriod" className="text-sm text-gray-700 cursor-pointer">
-                Período Específico
-              </label>
+          <div className="flex items-center gap-3 flex-wrap justify-end">
+            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+              {(['month', 'quarter', 'year', 'custom'] as const).map(p => (
+                <button key={p} onClick={() => setSelectedPeriod(p)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    selectedPeriod === p ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'
+                  }`}>
+                  {p === 'month' ? 'Mês' : p === 'quarter' ? 'Trimestre' : p === 'year' ? 'Ano' : 'Período'}
+                </button>
+              ))}
             </div>
 
-            {useCustomPeriod ? (
-              <select
-                value={selectedPeriodId || ''}
-                onChange={(e) => setSelectedPeriodId(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 min-w-[180px]"
-              >
-                <option value="">Selecione o período</option>
-                {availablePeriods.map((period) => (
-                  <option key={period.id} value={period.id}>
-                    {period.period_name} ({period.fiscal_year})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value as any)}
-                className="px-4 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="month">Último Mês</option>
-                <option value="quarter">Último Trimestre</option>
-                <option value="year">Ano Atual</option>
-              </select>
+            {selectedPeriod === 'custom' && (
+              <div className="flex items-center gap-2">
+                <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
+                <span className="text-gray-500 text-sm">até</span>
+                <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
+              </div>
             )}
 
-            <button
-              onClick={loadCFOData}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
+            {lastUpdated && (
+              <span className="text-xs text-gray-400">
+                Atualizado {lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+
+            <button onClick={loadCFOData}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Atualizar
-            </button>
-            <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Exportar
             </button>
           </div>
         </div>
@@ -471,6 +451,139 @@ const CFODashboard = () => {
             ]}
           />
         </div>
+
+        {/* Period KPIs - Real-time from RPC */}
+        {periodKpis && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
+                  <BarChart3 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">KPIs do Período</h2>
+                  <p className="text-sm text-gray-600">
+                    {new Date(periodKpis.periodo_inicio + 'T00:00:00').toLocaleDateString('pt-BR')} — {new Date(periodKpis.periodo_fim + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-lg font-bold ${periodKpis.lucro_liquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {periodKpis.lucro_liquido >= 0 ? <TrendingUp className="inline h-5 w-5 mr-1" /> : <TrendingDown className="inline h-5 w-5 mr-1" />}
+                  {formatCurrency(periodKpis.lucro_liquido)}
+                </span>
+                <span className="text-sm text-gray-500">lucro líquido</span>
+              </div>
+            </div>
+
+            {/* Faturamento e Margens */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                <p className="text-xs text-gray-500 mb-1">Faturamento Bruto</p>
+                <p className="text-xl font-bold text-gray-900">{formatCurrency(periodKpis.faturamento_bruto)}</p>
+                <p className="text-xs text-green-600 mt-1">{periodKpis.qtd_os_fechadas} OS fechadas</p>
+              </div>
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-100">
+                <p className="text-xs text-gray-500 mb-1">EBITDA</p>
+                <p className="text-xl font-bold text-gray-900">{formatCurrency(periodKpis.ebitda)}</p>
+                <p className="text-xs text-blue-600 mt-1">Margem: {(periodKpis.ebitda_margem || 0).toFixed(1)}%</p>
+              </div>
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 border border-orange-100">
+                <p className="text-xs text-gray-500 mb-1">Margem Líquida</p>
+                <p className="text-xl font-bold text-gray-900">{(periodKpis.margem_liquida_pct || 0).toFixed(1)}%</p>
+                <p className="text-xs text-orange-600 mt-1">Ticket médio: {formatCurrency(periodKpis.ticket_medio)}</p>
+              </div>
+              <div className="bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl p-4 border border-gray-200">
+                <p className="text-xs text-gray-500 mb-1">Clientes Atendidos</p>
+                <p className="text-xl font-bold text-gray-900">{periodKpis.qtd_clientes_atendidos}</p>
+                <p className="text-xs text-gray-600 mt-1">Volume de atendimento</p>
+              </div>
+            </div>
+
+            {/* Breakdown de Custos */}
+            <div className="border-t border-gray-100 pt-5">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Composição dos Custos</h3>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 mb-1">Impostos</p>
+                  <p className="text-base font-bold text-red-600">{formatCurrency(periodKpis.total_impostos)}</p>
+                  <p className="text-xs text-gray-400">{(periodKpis.aliquota_impostos || 0).toFixed(1)}% s/ fat.</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 mb-1">Materiais</p>
+                  <p className="text-base font-bold text-orange-600">{formatCurrency(periodKpis.custo_materiais)}</p>
+                  <p className="text-xs text-gray-400">
+                    {periodKpis.faturamento_bruto > 0
+                      ? ((periodKpis.custo_materiais / periodKpis.faturamento_bruto) * 100).toFixed(1)
+                      : '0.0'}% s/ fat.
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 mb-1">Mão de Obra</p>
+                  <p className="text-base font-bold text-blue-600">{formatCurrency(periodKpis.custo_mao_obra)}</p>
+                  <p className="text-xs text-gray-400">
+                    {periodKpis.faturamento_bruto > 0
+                      ? ((periodKpis.custo_mao_obra / periodKpis.faturamento_bruto) * 100).toFixed(1)
+                      : '0.0'}% s/ fat.
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 mb-1">Pessoal (RH)</p>
+                  <p className="text-base font-bold text-slate-600">{formatCurrency(periodKpis.custo_total_pessoal)}</p>
+                  <p className="text-xs text-gray-400">Salários + encargos</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 mb-1">Desp. Fixas</p>
+                  <p className="text-base font-bold text-gray-600">{formatCurrency(periodKpis.total_despesas_fixas)}</p>
+                  <p className="text-xs text-gray-400">Contas e contratos</p>
+                </div>
+              </div>
+
+              {/* Visual waterfall bar */}
+              {periodKpis.faturamento_bruto > 0 && (
+                <div className="mt-5">
+                  <div className="flex h-6 rounded-full overflow-hidden text-xs">
+                    {[
+                      { pct: (periodKpis.total_impostos / periodKpis.faturamento_bruto) * 100, color: 'bg-red-400', label: 'Impostos' },
+                      { pct: (periodKpis.custo_materiais / periodKpis.faturamento_bruto) * 100, color: 'bg-orange-400', label: 'Materiais' },
+                      { pct: (periodKpis.custo_mao_obra / periodKpis.faturamento_bruto) * 100, color: 'bg-blue-400', label: 'MO' },
+                      { pct: (periodKpis.custo_total_pessoal / periodKpis.faturamento_bruto) * 100, color: 'bg-slate-400', label: 'Pessoal' },
+                      { pct: (periodKpis.total_despesas_fixas / periodKpis.faturamento_bruto) * 100, color: 'bg-gray-400', label: 'Fixas' },
+                      { pct: Math.max((periodKpis.lucro_liquido / periodKpis.faturamento_bruto) * 100, 0), color: 'bg-green-400', label: 'Lucro' },
+                    ].map((seg, i) => (
+                      seg.pct > 0 && (
+                        <div key={i} title={`${seg.label}: ${seg.pct.toFixed(1)}%`}
+                          className={`${seg.color} flex items-center justify-center text-white font-medium transition-all`}
+                          style={{ width: `${Math.min(seg.pct, 100)}%`, minWidth: seg.pct > 2 ? undefined : 0 }}>
+                          {seg.pct > 5 && `${seg.pct.toFixed(0)}%`}
+                        </div>
+                      )
+                    ))}
+                  </div>
+                  <div className="flex gap-3 flex-wrap mt-2">
+                    {[
+                      { color: 'bg-red-400', label: 'Impostos' },
+                      { color: 'bg-orange-400', label: 'Materiais' },
+                      { color: 'bg-blue-400', label: 'Mão de Obra' },
+                      { color: 'bg-slate-400', label: 'Pessoal RH' },
+                      { color: 'bg-gray-400', label: 'Desp. Fixas' },
+                      { color: 'bg-green-400', label: 'Lucro Líquido' },
+                    ].map((leg, i) => (
+                      <div key={i} className="flex items-center gap-1">
+                        <div className={`w-3 h-3 rounded-sm ${leg.color}`} />
+                        <span className="text-xs text-gray-600">{leg.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
 
         {/* Alertas Financeiros */}
         {alerts.length > 0 && (

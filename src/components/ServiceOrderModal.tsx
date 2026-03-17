@@ -1,10 +1,25 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Plus, Trash2, Package, Users, DollarSign, Info, Calculator, Shield, User, Calendar, FileText, Clock, Search, Receipt, Download } from 'lucide-react'
+import { X, Save, Plus, Trash2, Package, Users, DollarSign, Info, Calculator, Shield, User, Calendar, FileText, Clock, Search, Receipt, Download, AlertTriangle, ShoppingCart, TrendingUp, TrendingDown, Percent } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import ServiceOrderCostManager from './ServiceOrderCostManager'
 import TemplateSelectorModal from './TemplateSelectorModal'
 import { fillTemplate } from '../services/templateFillService'
+
+interface TaxRate {
+  id: string
+  name: string
+  rate_percentual: number
+  is_active: boolean
+}
+
+interface StockAlert {
+  materialId: string
+  materialName: string
+  requested: number
+  available: number
+  unit: string
+}
 
 interface ServiceItem {
   id: string
@@ -104,6 +119,10 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
   const [globalMaterials, setGlobalMaterials] = useState<MaterialItem[]>([])
   const [globalLabor, setGlobalLabor] = useState<LaborItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
+  const [taxRates, setTaxRates] = useState<TaxRate[]>([])
+  const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([])
+  const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false)
+  const [pendingPurchaseItems, setPendingPurchaseItems] = useState<StockAlert[]>([])
 
   // Estados para modais de criação rápida
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false)
@@ -145,14 +164,15 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
 
   const loadData = async () => {
     try {
-      const [customersRes, materialsRes, staffRes, bankAccountsRes, contractsRes, catalogRes, companyRes] = await Promise.all([
+      const [customersRes, materialsRes, staffRes, bankAccountsRes, contractsRes, catalogRes, companyRes, taxRatesRes] = await Promise.all([
         supabase.from('customers').select('*, customer_addresses(*)').order('nome_razao'),
-        supabase.from('materials').select('*').eq('active', true).order('name'),
-        supabase.from('employees').select('id, name, role, custo_hora, especialidade, nivel').eq('active', true).order('name'),
+        supabase.from('inventory_items').select('id, name, unit, cost, price, quantity, min_stock, sku').eq('active', true).order('name'),
+        supabase.from('employees').select('id, name, role, custo_hora, salary, encargos_percentual, horas_mensais, especialidade, nivel').eq('active', true).order('name'),
         supabase.from('bank_accounts').select('*').eq('active', true).order('account_name'),
         supabase.from('contract_templates').select('*').order('name'),
         supabase.from('service_catalog').select('*, service_catalog_materials(*)').eq('active', true).order('name'),
-        supabase.from('company_settings').select('*').limit(1)
+        supabase.from('company_settings').select('*').limit(1),
+        supabase.from('tax_rates').select('*').eq('is_active', true).order('name')
       ])
 
       setCustomers(customersRes.data || [])
@@ -162,6 +182,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       setContractTemplates(contractsRes.data || [])
       setServiceCatalog(catalogRes.data || [])
       setCompanySettings(companyRes.data?.[0] || null)
+      setTaxRates(taxRatesRes.data || [])
     } catch (error) {
       console.error('Error loading data:', error)
     }
@@ -441,14 +462,69 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
     const material = materials.find(m => m.id === materialId)
     if (!material) return
 
+    const currentItem = globalMaterials.find(m => m.id === id)
+    const requestedQty = currentItem?.quantidade || 1
+    const availableQty = Number(material.quantity) || 0
+
     updateMaterial(id, {
       material_id: materialId,
       nome: material.name,
       unidade_medida: material.unit || 'UN',
-      preco_compra_unitario: Number(material.unit_cost) || 0,
-      preco_venda_unitario: Number(material.sale_price) || 0
+      preco_compra_unitario: Number(material.cost) || Number(material.unit_cost) || 0,
+      preco_venda_unitario: Number(material.price) || Number(material.sale_price) || 0
     })
     setMaterialSearch('')
+
+    if (availableQty < requestedQty) {
+      const alert: StockAlert = {
+        materialId,
+        materialName: material.name,
+        requested: requestedQty,
+        available: availableQty,
+        unit: material.unit || 'un'
+      }
+      setStockAlerts(prev => {
+        const exists = prev.find(a => a.materialId === materialId)
+        return exists ? prev.map(a => a.materialId === materialId ? alert : a) : [...prev, alert]
+      })
+    } else {
+      setStockAlerts(prev => prev.filter(a => a.materialId !== materialId))
+    }
+  }
+
+  const createAutoPurchaseOrder = async (items: StockAlert[]) => {
+    try {
+      const { data: poData, error: poError } = await supabase
+        .from('purchase_orders')
+        .insert([{
+          service_order_id: orderId || null,
+          priority: 'alta',
+          notes: `Gerada automaticamente pela OS${orderId ? ` (${orderId.substring(0, 8)})` : ''}`,
+          total_amount: 0
+        }])
+        .select()
+        .single()
+
+      if (poError) throw poError
+
+      const poItems = items.map(item => ({
+        purchase_order_id: poData.id,
+        inventory_item_id: item.materialId,
+        item_name: item.materialName,
+        quantity_requested: Math.max(item.requested - item.available, 1),
+        unit: item.unit,
+        unit_price: 0,
+        notes: `Estoque disponível: ${item.available} ${item.unit}. Necessário: ${item.requested} ${item.unit}`
+      }))
+
+      await supabase.from('purchase_order_items').insert(poItems)
+
+      setShowPurchaseOrderModal(false)
+      setPendingPurchaseItems([])
+      alert(`Ordem de Compra criada com sucesso!\nNúmero: será gerado automaticamente.\nItens: ${items.length} material(is) adicionado(s).`)
+    } catch (err: any) {
+      alert('Erro ao criar Ordem de Compra: ' + err.message)
+    }
   }
 
   const addLabor = () => {
@@ -482,10 +558,17 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
     const employee = staff.find(s => s.id === staffId)
     if (!employee) return
 
+    let custoHora = Number(employee.custo_hora) || 0
+    if (custoHora === 0 && employee.salary > 0) {
+      const encargos = Number(employee.encargos_percentual) || 68
+      const horas = Number(employee.horas_mensais) || 176
+      custoHora = Math.round((employee.salary * (1 + encargos / 100) / horas) * 100) / 100
+    }
+
     updateLabor(id, {
       staff_id: staffId,
       nome: employee.name,
-      custo_hora: Number(employee.custo_hora) || 0
+      custo_hora: custoHora
     })
     setLaborSearch('')
   }
@@ -507,26 +590,38 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
   const calculateTotals = () => {
     const subtotal = serviceItems.reduce((sum, s) => sum + s.preco_total, 0)
     const desconto = formData.desconto_valor || (subtotal * (formData.desconto_percentual / 100))
+    const total = subtotal - desconto
+
+    const aliquota_total = taxRates.reduce((sum, t) => sum + Number(t.rate_percentual), 0)
+    const valor_impostos = Math.round(total * aliquota_total / 100 * 100) / 100
 
     const custo_materiais_servicos = serviceItems.reduce((sum, s) => sum + s.custo_materiais, 0)
     const custo_mao_obra_servicos = serviceItems.reduce((sum, s) => sum + s.custo_mao_obra, 0)
     const custo_materiais_globais = globalMaterials.reduce((sum, m) => sum + m.custo_total, 0)
     const custo_mao_obra_globais = globalLabor.reduce((sum, l) => sum + l.custo_total, 0)
 
-    const custo_total = custo_materiais_servicos + custo_mao_obra_servicos + custo_materiais_globais + custo_mao_obra_globais
-    const total = subtotal - desconto
-    const lucro_total = total - custo_total
-    const margem_lucro = custo_total > 0 ? (lucro_total / custo_total) * 100 : 0
+    const custo_total_materiais = custo_materiais_servicos + custo_materiais_globais
+    const custo_total_mao_obra = custo_mao_obra_servicos + custo_mao_obra_globais
+    const custo_total = custo_total_materiais + custo_total_mao_obra
+
+    const margem_liquida = total - valor_impostos - custo_total
+    const percentual_margem = total > 0 ? (margem_liquida / total) * 100 : 0
+    const lucro_total = margem_liquida
+    const margem_lucro = percentual_margem
 
     return {
       subtotal,
       desconto,
       total,
+      aliquota_total,
+      valor_impostos,
       custo_total,
+      custo_total_materiais,
+      custo_total_mao_obra,
       lucro_total,
+      margem_liquida,
       margem_lucro,
-      custo_total_materiais: custo_materiais_servicos + custo_materiais_globais,
-      custo_total_mao_obra: custo_mao_obra_servicos + custo_mao_obra_globais,
+      percentual_margem,
       global_materiais: custo_materiais_globais,
       global_mao_obra: custo_mao_obra_globais
     }
@@ -1837,24 +1932,104 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-lg p-6 border-2 border-gray-300 shadow-sm">
-                      <div className="space-y-3">
+                    <div className="bg-white rounded-lg p-6 border-2 border-gray-300 shadow-sm space-y-3">
+                      <div className="flex justify-between text-base">
+                        <span className="text-gray-700">Subtotal dos Serviços:</span>
+                        <span className="font-bold">{formatCurrency(totals.subtotal)}</span>
+                      </div>
+                      {totals.desconto > 0 && (
                         <div className="flex justify-between text-base">
-                          <span className="text-gray-700">Subtotal dos Serviços:</span>
-                          <span className="font-bold">{formatCurrency(totals.subtotal)}</span>
+                          <span className="text-gray-700">Desconto Aplicado:</span>
+                          <span className="font-bold text-red-600">- {formatCurrency(totals.desconto)}</span>
                         </div>
-                        {totals.desconto > 0 && (
-                          <div className="flex justify-between text-base">
-                            <span className="text-gray-700">Desconto Aplicado:</span>
-                            <span className="font-bold text-red-600">- {formatCurrency(totals.desconto)}</span>
+                      )}
+                      <div className="border-t-2 pt-3 flex justify-between items-center">
+                        <span className="font-bold text-xl text-gray-900">VALOR TOTAL DA PROPOSTA:</span>
+                        <span className="font-bold text-3xl text-green-600">{formatCurrency(totals.total)}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-lg p-5 border border-slate-200 space-y-3">
+                      <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                        <Calculator className="h-4 w-4 text-slate-600" />
+                        Análise Financeira Interna
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="bg-white rounded-lg p-3 border border-slate-200">
+                          <p className="text-xs text-slate-500 mb-1">Faturamento Bruto</p>
+                          <p className="font-bold text-slate-900 text-base">{formatCurrency(totals.total)}</p>
+                        </div>
+                        <div className="bg-red-50 rounded-lg p-3 border border-red-200">
+                          <p className="text-xs text-red-600 mb-1 flex items-center gap-1">
+                            <Percent className="h-3 w-3" />
+                            Impostos ({totals.aliquota_total.toFixed(2)}%)
+                          </p>
+                          <p className="font-bold text-red-700 text-base">- {formatCurrency(totals.valor_impostos)}</p>
+                          <p className="text-xs text-red-500 mt-1">{taxRates.map(t => t.name).join(' + ')}</p>
+                        </div>
+                        <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
+                          <p className="text-xs text-orange-600 mb-1 flex items-center gap-1">
+                            <Package className="h-3 w-3" />
+                            Custo de Materiais
+                          </p>
+                          <p className="font-bold text-orange-700 text-base">- {formatCurrency(totals.custo_total_materiais)}</p>
+                        </div>
+                        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                          <p className="text-xs text-blue-600 mb-1 flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            Custo de Mão de Obra
+                          </p>
+                          <p className="font-bold text-blue-700 text-base">- {formatCurrency(totals.custo_total_mao_obra)}</p>
+                        </div>
+                      </div>
+                      <div className={`rounded-lg p-4 border-2 ${totals.margem_liquida >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Margem de Lucro Líquida</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Bruto - Impostos - Materiais - MO</p>
                           </div>
-                        )}
-                        <div className="border-t-2 pt-3 flex justify-between items-center">
-                          <span className="font-bold text-xl text-gray-900">VALOR TOTAL DA PROPOSTA:</span>
-                          <span className="font-bold text-3xl text-green-600">{formatCurrency(totals.total)}</span>
+                          <div className="text-right">
+                            <p className={`font-bold text-2xl ${totals.margem_liquida >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                              {formatCurrency(totals.margem_liquida)}
+                            </p>
+                            <p className={`text-sm font-semibold flex items-center justify-end gap-1 ${totals.margem_liquida >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {totals.margem_liquida >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                              {totals.percentual_margem.toFixed(1)}%
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {stockAlerts.length > 0 && (
+                      <div className="bg-amber-50 rounded-lg p-4 border border-amber-300">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold text-amber-800 flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            Alerta de Estoque Insuficiente ({stockAlerts.length})
+                          </h4>
+                          <button
+                            onClick={() => { setPendingPurchaseItems(stockAlerts); setShowPurchaseOrderModal(true) }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white rounded-lg text-sm hover:bg-amber-700 transition-colors"
+                          >
+                            <ShoppingCart className="h-3.5 w-3.5" />
+                            Gerar Ordem de Compra
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          {stockAlerts.map(alert => (
+                            <div key={alert.materialId} className="flex justify-between items-center text-sm bg-white rounded p-2 border border-amber-200">
+                              <span className="font-medium text-amber-900">{alert.materialName}</span>
+                              <div className="text-right">
+                                <span className="text-red-600 font-semibold">Disponível: {alert.available} {alert.unit}</span>
+                                <span className="text-gray-500 mx-2">|</span>
+                                <span className="text-amber-700">Necessário: {alert.requested} {alert.unit}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {formData.contract_notes && (
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -1881,6 +2056,41 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
           </button>
         </div>
       </motion.div>
+
+      {/* Modal Confirmar Ordem de Compra */}
+      {showPurchaseOrderModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[10000] p-4">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-2xl">
+            <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-amber-600" />
+              Gerar Ordem de Compra Automática
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">Os seguintes materiais estão com estoque insuficiente. Uma Ordem de Compra será gerada automaticamente:</p>
+            <div className="space-y-2 mb-6 max-h-56 overflow-y-auto">
+              {pendingPurchaseItems.map(item => (
+                <div key={item.materialId} className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm">
+                  <span className="font-medium text-gray-800">{item.materialName}</span>
+                  <div className="text-right">
+                    <p className="text-red-600 font-semibold">Falta: {Math.max(item.requested - item.available, 0)} {item.unit}</p>
+                    <p className="text-gray-500 text-xs">Estoque: {item.available} | Pedido: {item.requested}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowPurchaseOrderModal(false); setPendingPurchaseItems([]) }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button onClick={() => createAutoPurchaseOrder(pendingPurchaseItems)}
+                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 flex items-center justify-center gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                Confirmar e Gerar OC
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Novo Cliente */}
       {showNewCustomerModal && (

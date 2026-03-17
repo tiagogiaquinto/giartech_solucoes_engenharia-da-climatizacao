@@ -19,14 +19,15 @@ import {
   Clock,
   Zap,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Percent
 } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
-import { getUserSettings, updateUserSettings, createDefaultUserSettings } from '../lib/supabase'
+import { getUserSettings, updateUserSettings, createDefaultUserSettings, supabase } from '../lib/supabase'
 import AdvancedThemeManager from '../components/AdvancedThemeManager'
 
 const Settings = () => {
-  const { user } = useUser()
+  const { user, isSuperAdmin } = useUser()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(true)
@@ -109,7 +110,8 @@ const Settings = () => {
     { id: 'backup', name: 'Backup', icon: Database },
     { id: 'sync', name: 'Sincronização', icon: Cloud },
     { id: 'productivity', name: 'Produtividade', icon: Zap },
-    { id: 'security', name: 'Segurança', icon: Shield }
+    { id: 'security', name: 'Segurança', icon: Shield },
+    ...(isSuperAdmin ? [{ id: 'fiscal', name: 'Alíquotas Fiscais', icon: Percent }] : [])
   ]
 
   if (loading) {
@@ -233,6 +235,9 @@ const Settings = () => {
               )}
               {activeTab === 'security' && (
                 <SecuritySettings settings={settings} onSave={handleSave} saving={saving} />
+              )}
+              {activeTab === 'fiscal' && isSuperAdmin && (
+                <TaxRateSettings />
               )}
             </div>
           </div>
@@ -924,6 +929,135 @@ const SecuritySettings: React.FC<any> = ({ settings, onSave, saving }) => {
           {saving ? 'Salvando...' : 'Salvar Configurações'}
         </button>
       </div>
+    </div>
+  )
+}
+
+// Tax Rate Settings (Director only)
+const TaxRateSettings: React.FC = () => {
+  const [rates, setRates] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadRates()
+  }, [])
+
+  const loadRates = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('tax_rates')
+      .select('*')
+      .order('name')
+    if (error) setError(error.message)
+    else setRates(data || [])
+    setLoading(false)
+  }
+
+  const updateRate = (id: string, field: string, value: any) => {
+    setRates(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r))
+  }
+
+  const saveRates = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      for (const rate of rates) {
+        const { error } = await supabase
+          .from('tax_rates')
+          .update({ rate_percentual: Number(rate.rate_percentual), is_active: rate.is_active })
+          .eq('id', rate.id)
+        if (error) throw error
+      }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const totalAliquota = rates
+    .filter(r => r.is_active)
+    .reduce((sum, r) => sum + Number(r.rate_percentual), 0)
+
+  if (loading) return <div className="py-8 text-center text-gray-500">Carregando...</div>
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Alíquotas Fiscais</h2>
+          <p className="text-sm text-gray-600 mt-1">Regime Lucro Presumido — usadas para calcular a margem líquida nas OS</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-gray-500">Alíquota total ativa</p>
+          <p className="text-2xl font-bold text-red-600">{totalAliquota.toFixed(2)}%</p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
+      )}
+      {saved && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+          <Check className="w-4 h-4" /> Alíquotas salvas com sucesso!
+        </div>
+      )}
+
+      <div className="space-y-3 mb-6">
+        {rates.map(rate => (
+          <div key={rate.id} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+            rate.is_active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-60'
+          }`}>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => updateRate(rate.id, 'is_active', !rate.is_active)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  rate.is_active ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                  rate.is_active ? 'translate-x-5' : 'translate-x-1'
+                }`} />
+              </button>
+              <div>
+                <p className="font-medium text-gray-900">{rate.name}</p>
+                {rate.description && <p className="text-xs text-gray-500">{rate.description}</p>}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={rate.rate_percentual}
+                onChange={e => updateRate(rate.id, 'rate_percentual', e.target.value)}
+                step="0.01"
+                min="0"
+                max="100"
+                className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-right text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <span className="text-gray-500 text-sm font-medium">%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 mb-6">
+        <span className="font-semibold text-gray-700">Carga tributária total (ativas)</span>
+        <span className="text-xl font-bold text-red-600">{totalAliquota.toFixed(2)}%</span>
+      </div>
+
+      <button
+        onClick={saveRates}
+        disabled={saving}
+        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+      >
+        <Save className="w-5 h-5" />
+        {saving ? 'Salvando...' : 'Salvar Alíquotas'}
+      </button>
     </div>
   )
 }
