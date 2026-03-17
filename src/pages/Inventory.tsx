@@ -492,7 +492,7 @@ const Inventory = () => {
                 {isAdmin && (
                   <div>
                     <p className="text-xs text-gray-500">Preço Unitário</p>
-                    <p className="text-sm text-green-600">R$ {item.price.toFixed(2)}</p>
+                    <p className="text-sm text-green-600">R$ {(item.price ?? 0).toFixed(2)}</p>
                   </div>
                 )}
                 <div>
