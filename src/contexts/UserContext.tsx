@@ -12,6 +12,12 @@ export interface ModulePermission {
   can_delete: boolean
 }
 
+export interface SensitivePermissions {
+  can_view_profit: boolean
+  can_apply_discount: boolean
+  can_adjust_stock: boolean
+}
+
 interface UserProfile {
   id: string
   email: string
@@ -20,6 +26,7 @@ interface UserProfile {
   role: UserRole
   is_active: boolean
   permissions: ModulePermission[]
+  sensitive: SensitivePermissions
 }
 
 interface User extends UserProfile {
@@ -37,8 +44,10 @@ interface UserContextType {
   isExternal: boolean
   isPremium: boolean
   isEnterprise: boolean
+  sensitive: SensitivePermissions
   hasPermission: (permission: string) => boolean
   hasModuleAccess: (moduleCode: string, action?: 'view' | 'create' | 'edit' | 'delete') => boolean
+  hasSensitiveAccess: (field: keyof SensitivePermissions) => boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   onPremiumFeature?: (feature: string) => void
@@ -128,12 +137,17 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       }
 
       let permissions: ModulePermission[] = []
+      let sensitive: SensitivePermissions = { can_view_profit: false, can_apply_discount: false, can_adjust_stock: false }
+
       if (!superAdmin) {
-        const { data: perms } = await supabase
-          .from('module_permissions')
-          .select('module_code, can_view, can_create, can_edit, can_delete')
-          .eq('user_id', authUser.id)
+        const [{ data: perms }, { data: sens }] = await Promise.all([
+          supabase.from('module_permissions').select('module_code, can_view, can_create, can_edit, can_delete').eq('user_id', authUser.id),
+          supabase.from('sensitive_permissions').select('can_view_profit, can_apply_discount, can_adjust_stock').eq('user_id', authUser.id).maybeSingle()
+        ])
         permissions = perms || []
+        if (sens) sensitive = { can_view_profit: sens.can_view_profit, can_apply_discount: sens.can_apply_discount, can_adjust_stock: sens.can_adjust_stock }
+      } else {
+        sensitive = { can_view_profit: true, can_apply_discount: true, can_adjust_stock: true }
       }
 
       const userProfile: UserProfile = {
@@ -143,7 +157,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         full_name: accountData?.full_name || authUser.email || 'Usuário',
         role: resolvedRole,
         is_active: isActive,
-        permissions
+        permissions,
+        sensitive
       }
 
       setProfile(userProfile)
@@ -194,6 +209,14 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     return profile.permissions.some(p => p.module_code === permission && p.can_view)
   }
 
+  const hasSensitiveAccess = (field: keyof SensitivePermissions): boolean => {
+    if (!profile) return false
+    if (isSuperAdmin) return true
+    return profile.sensitive?.[field] ?? false
+  }
+
+  const sensitive: SensitivePermissions = profile?.sensitive ?? { can_view_profit: false, can_apply_discount: false, can_adjust_stock: false }
+
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
@@ -221,8 +244,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       isExternal,
       isPremium,
       isEnterprise,
+      sensitive,
       hasPermission,
       hasModuleAccess,
+      hasSensitiveAccess,
       login,
       logout,
       onPremiumFeature,
