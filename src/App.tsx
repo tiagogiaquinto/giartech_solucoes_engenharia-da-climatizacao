@@ -113,6 +113,14 @@ import TemplateManager from './pages/TemplateManager'
 import Customer360 from './pages/Customer360'
 import TeamManagement from './pages/TeamManagement'
 import StaffHub from './pages/StaffHub'
+import InternalChat from './pages/InternalChat'
+import PortalLogin from './pages/portal/PortalLogin'
+import PortalLayout from './pages/portal/PortalLayout'
+import PortalDashboardRouter from './pages/portal/PortalDashboardRouter'
+import CustomerPortalDocuments from './pages/portal/CustomerPortalDocuments'
+import CustomerServiceRequest from './pages/portal/CustomerServiceRequest'
+import PartnerPortalDashboard from './pages/portal/PartnerPortalDashboard'
+import { PortalProvider } from './contexts/PortalContext'
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
   const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
@@ -947,6 +955,35 @@ function App() {
           <Route path="/sobre" element={<About />} />
           <Route path="/servicos" element={<Services />} />
           <Route path="/contato" element={<Contact />} />
+
+          <Route path="/chat-interno" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <InternalChat />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/portal/login" element={
+            <PortalProvider>
+              <PortalLogin />
+            </PortalProvider>
+          } />
+
+          <Route path="/portal/*" element={
+            <PortalProvider>
+              <PortalLayout>
+                <Routes>
+                  <Route path="dashboard" element={<PortalDashboardRouter />} />
+                  <Route path="documentos" element={<CustomerPortalDocuments />} />
+                  <Route path="solicitar" element={<CustomerServiceRequest />} />
+                  <Route path="indicacoes" element={<PartnerPortalDashboard />} />
+                  <Route path="historico" element={<PartnerPortalDashboard />} />
+                  <Route path="*" element={<PortalDashboardRouter />} />
+                </Routes>
+              </PortalLayout>
+            </PortalProvider>
+          } />
         </Routes>
 
         {/* Tutorial Interativo */}

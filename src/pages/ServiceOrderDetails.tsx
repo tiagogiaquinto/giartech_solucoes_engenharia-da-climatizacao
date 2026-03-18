@@ -6,6 +6,7 @@ import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supaba
 import { formatDateSafe } from '../utils/format'
 import { OSFiscalHealth } from '../components/OSFiscalHealth'
 import { OSPaymentFlow } from '../components/OSPaymentFlow'
+import { OSChatPanel } from '../components/OSChatPanel'
 
 const ServiceOrderDetails = () => {
   const { id } = useParams()
@@ -458,6 +459,10 @@ const FinancialTab = ({ order, items, materials, team, onUpdate }: any) => {
         nfStatus={order.nf_status || 'nao_emitida'}
         reciboEmitido={order.recibo_emitido || false}
         onUpdate={onUpdate}
+      />
+      <OSChatPanel
+        serviceOrderId={order.id}
+        serviceOrderTitle={order.title || order.order_number || ''}
       />
     </div>
   )

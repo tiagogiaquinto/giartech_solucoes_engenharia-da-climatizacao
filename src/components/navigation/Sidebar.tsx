@@ -86,6 +86,8 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações', moduleCode: 'auditoria' },
   { id: 'document-templates', path: '/document-templates', icon: FileText, label: 'Templates de Documentos', description: 'Gerenciar templates de OS, contratos e propostas', moduleCode: 'templates' },
   { id: 'template-manager', path: '/template-manager', icon: FileText, label: 'Templates HVAC', description: 'Modelos profissionais editáveis', moduleCode: 'templates' },
+  { id: 'chat-interno', path: '/chat-interno', icon: MessageCircle, label: 'Chat Corporativo', description: 'Mensagens internas entre funcionarios', moduleCode: 'chat' },
+  { id: 'portal-clientes', path: '/portal/login', icon: Building2, label: 'Portal Cliente/Parceiro', description: 'Acesso externo para clientes e parceiros', moduleCode: 'portal' },
   { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais', moduleCode: 'configuracoes' },
 ]
 
