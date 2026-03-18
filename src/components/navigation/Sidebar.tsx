@@ -74,6 +74,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'salarios', path: '/salary-management', icon: DollarSign, label: 'Gestão de Salários', description: 'Controle de pagamentos de salários', moduleCode: 'salarios' },
   { id: 'metas-rankings', path: '/goals-rankings', icon: Trophy, label: 'Metas & Rankings', description: 'Metas individuais, supermetas, bônus, rankings', moduleCode: 'metas' },
   { id: 'documentos', path: '/documents', icon: FileText, label: 'Centro de Documentos', description: 'PMOC, contratos, orçamentos, garantias, laudos', moduleCode: 'documentos' },
+  { id: 'contract-templates', path: '/contract-templates', icon: FileText, label: 'Templates de Contratos', description: 'Modelos de contratos, cláusulas e termos de garantia', moduleCode: 'documentos' },
   { id: 'relatorios', path: '/relatorios', icon: FileText, label: 'Relatórios', description: 'Dashboards interativos, PDFs e análises', moduleCode: 'relatorios' },
   { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis', moduleCode: 'catalogo' },
   { id: 'inventory', path: '/inventory', icon: Package, label: 'Estoque', description: 'Controle de materiais', moduleCode: 'estoque' },
