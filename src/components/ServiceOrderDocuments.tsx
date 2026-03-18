@@ -20,6 +20,8 @@ import {
 import { supabase } from '../lib/supabase'
 import { useToast } from '../hooks/useToast'
 import { formatDateSafe } from '../utils/format'
+import { QuotationUploadProcessor } from './QuotationUploadProcessor'
+import { PriceUpdateConfirmationCard } from './PriceUpdateConfirmationCard'
 
 interface ServiceOrderDocument {
   id: string
@@ -253,6 +255,19 @@ export function ServiceOrderDocuments({
 
   return (
     <div className="space-y-6">
+      {!readOnly && (
+        <>
+          <QuotationUploadProcessor
+            serviceOrderId={serviceOrderId}
+            onExtractionComplete={() => loadDocuments()}
+          />
+          <PriceUpdateConfirmationCard
+            serviceOrderId={serviceOrderId}
+            onProposalHandled={() => {}}
+          />
+        </>
+      )}
+
       {/* Header com estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {DOCUMENT_CATEGORIES.slice(0, 5).map(cat => {

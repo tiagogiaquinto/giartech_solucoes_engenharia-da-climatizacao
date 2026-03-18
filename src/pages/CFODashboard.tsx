@@ -154,6 +154,7 @@ const CFODashboard = () => {
   const [kpis, setKpis] = useState<CFOKPIs | null>(null)
   const [periodKpis, setPeriodKpis] = useState<PeriodKPIs | null>(null)
   const [alerts, setAlerts] = useState<FinancialAlert[]>([])
+  const [marginAlerts, setMarginAlerts] = useState<any[]>([])
   const [topCustomers, setTopCustomers] = useState<CustomerIntelligence[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter' | 'year' | 'custom'>('month')
@@ -198,18 +199,21 @@ const CFODashboard = () => {
         customEnd || undefined
       )
 
-      const [periodRes, alertsRes, customersRes, kpisRes] = await Promise.all([
+      const [periodRes, alertsRes, customersRes, kpisRes, marginAlertsRes] = await Promise.all([
         supabase.rpc('get_cfo_kpis_period', { p_start_date: start, p_end_date: end }),
         supabase.from('financial_alerts').select('*').eq('is_active', true)
           .order('severity', { ascending: true }).order('created_at', { ascending: false }).limit(10),
         supabase.from('v_customer_intelligence').select('*').order('total_revenue', { ascending: false }).limit(10),
-        supabase.from('v_cfo_kpis').select('*').maybeSingle()
+        supabase.from('v_cfo_kpis').select('*').maybeSingle(),
+        supabase.from('margin_alerts').select('*').eq('is_dismissed', false)
+          .order('created_at', { ascending: false }).limit(20)
       ])
 
       if (periodRes.data) setPeriodKpis(periodRes.data as PeriodKPIs)
       setAlerts(alertsRes.data || [])
       setTopCustomers(customersRes.data || [])
       if (kpisRes.data) setKpis(kpisRes.data)
+      setMarginAlerts(marginAlertsRes.data || [])
       setLastUpdated(new Date())
     } catch (error: any) {
       console.error('Erro ao carregar dados CFO:', error)
@@ -626,6 +630,70 @@ const CFODashboard = () => {
                       <span>Limite: {formatCurrency(alert.threshold_value)}</span>
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Alertas de Margem por Cotacao */}
+        {marginAlerts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-orange-200"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center">
+                  <Package className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Alertas de Custo x Margem</h2>
+                  <p className="text-sm text-gray-600">Cotacoes processadas pela IA detectaram impactos</p>
+                </div>
+              </div>
+              <span className="px-3 py-1 bg-orange-100 text-orange-700 text-sm font-bold rounded-full">
+                {marginAlerts.length} alertas
+              </span>
+            </div>
+            <div className="space-y-3">
+              {marginAlerts.map((alert: any) => (
+                <div
+                  key={alert.id}
+                  className={`flex items-start gap-3 p-4 rounded-xl border ${
+                    alert.severity === 'critical'
+                      ? 'bg-red-50 border-red-200 text-red-800'
+                      : alert.severity === 'warning'
+                      ? 'bg-amber-50 border-amber-200 text-amber-800'
+                      : 'bg-blue-50 border-blue-200 text-blue-800'
+                  }`}
+                >
+                  <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h4 className="font-semibold text-sm">{alert.title}</h4>
+                      <span className="text-xs opacity-70 shrink-0">
+                        {formatDateSafe(alert.created_at)}
+                      </span>
+                    </div>
+                    <p className="text-xs opacity-90">{alert.description}</p>
+                    {alert.suggested_price > 0 && (
+                      <p className="text-xs font-semibold mt-1">
+                        Preco sugerido: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(alert.suggested_price)}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await supabase.from('margin_alerts').update({ is_dismissed: true, dismissed_at: new Date().toISOString() }).eq('id', alert.id)
+                      setMarginAlerts(prev => prev.filter(a => a.id !== alert.id))
+                    }}
+                    className="p-1 rounded-lg hover:bg-black/10 transition-colors shrink-0"
+                    title="Dispensar alerta"
+                  >
+                    <XCircle size={14} />
+                  </button>
                 </div>
               ))}
             </div>
