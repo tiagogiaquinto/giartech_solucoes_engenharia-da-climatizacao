@@ -99,7 +99,15 @@ export const mapCalendarEventToAgendaEvent = (event: CalendarEvent | any) => {
   let startDate: Date
   let endDate: Date
 
-  if (typeof event.start === 'string' || !event.start) {
+  if (event.date && event.time) {
+    const dateStr = event.date
+    const timeStr = event.time
+    startDate = createDateFromLocalString(dateStr, timeStr)
+
+    const endDateStr = event.endDate || dateStr
+    const endTimeStr = event.endTime || timeStr
+    endDate = createDateFromLocalString(endDateStr, endTimeStr)
+  } else if (typeof event.start === 'string' || !event.start) {
     const dateStr = event.date || getLocalDateString(new Date())
     const timeStr = event.time || '09:00'
     startDate = createDateFromLocalString(dateStr, timeStr)
