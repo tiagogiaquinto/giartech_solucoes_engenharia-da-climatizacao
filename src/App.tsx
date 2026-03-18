@@ -69,7 +69,6 @@ import CRMEsteiraIntegrada from './pages/CRMEsteiraIntegrada'
 import CRMMessageTemplates from './pages/CRMMessageTemplates'
 import Contracts from './pages/Contracts'
 import ContractTemplates from './pages/ContractTemplates'
-import DocumentTemplates from './pages/DocumentTemplates'
 import Invoices from './pages/Invoices'
 import CompanySettings from './pages/CompanySettings'
 import Equipments from './pages/Equipments'
@@ -109,7 +108,6 @@ import BudgetManagement from './pages/BudgetManagement'
 import DocumentCenter from './pages/DocumentCenter'
 import ThomazDashboard from './pages/ThomazDashboard'
 import AIProvidersSettings from './pages/AIProvidersSettings'
-import TemplateManager from './pages/TemplateManager'
 import Customer360 from './pages/Customer360'
 import TeamManagement from './pages/TeamManagement'
 import StaffHub from './pages/StaffHub'
@@ -878,21 +876,6 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/document-templates" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <DocumentTemplates />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/template-manager" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <TemplateManager />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
 
           <Route path="/invoices" element={
             <ProtectedRoute>
