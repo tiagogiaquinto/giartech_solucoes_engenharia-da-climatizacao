@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase'
 import ServiceOrderCostManager from './ServiceOrderCostManager'
 import TemplateSelectorModal from './TemplateSelectorModal'
 import { fillTemplate } from '../services/templateFillService'
+import { PortalAccountSelector } from './ServiceOrder/PortalAccountSelector'
+import { useUser } from '../contexts/UserContext'
 
 interface TaxRate {
   id: string
@@ -72,6 +74,10 @@ interface ServiceOrderModalProps {
 const STORAGE_KEY = 'serviceOrderDraft'
 
 const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderModalProps) => {
+  const { profile } = useUser()
+  const canEditStakeholders = !orderId || ['super_admin', 'admin', 'manager'].includes(profile?.role || '')
+  const [portalAccountId, setPortalAccountId] = useState('')
+  const [partnerAccountId, setPartnerAccountId] = useState('')
   const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'pagamento' | 'garantia' | 'contrato'>('dados')
   const [loading, setLoading] = useState(false)
   const [materialSearch, setMaterialSearch] = useState('')
@@ -221,6 +227,10 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
         created_at: i.created_at
       })))
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+      // Carregar portal/partner
+      setPortalAccountId(order.portal_account_id || '')
+      setPartnerAccountId(order.partner_account_id || '')
 
       // Carregar dados básicos da OS
       setFormData({
@@ -861,7 +871,9 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
         relatorio_tecnico: (formData as any).relatorio_tecnico || '',
         orientacoes_servico: (formData as any).orientacoes_servico || '',
         escopo_detalhado: (formData as any).escopo_detalhado || '',
-        additional_info: (formData as any).additional_info || 'Trabalhamos para que seus projetos, se tornem realidade.. Obrigado pela confiança'
+        additional_info: (formData as any).additional_info || 'Trabalhamos para que seus projetos, se tornem realidade.. Obrigado pela confiança',
+        portal_account_id: portalAccountId || null,
+        partner_account_id: partnerAccountId || null
       }
 
       let orderIdToUse = orderId
@@ -1210,6 +1222,17 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
                     <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})}
                       className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" rows={2}
                       placeholder="Notas internas (não aparecem para o cliente)..." />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <PortalAccountSelector
+                      clientPortalAccountId={portalAccountId}
+                      partnerAccountId={partnerAccountId}
+                      onClientChange={setPortalAccountId}
+                      onPartnerChange={setPartnerAccountId}
+                      disabled={!canEditStakeholders}
+                      orderTotal={totals?.total || 0}
+                    />
                   </div>
                 </div>
 

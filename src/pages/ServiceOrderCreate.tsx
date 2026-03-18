@@ -11,6 +11,8 @@ import { SmartServiceSearch } from '../components/SmartServiceSearch'
 import { TemplateSelector } from '../components/TemplateSelector'
 import { RealtimeCalculationPanel } from '../components/RealtimeCalculationPanel'
 import { formatDateSafe } from '../utils/format'
+import { PortalAccountSelector } from '../components/ServiceOrder/PortalAccountSelector'
+import { useUser } from '../contexts/UserContext'
 
 interface ServiceItem {
   id: string
@@ -62,6 +64,8 @@ const ServiceOrderCreate = () => {
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit') || paramId
   const isEditMode = Boolean(editId)
+  const { profile } = useUser()
+  const canEditStakeholders = !isEditMode || ['super_admin', 'admin', 'manager'].includes(profile?.role || '')
   const [loading, setLoading] = useState(false)
   const [customers, setCustomers] = useState<any[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
@@ -198,6 +202,8 @@ const ServiceOrderCreate = () => {
     bankData: false,
     additionalClauses: false
   })
+  const [portalAccountId, setPortalAccountId] = useState('')
+  const [partnerAccountId, setPartnerAccountId] = useState('')
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false)
   const [showNewServiceModal, setShowNewServiceModal] = useState(false)
   const [showNewMaterialModal, setShowNewMaterialModal] = useState(false)
@@ -293,6 +299,8 @@ const ServiceOrderCreate = () => {
         })
 
         setOrderNumber(orderData.order_number || '')
+        setPortalAccountId(orderData.portal_account_id || '')
+        setPartnerAccountId(orderData.partner_account_id || '')
 
         if (orderData.client_id) {
           loadCustomerDetails(orderData.client_id)
@@ -700,7 +708,9 @@ const ServiceOrderCreate = () => {
         notes: formData.notes,
         subtotal: totals.subtotal,
         discount_amount: totals.desconto,
-        final_total: totals.total
+        final_total: totals.total,
+        portal_account_id: portalAccountId || null,
+        partner_account_id: partnerAccountId || null
       }
 
       let order: any
@@ -1408,6 +1418,17 @@ const ServiceOrderCreate = () => {
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                   <span className="text-sm font-medium">Exibir valores na proposta (desmarque para enviar ao cliente sem valores ou para funcionários)</span>
                 </label>
+              </div>
+
+              <div className="md:col-span-3">
+                <PortalAccountSelector
+                  clientPortalAccountId={portalAccountId}
+                  partnerAccountId={partnerAccountId}
+                  onClientChange={setPortalAccountId}
+                  onPartnerChange={setPartnerAccountId}
+                  disabled={!canEditStakeholders}
+                  orderTotal={totals.total}
+                />
               </div>
             </div>
 
