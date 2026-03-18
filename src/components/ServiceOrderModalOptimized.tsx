@@ -492,7 +492,7 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
           description: formData.description || null,
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
-          event_type: 'operational',
+          event_type: 'operacional',
           customer_id: selectedCustomer.id,
           service_order_id: orderId,
           status: 'a_fazer',

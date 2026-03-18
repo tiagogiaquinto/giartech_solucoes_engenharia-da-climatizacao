@@ -79,7 +79,11 @@ export const mapAgendaEventToCalendarEvent = (event: any): CalendarEvent => {
     time: getLocalTimeString(startDateTime),
     endDate: getLocalDateString(endDateTime),
     endTime: getLocalTimeString(endDateTime),
-    type: event.event_type || event.type || 'operacional',
+    type: (() => {
+      const t = event.event_type || event.type || 'operacional'
+      const norm: Record<string, string> = { 'operational': 'operacional', 'service_order': 'operacional' }
+      return norm[t] || t
+    })(),
     priority: event.priority || 'medium',
     status: event.status || 'a_fazer',
     assignedTo: event.employee_id,
@@ -125,11 +129,20 @@ export const mapCalendarEventToAgendaEvent = (event: CalendarEvent | any) => {
     return uuidRegex.test(value)
   }
 
+  const normalizeEventType = (t: string | undefined): string => {
+    if (!t) return 'operacional'
+    const map: Record<string, string> = {
+      'operational': 'operacional',
+      'service_order': 'operacional',
+    }
+    return map[t] || t
+  }
+
   const agendaEvent: any = {
     title: event.title,
     start_date: startDate.toISOString(),
     end_date: endDate.toISOString(),
-    event_type: event.type || 'operational',
+    event_type: normalizeEventType(event.type as string),
     priority: event.priority || 'medium',
     status: event.status || 'a_fazer'
   }
