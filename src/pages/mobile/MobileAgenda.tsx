@@ -199,9 +199,9 @@ const MobileAgenda = () => {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${
-                      getEventTypeColor(event.event_type)
+                      getEventTypeColor(event.event_type || event.type || 'operacional')
                     }`}>
-                      {getEventTypeLabel(event.event_type)}
+                      {getEventTypeLabel(event.event_type || event.type || 'operacional')}
                     </span>
                     {getStatusIcon(event.status)}
                   </div>

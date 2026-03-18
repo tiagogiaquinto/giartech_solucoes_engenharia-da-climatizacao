@@ -393,31 +393,37 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
   }
 
   const getEventTypeColor = (type: Event['type']) => {
-    const colors: Record<string, string> = {
-      'pessoal': 'bg-blue-500',
-      'networking': 'bg-teal-500',
-      'financeiro': 'bg-green-500',
-      'operacional': 'bg-orange-500',
-      'operational': 'bg-orange-500',
-      'cobrar': 'bg-yellow-500',
-      'pagar': 'bg-red-500',
-      'service_order': 'bg-orange-500',
-    }
-    return colors[type as string] || 'bg-gray-500'
+    const t = type as string
+    if (t === 'networking') return 'bg-teal-500'
+    if (t === 'financeiro') return 'bg-green-500'
+    if (t === 'cobrar') return 'bg-yellow-500'
+    if (t === 'pagar') return 'bg-red-500'
+    if (t === 'pessoal') return 'bg-blue-500'
+    if (t === 'operacional' || t === 'operational' || t === 'service_order') return 'bg-orange-500'
+    return 'bg-gray-500'
+  }
+
+  const getEventTypeHexColor = (type: Event['type']) => {
+    const t = type as string
+    if (t === 'networking') return '#14b8a6'
+    if (t === 'financeiro') return '#22c55e'
+    if (t === 'cobrar') return '#eab308'
+    if (t === 'pagar') return '#ef4444'
+    if (t === 'pessoal') return '#3b82f6'
+    if (t === 'operacional' || t === 'operational' || t === 'service_order') return '#f97316'
+    return '#6b7280'
   }
 
   const getEventTypeText = (type: Event['type']) => {
-    const labels: Record<string, string> = {
-      'pessoal': 'Pessoal',
-      'networking': 'Networking',
-      'financeiro': 'Financeiro',
-      'operacional': 'Operacional',
-      'operational': 'Operacional',
-      'cobrar': 'Cobrar',
-      'pagar': 'Pagar',
-      'service_order': 'Ordem de Serviço',
-    }
-    return labels[type as string] || (type ? String(type) : 'Evento')
+    const t = type as string
+    if (t === 'pessoal') return 'Pessoal'
+    if (t === 'networking') return 'Networking'
+    if (t === 'financeiro') return 'Financeiro'
+    if (t === 'operacional' || t === 'operational') return 'Operacional'
+    if (t === 'cobrar') return 'Cobrar'
+    if (t === 'pagar') return 'Pagar'
+    if (t === 'service_order') return 'Ordem de Serviço'
+    return t ? String(t) : 'Evento'
   }
 
   const getPriorityColor = (priority: Event['priority']) => {
@@ -1061,11 +1067,11 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                   <div
                     key={event.id}
                     className="relative bg-white p-3 rounded-lg border-l-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                    style={{ borderLeftColor: getEventTypeColor(event.type).replace('bg-', '').replace('500', '') }}
+                    style={{ borderLeftColor: getEventTypeHexColor(event.type) }}
                     onClick={() => setShowEditModal(event)}
                   >
                     <div className="absolute -left-[29px] top-4 w-3 h-3 rounded-full bg-white border-2"
-                         style={{ borderColor: getEventTypeColor(event.type).replace('bg-', '').replace('500', '') }} />
+                         style={{ borderColor: getEventTypeHexColor(event.type) }} />
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h4 className="font-medium text-sm text-gray-900">{event.title}</h4>
