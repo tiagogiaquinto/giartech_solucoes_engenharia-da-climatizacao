@@ -79,7 +79,7 @@ export const mapAgendaEventToCalendarEvent = (event: any): CalendarEvent => {
     time: getLocalTimeString(startDateTime),
     endDate: getLocalDateString(endDateTime),
     endTime: getLocalTimeString(endDateTime),
-    type: event.event_type || 'pessoal',
+    type: event.event_type || event.type || 'operacional',
     priority: event.priority || 'medium',
     status: event.status || 'a_fazer',
     assignedTo: event.employee_id,
@@ -129,7 +129,7 @@ export const mapCalendarEventToAgendaEvent = (event: CalendarEvent | any) => {
     title: event.title,
     start_date: startDate.toISOString(),
     end_date: endDate.toISOString(),
-    event_type: event.type || 'pessoal',
+    event_type: event.type || 'operational',
     priority: event.priority || 'medium',
     status: event.status || 'a_fazer'
   }

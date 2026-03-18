@@ -185,7 +185,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       // Buscar Eventos da Agenda
       const { data: events } = await supabase
         .from('agenda_events')
-        .select('id, title, start_date, event_type')
+        .select('id, title, start_date')
         .ilike('title', searchTerm)
         .limit(5)
 
@@ -197,7 +197,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
           type: 'agenda',
           url: `/agenda`,
           icon: <Calendar className="h-5 w-5 text-indigo-600" />,
-          metadata: event.event_type
+          metadata: event.title
         })
       })
 

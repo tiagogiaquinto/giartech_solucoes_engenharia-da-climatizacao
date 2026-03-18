@@ -60,7 +60,7 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
     time: '',
     endDate: '',
     endTime: '',
-    type: 'pessoal' as Event['type'],
+    type: 'operacional' as Event['type'],
     priority: 'medium' as Event['priority'],
     status: 'a_fazer' as Event['status'],
     location: '',
@@ -237,7 +237,7 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
           time: '',
           endDate: '',
           endTime: '',
-          type: 'pessoal',
+          type: 'operacional',
           priority: 'medium',
           status: 'a_fazer',
           location: '',
@@ -393,27 +393,31 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
   }
 
   const getEventTypeColor = (type: Event['type']) => {
-    const colors = {
-      'pessoal': 'bg-purple-600',
-      'networking': 'bg-blue-500',
+    const colors: Record<string, string> = {
+      'pessoal': 'bg-blue-500',
+      'networking': 'bg-teal-500',
       'financeiro': 'bg-green-500',
       'operacional': 'bg-orange-500',
+      'operational': 'bg-orange-500',
       'cobrar': 'bg-yellow-500',
-      'pagar': 'bg-red-500'
+      'pagar': 'bg-red-500',
+      'service_order': 'bg-orange-500',
     }
-    return colors[type as keyof typeof colors] || 'bg-gray-500'
+    return colors[type as string] || 'bg-gray-500'
   }
 
   const getEventTypeText = (type: Event['type']) => {
-    switch (type) {
-      case 'pessoal': return 'Pessoal'
-      case 'networking': return 'Networking'
-      case 'financeiro': return 'Financeiro'
-      case 'operacional': return 'Operacional'
-      case 'cobrar': return 'Cobrar'
-      case 'pagar': return 'Pagar'
-      default: return 'Evento'
+    const labels: Record<string, string> = {
+      'pessoal': 'Pessoal',
+      'networking': 'Networking',
+      'financeiro': 'Financeiro',
+      'operacional': 'Operacional',
+      'operational': 'Operacional',
+      'cobrar': 'Cobrar',
+      'pagar': 'Pagar',
+      'service_order': 'Ordem de Serviço',
     }
+    return labels[type as string] || (type ? String(type) : 'Evento')
   }
 
   const getPriorityColor = (priority: Event['priority']) => {
@@ -1862,10 +1866,10 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                     onChange={(e) => setNewEvent({...newEvent, type: e.target.value as Event['type']})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
+                    <option value="operacional">Operacional</option>
                     <option value="pessoal">Pessoal</option>
                     <option value="networking">Networking</option>
                     <option value="financeiro">Financeiro</option>
-                    <option value="operacional">Operacional</option>
                     <option value="cobrar">Cobrar</option>
                     <option value="pagar">Pagar</option>
                   </select>
@@ -2144,14 +2148,14 @@ const Calendar: React.FC<CalendarProps> = ({ onPremiumFeature }) => {
                     Tipo
                   </label>
                   <select
-                    value={showEditModal.type}
+                    value={showEditModal.type || 'operacional'}
                     onChange={(e) => setShowEditModal({...showEditModal, type: e.target.value as Event['type']})}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
+                    <option value="operacional">Operacional</option>
                     <option value="pessoal">Pessoal</option>
                     <option value="networking">Networking</option>
                     <option value="financeiro">Financeiro</option>
-                    <option value="operacional">Operacional</option>
                     <option value="cobrar">Cobrar</option>
                     <option value="pagar">Pagar</option>
                   </select>

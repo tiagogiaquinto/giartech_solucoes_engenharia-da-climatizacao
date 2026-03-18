@@ -403,7 +403,7 @@ export default function Customer360() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-800 text-sm truncate">{ev.title}</p>
-                    <p className="text-xs text-gray-500">{ev.event_type} — {formatDate(ev.start_date)}</p>
+                    <p className="text-xs text-gray-500">{formatDate(ev.start_date)}</p>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${
                     ev.status === 'concluido' ? 'bg-green-100 text-green-700' :

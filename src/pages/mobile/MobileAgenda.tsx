@@ -69,10 +69,17 @@ const MobileAgenda = () => {
   const getEventTypeColor = (type: string) => {
     const colors: Record<string, string> = {
       service: 'bg-blue-500',
-      meeting: 'bg-purple-500',
+      meeting: 'bg-teal-500',
       maintenance: 'bg-orange-500',
       training: 'bg-green-500',
-      other: 'bg-gray-500'
+      other: 'bg-gray-500',
+      operacional: 'bg-orange-500',
+      operational: 'bg-orange-500',
+      service_order: 'bg-orange-500',
+      pessoal: 'bg-blue-500',
+      financeiro: 'bg-green-500',
+      cobrar: 'bg-yellow-500',
+      pagar: 'bg-red-500',
     }
     return colors[type] || 'bg-gray-500'
   }
@@ -83,9 +90,16 @@ const MobileAgenda = () => {
       meeting: 'Reunião',
       maintenance: 'Manutenção',
       training: 'Treinamento',
-      other: 'Outro'
+      other: 'Outro',
+      operacional: 'Operacional',
+      operational: 'Operacional',
+      service_order: 'Ordem de Serviço',
+      pessoal: 'Pessoal',
+      financeiro: 'Financeiro',
+      cobrar: 'Cobrar',
+      pagar: 'Pagar',
     }
-    return labels[type] || type
+    return labels[type] || 'Evento'
   }
 
   const getStatusIcon = (status: string) => {
