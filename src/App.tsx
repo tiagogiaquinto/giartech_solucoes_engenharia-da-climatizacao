@@ -116,8 +116,10 @@ import PortalLogin from './pages/portal/PortalLogin'
 import PortalLayout from './pages/portal/PortalLayout'
 import PortalDashboardRouter from './pages/portal/PortalDashboardRouter'
 import CustomerPortalDocuments from './pages/portal/CustomerPortalDocuments'
+import CustomerPortalInventory from './pages/portal/CustomerPortalInventory'
 import CustomerServiceRequest from './pages/portal/CustomerServiceRequest'
 import PartnerPortalDashboard from './pages/portal/PartnerPortalDashboard'
+import PartnerPortalHistory from './pages/portal/PartnerPortalHistory'
 import { PortalProvider } from './contexts/PortalContext'
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
@@ -958,10 +960,11 @@ function App() {
               <PortalLayout>
                 <Routes>
                   <Route path="dashboard" element={<PortalDashboardRouter />} />
+                  <Route path="inventario" element={<CustomerPortalInventory />} />
                   <Route path="documentos" element={<CustomerPortalDocuments />} />
                   <Route path="solicitar" element={<CustomerServiceRequest />} />
                   <Route path="indicacoes" element={<PartnerPortalDashboard />} />
-                  <Route path="historico" element={<PartnerPortalDashboard />} />
+                  <Route path="historico" element={<PartnerPortalHistory />} />
                   <Route path="*" element={<PortalDashboardRouter />} />
                 </Routes>
               </PortalLayout>

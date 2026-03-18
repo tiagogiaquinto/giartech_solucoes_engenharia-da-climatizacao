@@ -2,7 +2,7 @@ import React from 'react'
 import { NavLink, useNavigate, Navigate } from 'react-router-dom'
 import {
   LayoutDashboard, FileText, MessageSquarePlus, Building2,
-  Users, LogOut, ChevronRight, BarChart2, History
+  Users, LogOut, ChevronRight, BarChart2, History, Package
 } from 'lucide-react'
 import { usePortal } from '../../contexts/PortalContext'
 import { Loader2 } from 'lucide-react'
@@ -31,14 +31,15 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
 
   const clienteLinks = [
     { to: '/portal/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/portal/inventario', icon: Package, label: 'Inventário' },
     { to: '/portal/documentos', icon: FileText, label: 'Documentos' },
-    { to: '/portal/solicitar', icon: MessageSquarePlus, label: 'Solicitar Servico' },
+    { to: '/portal/solicitar', icon: MessageSquarePlus, label: 'Solicitar Serviço' },
   ]
 
   const parceiroLinks = [
     { to: '/portal/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/portal/indicacoes', icon: BarChart2, label: 'Indicacoes' },
-    { to: '/portal/historico', icon: History, label: 'Historico' },
+    { to: '/portal/indicacoes', icon: BarChart2, label: 'Indicações' },
+    { to: '/portal/historico', icon: History, label: 'Histórico' },
   ]
 
   const links = isCliente ? clienteLinks : parceiroLinks
