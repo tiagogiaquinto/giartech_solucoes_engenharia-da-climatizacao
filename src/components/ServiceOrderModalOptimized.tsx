@@ -480,24 +480,7 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
         if (error) throw error
         orderId = data.id
 
-        const startDate = new Date(scheduledAt)
-        const endDate = new Date(startDate.getTime() + 60 * 60 * 1000)
         const serviceTitles = serviceItems.map(s => s.descricao).filter(Boolean).join(', ')
-        const agendaTitle = serviceTitles
-          ? `${selectedCustomer.nome_fantasia || selectedCustomer.nome_razao} — ${serviceTitles}`
-          : (selectedCustomer.nome_fantasia || selectedCustomer.nome_razao)
-
-        await supabase.from('agenda_events').insert({
-          title: agendaTitle,
-          description: formData.description || null,
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
-          event_type: 'operacional',
-          customer_id: selectedCustomer.id,
-          service_order_id: orderId,
-          status: 'a_fazer',
-          priority: 'medium'
-        })
 
         // Auto-create CRM opportunity when OS is saved
         try {
