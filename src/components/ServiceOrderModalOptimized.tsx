@@ -169,7 +169,7 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
           customer:customers(*),
           items:service_order_items(*,
             materiais:service_order_materials(*),
-            funcionarios:service_order_labor(*, employee:employees(*))
+            funcionarios:service_order_labor(*)
           )
         `)
         .eq('id', id)
@@ -178,7 +178,10 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
       if (error) throw error
       if (!order) return
 
-      setSelectedCustomer(order.customer)
+      const customerData = order.customer || (order.customer_id
+        ? { id: order.customer_id, nome_razao: order.client_name || '', telefone: order.client_phone || '', email: order.client_email || '' }
+        : null)
+      setSelectedCustomer(customerData)
       setFormData({
         description: order.description || '',
         scheduled_at: order.scheduled_at ? order.scheduled_at.split('T')[0] : '',
@@ -201,33 +204,41 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
           preco_unitario: parseFloat(item.preco_unitario || 0),
           preco_total: parseFloat(item.preco_total || 0),
           tempo_estimado_minutos: item.tempo_estimado_minutos || 0,
-          materiais: (item.materiais || []).map((m: any) => ({
-            id: m.id,
-            material_id: m.material_id,
-            nome: m.nome || m.material?.nome || 'Material',
-            quantidade: parseFloat(m.quantidade || 0),
-            unidade_medida: m.unidade_medida || 'un',
-            preco_compra_unitario: parseFloat(m.preco_compra_unitario || 0),
-            preco_venda_unitario: parseFloat(m.preco_venda_unitario || 0),
-            preco_compra: parseFloat(m.preco_compra_unitario || 0) * parseFloat(m.quantidade || 0),
-            preco_venda: parseFloat(m.preco_venda_unitario || 0) * parseFloat(m.quantidade || 0),
-            custo_total: parseFloat(m.custo_total || 0),
-            valor_total: parseFloat(m.valor_total || 0),
-            lucro: parseFloat(m.valor_total || 0) - parseFloat(m.custo_total || 0),
-            tipo_uso: (m.tipo_uso || 'consumo') as 'consumo' | 'locacao',
-            observacoes_tecnicas: m.observacoes_tecnicas || '',
-            preco_negociado: m.preco_unitario_negociado ? parseFloat(m.preco_unitario_negociado) : null,
-            quantidade_estoque: parseFloat(m.quantidade_disponivel_estoque || 0),
-            alerta_estoque: m.alerta_estoque || false,
-            from_inventory: !!m.material_id
-          })),
+          materiais: (item.materiais || []).map((m: any) => {
+            const nome = m.nome_material || m.material_name || m.nome || 'Material'
+            const qtd = parseFloat(m.quantidade || m.quantity || 0)
+            const precoCompraUnit = parseFloat(m.preco_compra || m.unit_cost_at_time || m.unit_cost || 0)
+            const precoVendaUnit = parseFloat(m.preco_venda || m.unit_sale_price || m.unit_price || 0)
+            const custoTotal = parseFloat(m.custo_total || m.total_cost || 0) || precoCompraUnit * qtd
+            const valorTotal = parseFloat(m.valor_total || m.total_sale_price || m.total_price || 0) || precoVendaUnit * qtd
+            return {
+              id: m.id,
+              material_id: m.material_id,
+              nome,
+              quantidade: qtd,
+              unidade_medida: m.material_unit || m.unidade_medida || 'un',
+              preco_compra_unitario: precoCompraUnit,
+              preco_venda_unitario: precoVendaUnit,
+              preco_compra: precoCompraUnit * qtd,
+              preco_venda: precoVendaUnit * qtd,
+              custo_total: custoTotal,
+              valor_total: valorTotal,
+              lucro: valorTotal - custoTotal,
+              tipo_uso: (m.tipo_uso || 'consumo') as 'consumo' | 'locacao',
+              observacoes_tecnicas: m.observacoes_tecnicas || '',
+              preco_negociado: m.preco_unitario_negociado ? parseFloat(m.preco_unitario_negociado) : null,
+              quantidade_estoque: parseFloat(m.quantidade_disponivel_estoque || 0),
+              alerta_estoque: m.alerta_estoque || false,
+              from_inventory: !!m.material_id
+            }
+          }),
           funcionarios: (item.funcionarios || []).map((f: any) => ({
             id: f.id,
-            staff_id: f.employee_id,
-            nome: f.employee?.name || f.employee?.nome || 'Funcionário',
-            tempo_minutos: f.tempo_minutos || 0,
-            custo_hora: parseFloat(f.custo_hora || 0),
-            custo_total: parseFloat(f.custo_total || 0)
+            staff_id: f.staff_id || f.employee_id || '',
+            nome: f.nome_funcionario || f.employee_name || f.description || 'Funcionário',
+            tempo_minutos: f.tempo_minutos || Math.round((f.hours || 0) * 60),
+            custo_hora: parseFloat(f.custo_hora || f.hourly_rate || 0),
+            custo_total: parseFloat(f.custo_total || f.total_cost || 0)
           })),
           custo_materiais: parseFloat(item.custo_materiais || 0),
           custo_mao_obra: parseFloat(item.custo_mao_obra || 0),
