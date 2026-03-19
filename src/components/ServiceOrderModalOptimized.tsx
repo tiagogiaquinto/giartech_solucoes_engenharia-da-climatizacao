@@ -486,12 +486,12 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
         try {
           const { data: pipelines } = await supabase
             .from('crm_pipelines')
-            .select('id, stages:crm_stages(id, name, position)')
+            .select('id, stages:crm_stages(id, nome, ordem)')
             .limit(1)
             .maybeSingle()
 
           if (pipelines) {
-            const stages = (pipelines.stages || []).sort((a: any, b: any) => a.position - b.position)
+            const stages = (pipelines.stages || []).sort((a: any, b: any) => a.ordem - b.ordem)
             const firstStage = stages[0]
             if (firstStage) {
               const { data: opp } = await supabase
