@@ -4,6 +4,16 @@ import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 export type UserRole = 'super_admin' | 'admin' | 'manager' | 'technician' | 'sales' | 'financial' | 'viewer'
 
+export const ROLE_REDIRECT: Record<UserRole, string> = {
+  super_admin: '/',
+  admin: '/',
+  manager: '/',
+  sales: '/',
+  financial: '/',
+  technician: '/mobile',
+  viewer: '/portal/dashboard'
+}
+
 export interface ModulePermission {
   module_code: string
   can_view: boolean
@@ -27,6 +37,7 @@ interface UserProfile {
   is_active: boolean
   permissions: ModulePermission[]
   sensitive: SensitivePermissions
+  employee_id?: string
 }
 
 interface User extends UserProfile {
@@ -53,6 +64,7 @@ interface UserContextType {
   onPremiumFeature?: (feature: string) => void
   refreshPermissions: () => Promise<void>
   employee_id?: string
+  redirectPath: string
 }
 
 const SUPER_ADMIN_EMAIL = 'diretor.giartechsolucoes@gmail.com'
@@ -150,6 +162,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         sensitive = { can_view_profit: true, can_apply_discount: true, can_adjust_stock: true }
       }
 
+      let employee_id: string | undefined
+      try {
+        const { data: empData } = await supabase
+          .from('employees')
+          .select('id')
+          .eq('user_id', authUser.id)
+          .maybeSingle()
+        employee_id = empData?.id
+      } catch { /* no employee linked */ }
+
       const userProfile: UserProfile = {
         id: authUser.id,
         email: authUser.email || '',
@@ -158,7 +180,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         role: resolvedRole,
         is_active: isActive,
         permissions,
-        sensitive
+        sensitive,
+        employee_id
       }
 
       setProfile(userProfile)
@@ -183,6 +206,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const isExternal = profile?.role === 'viewer'
   const isPremium = isManager
   const isEnterprise = isAdmin
+  const redirectPath = profile?.role ? (ROLE_REDIRECT[profile.role] ?? '/') : '/'
 
   const hasModuleAccess = (
     moduleCode: string,
@@ -251,7 +275,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       login,
       logout,
       onPremiumFeature,
-      refreshPermissions
+      refreshPermissions,
+      employee_id: profile?.employee_id,
+      redirectPath
     }}>
       {children}
     </UserContext.Provider>

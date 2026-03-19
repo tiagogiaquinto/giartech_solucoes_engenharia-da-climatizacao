@@ -19,10 +19,29 @@ export default defineConfig({
         name: 'Giartech - Sistema de OS Integrado',
         short_name: 'Giartech',
         description: 'Sistema de gerenciamento de ordens de serviço',
-        theme_color: '#0ea5e9',
-        background_color: '#ffffff',
+        theme_color: '#0f567d',
+        background_color: '#0f1623',
         display: 'standalone',
         orientation: 'portrait-primary',
+        start_url: '/login',
+        scope: '/',
+        lang: 'pt-BR',
+        shortcuts: [
+          {
+            name: 'Minhas Ordens',
+            short_name: 'Ordens',
+            description: 'Ver ordens de serviço',
+            url: '/mobile/orders',
+            icons: [{ src: '/icon.png', sizes: '96x96' }]
+          },
+          {
+            name: 'Agenda',
+            short_name: 'Agenda',
+            description: 'Ver agenda do dia',
+            url: '/mobile/agenda',
+            icons: [{ src: '/icon.png', sizes: '96x96' }]
+          }
+        ],
         icons: [
           {
             src: '/icon-192x192.png',

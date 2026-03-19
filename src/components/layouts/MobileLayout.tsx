@@ -29,10 +29,10 @@ const MobileLayout = () => {
 
   const mainTabs = [
     { id: 'home', label: 'Início', icon: Home, path: '/mobile', color: 'blue' },
-    { id: 'agenda', label: 'Agenda', icon: Calendar, path: '/mobile/agenda', color: 'purple' },
-    { id: 'orders', label: 'OS', icon: ClipboardList, path: '/mobile/orders', color: 'green' },
-    { id: 'purchases', label: 'Compras', icon: ShoppingCart, path: '/mobile/purchases', color: 'orange' },
-    { id: 'routes', label: 'Rotas', icon: MapPin, path: '/mobile/routes', color: 'red' }
+    { id: 'orders', label: 'Ordens', icon: ClipboardList, path: '/mobile/orders', color: 'green' },
+    { id: 'agenda', label: 'Agenda', icon: Calendar, path: '/mobile/agenda', color: 'cyan' },
+    { id: 'routes', label: 'Rotas', icon: MapPin, path: '/mobile/routes', color: 'orange' },
+    { id: 'profile', label: 'Perfil', icon: User, path: '/mobile/profile', color: 'gray' }
   ]
 
   useEffect(() => {
@@ -68,26 +68,38 @@ const MobileLayout = () => {
   const getTabColor = (tab: any) => {
     const colors: Record<string, string> = {
       blue: 'from-blue-500 to-blue-600',
-      purple: 'from-purple-500 to-purple-600',
+      cyan: 'from-cyan-500 to-cyan-600',
       green: 'from-green-500 to-green-600',
       orange: 'from-orange-500 to-orange-600',
-      red: 'from-red-500 to-red-600'
+      red: 'from-red-500 to-red-600',
+      gray: 'from-gray-500 to-gray-600'
     }
     return colors[tab.color] || colors.blue
   }
 
-  const handleLogout = () => {
-    logout()
-    navigate('/mobile/login')
+  const getTabActiveIcon = (tab: any) => {
+    const colors: Record<string, string> = {
+      blue: 'text-blue-500',
+      cyan: 'text-cyan-500',
+      green: 'text-green-500',
+      orange: 'text-orange-500',
+      red: 'text-red-500',
+      gray: 'text-gray-600'
+    }
+    return colors[tab.color] || 'text-blue-500'
+  }
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login', { replace: true })
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 pb-24">
-      {/* Premium Header */}
+    <div className="min-h-screen bg-[#f0f4f8] pb-24">
+      {/* Header */}
       <div className="relative">
-        <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white sticky top-0 z-30 shadow-2xl">
-          {/* Decorative Top Bar */}
-          <div className="h-1 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-500" />
+        <div className="bg-gradient-to-r from-[#0f1e3d] to-[#0a3d6b] text-white sticky top-0 z-30 shadow-xl">
+          <div className="h-0.5 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500" />
 
           <div className="flex items-center justify-between p-4">
             {/* User Info */}
@@ -104,11 +116,11 @@ const MobileLayout = () => {
               </motion.div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-base truncate">
-                  {user?.name?.split(' ')[0] || 'Técnico'}
+                  {user?.name?.split(' ').slice(0, 2).join(' ') || 'Técnico'}
                 </p>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <p className="text-xs text-blue-100">Online</p>
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                  <p className="text-xs text-blue-200 capitalize">{user?.role === 'technician' ? 'Técnico de Campo' : user?.role || 'Online'}</p>
                 </div>
               </div>
             </motion.div>
@@ -277,61 +289,36 @@ const MobileLayout = () => {
         )}
       </AnimatePresence>
 
-      {/* Main Content with Premium Padding */}
-      <div className="p-4">
-        <Outlet />
-      </div>
-
-      {/* Premium Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-30">
-        {/* Glass Effect Background */}
-        <div className="bg-white/90 backdrop-blur-xl border-t border-gray-200/50 shadow-2xl">
-          <div className="flex items-center justify-around px-2 py-3">
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 safe-area-bottom">
+        <div className="bg-white border-t border-gray-200 shadow-2xl">
+          <div className="flex items-center justify-around px-1 pt-2 pb-3">
             {mainTabs.map((tab) => {
               const isActive = isActiveTab(tab.path)
               return (
                 <motion.button
                   key={tab.id}
                   onClick={() => navigate(tab.path)}
-                  whileTap={{ scale: 0.9 }}
-                  className="relative flex flex-col items-center gap-1 px-3 py-2 rounded-2xl transition-all flex-1"
+                  whileTap={{ scale: 0.92 }}
+                  className="relative flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl flex-1 min-w-0"
                 >
                   {isActive && (
                     <motion.div
-                      layoutId="activeTab"
-                      className={`absolute inset-0 bg-gradient-to-br ${getTabColor(tab)} rounded-2xl opacity-10`}
-                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      layoutId="activeMobileTab"
+                      className="absolute inset-0 bg-blue-50 rounded-xl"
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                     />
                   )}
 
                   <motion.div
-                    className={`relative ${
-                      isActive ? 'text-blue-600' : 'text-gray-500'
-                    }`}
-                    animate={{
-                      scale: isActive ? 1.1 : 1,
-                    }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    className={`relative ${isActive ? getTabActiveIcon(tab) : 'text-gray-400'}`}
+                    animate={{ scale: isActive ? 1.1 : 1, y: isActive ? -1 : 0 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   >
-                    <tab.icon
-                      className="w-6 h-6"
-                      strokeWidth={isActive ? 2.5 : 2}
-                    />
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeIndicator"
-                        className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-gradient-to-r ${getTabColor(tab)} rounded-full`}
-                      />
-                    )}
+                    <tab.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
                   </motion.div>
 
-                  <span
-                    className={`text-xs font-semibold transition-colors ${
-                      isActive
-                        ? 'text-blue-600'
-                        : 'text-gray-500'
-                    }`}
-                  >
+                  <span className={`text-[10px] font-semibold truncate w-full text-center transition-colors ${isActive ? getTabActiveIcon(tab) : 'text-gray-400'}`}>
                     {tab.label}
                   </span>
                 </motion.button>
@@ -339,9 +326,11 @@ const MobileLayout = () => {
             })}
           </div>
         </div>
+      </div>
 
-        {/* Decorative Bottom Bar */}
-        <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+      {/* Main Content */}
+      <div className="p-4">
+        <Outlet />
       </div>
     </div>
   )

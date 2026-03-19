@@ -155,6 +155,52 @@ const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; m
   return <>{children}</>
 };
 
+const MobileProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useUser()
+  const location = useLocation()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0f172a]">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  return <>{children}</>
+}
+
+const RoleBasedHome = () => {
+  const { user, profile, isLoading } = useUser()
+  const location = useLocation()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (profile?.role === 'technician') {
+    return <Navigate to="/mobile" replace />
+  }
+
+  if (profile?.role === 'viewer') {
+    return <Navigate to="/portal/dashboard" replace />
+  }
+
+  return <Navigate to="/dashboard" replace />
+};
+
 function App() {
   const [isLoading, setIsLoading] = useState(true)
   const [showTutorial, setShowTutorial] = useState(false)
@@ -300,6 +346,10 @@ function App() {
           <Route path="/pricing" element={<PricingPlans />} />
           
           <Route path="/" element={
+            <RoleBasedHome />
+          } />
+
+          <Route path="/dashboard" element={
             <ProtectedRoute>
               <WebLayout>
                 <CFODashboard />
@@ -364,9 +414,9 @@ function App() {
 
           {/* Mobile App Routes */}
           <Route path="/mobile" element={
-            <ProtectedRoute>
+            <MobileProtectedRoute>
               <MobileLayout />
-            </ProtectedRoute>
+            </MobileProtectedRoute>
           }>
             <Route index element={<MobileHome />} />
             <Route path="agenda" element={<MobileAgenda />} />
