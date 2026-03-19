@@ -100,6 +100,7 @@ import MobileAgenda from './pages/mobile/MobileAgenda'
 import MobileLibrary from './pages/mobile/MobileLibrary'
 import MobileRoutes from './pages/mobile/MobileRoutes'
 import MobilePurchases from './pages/mobile/MobilePurchases'
+import MobileOSExecution from './pages/mobile/MobileOSExecution'
 import SalaryManagement from './pages/SalaryManagement'
 import MobileLogin from './pages/mobile/MobileLogin'
 import OSDistribution from './pages/OSDistribution'
@@ -370,6 +371,7 @@ function App() {
             <Route index element={<MobileHome />} />
             <Route path="agenda" element={<MobileAgenda />} />
             <Route path="orders" element={<MobileOrders />} />
+            <Route path="orders/:id/execute" element={<MobileOSExecution />} />
             <Route path="purchases" element={<MobilePurchases />} />
             <Route path="library" element={<MobileLibrary />} />
             <Route path="routes" element={<MobileRoutes />} />

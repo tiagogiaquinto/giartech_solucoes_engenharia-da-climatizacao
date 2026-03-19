@@ -49,6 +49,7 @@ const MobileOrders = () => {
             status,
             scheduled_date,
             priority,
+            progress_percent,
             customers (
               name,
               phone,
@@ -194,7 +195,7 @@ const MobileOrders = () => {
             return (
               <motion.button
                 key={assignment.id}
-                onClick={() => navigate(`/service-orders/${order.id}/mobile`)}
+                onClick={() => navigate(`/mobile/orders/${order.id}/execute`)}
                 whileTap={{ scale: 0.98 }}
                 className={`w-full bg-white rounded-2xl p-5 shadow-lg text-left border-l-4 ${
                   getPriorityColor(order.priority)
@@ -249,6 +250,22 @@ const MobileOrders = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Progress Bar */}
+                {typeof order.progress_percent === 'number' && order.progress_percent > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-500">Progresso</span>
+                      <span className="text-xs font-bold text-gray-700">{Math.round(order.progress_percent)}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${order.progress_percent >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+                        style={{ width: `${Math.min(order.progress_percent, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Priority Badge */}
                 {order.priority && order.priority !== 'normal' && (
