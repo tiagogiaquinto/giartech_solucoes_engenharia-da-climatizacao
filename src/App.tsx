@@ -425,6 +425,7 @@ function App() {
             <Route path="purchases" element={<MobilePurchases />} />
             <Route path="library" element={<MobileLibrary />} />
             <Route path="routes" element={<MobileRoutes />} />
+            <Route path="chat" element={<InternalChat />} />
             <Route path="profile" element={<Profile />} />
           </Route>
 
