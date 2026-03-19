@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Plus, Trash2, Package, Users, DollarSign, Info, Calculator, Shield, User, Calendar, FileText, Clock, Search, Receipt, Download, AlertTriangle, ShoppingCart, TrendingUp, TrendingDown, Percent } from 'lucide-react'
+import { X, Save, Plus, Trash2, Package, Users, DollarSign, Info, Calculator, Shield, User, Calendar, FileText, Clock, Search, Receipt, Download, AlertTriangle, ShoppingCart, TrendingUp, TrendingDown, Percent, ListChecks } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import ServiceOrderCostManager from './ServiceOrderCostManager'
 import TemplateSelectorModal from './TemplateSelectorModal'
 import { fillTemplate } from '../services/templateFillService'
 import { PortalAccountSelector } from './ServiceOrder/PortalAccountSelector'
 import { useUser } from '../contexts/UserContext'
+import ChecklistPlanner, { ChecklistStep } from './ServiceOrder/ChecklistPlanner'
 
 interface TaxRate {
   id: string
@@ -69,16 +70,17 @@ interface ServiceOrderModalProps {
   onClose: () => void
   onSave: () => void
   orderId?: string
+  budgetId?: string
 }
 
 const STORAGE_KEY = 'serviceOrderDraft'
 
-const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderModalProps) => {
+const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId, budgetId }: ServiceOrderModalProps) => {
   const { profile } = useUser()
   const canEditStakeholders = !orderId || ['super_admin', 'admin', 'manager'].includes(profile?.role || '')
   const [portalAccountId, setPortalAccountId] = useState('')
   const [partnerAccountId, setPartnerAccountId] = useState('')
-  const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'pagamento' | 'garantia' | 'contrato'>('dados')
+  const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'etapas' | 'pagamento' | 'garantia' | 'contrato'>('dados')
   const [loading, setLoading] = useState(false)
   const [materialSearch, setMaterialSearch] = useState('')
   const [laborSearch, setLaborSearch] = useState('')
@@ -144,6 +146,10 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [loadedTemplateHtml, setLoadedTemplateHtml] = useState<string>('')
 
+  // Checklist de etapas
+  const [checklistSteps, setChecklistSteps] = useState<ChecklistStep[]>([])
+  const [customerEquipment, setCustomerEquipment] = useState<any[]>([])
+
   useEffect(() => {
     if (isOpen) {
       loadData()
@@ -169,6 +175,42 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       setSelectedCustomer(customer || null)
     }
   }, [formData.customer_id, customers])
+
+  useEffect(() => {
+    if (formData.customer_id) {
+      supabase
+        .from('customer_equipment')
+        .select('id, tipo_equipamento, marca, modelo, capacidade')
+        .eq('customer_id', formData.customer_id)
+        .then(({ data }) => setCustomerEquipment(data || []))
+    } else {
+      setCustomerEquipment([])
+    }
+  }, [formData.customer_id])
+
+  useEffect(() => {
+    if (!isOpen || !budgetId || checklistSteps.length > 0) return
+    supabase
+      .from('budgets')
+      .select('data, customer_name')
+      .eq('id', budgetId)
+      .maybeSingle()
+      .then(({ data: budget }) => {
+        if (!budget?.data) return
+        const budgetData = budget.data as any
+        const items: Array<{ description?: string; name?: string; descricao?: string }> =
+          budgetData.items || budgetData.services || budgetData.serviceItems || []
+        if (items.length === 0) return
+        const imported: ChecklistStep[] = items
+          .filter(item => item.description || item.name || item.descricao)
+          .map((item, i) => ({
+            id: Math.random().toString(36).slice(2) + i,
+            description: (item.description || item.name || item.descricao || '').toString(),
+            position: i
+          }))
+        if (imported.length > 0) setChecklistSteps(imported)
+      })
+  }, [isOpen, budgetId])
 
   const loadData = async () => {
     try {
@@ -204,11 +246,12 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       // Adicionar timestamp para evitar cache
       const cacheBuster = `?_t=${Date.now()}`
 
-      const [orderRes, itemsRes, materialsRes, teamRes] = await Promise.all([
+      const [orderRes, itemsRes, materialsRes, teamRes, checklistRes] = await Promise.all([
         supabase.from('service_orders').select('*').eq('id', id).single(),
         supabase.from('service_order_items').select('*').eq('service_order_id', id).order('created_at', { ascending: true }),
         supabase.from('service_order_materials').select('*').eq('service_order_id', id),
-        supabase.from('service_order_team').select('*').eq('service_order_id', id)
+        supabase.from('service_order_team').select('*').eq('service_order_id', id),
+        supabase.from('os_checklist_items').select('*').eq('os_id', id).order('position', { ascending: true })
       ])
 
       console.log('🔄 RELOAD FORÇADO - Items carregados:', itemsRes.data?.length || 0)
@@ -231,6 +274,19 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       // Carregar portal/partner
       setPortalAccountId(order.portal_account_id || '')
       setPartnerAccountId(order.partner_account_id || '')
+
+      // Carregar checklist de etapas
+      if (checklistRes.data && checklistRes.data.length > 0) {
+        setChecklistSteps(checklistRes.data.map((item: any) => ({
+          id: item.id,
+          description: item.description,
+          equipment_id: item.equipment_id,
+          technical_note: item.technical_note,
+          position: item.position
+        })))
+      } else {
+        setChecklistSteps([])
+      }
 
       // Carregar dados básicos da OS
       setFormData({
@@ -1038,6 +1094,20 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
       // Equipe será salva quando implementarmos o state teamMembers
       console.log('ℹ️ Salvamento de equipe será implementado')
 
+      // Salvar checklist de etapas
+      if (checklistSteps.length > 0) {
+        await supabase.from('os_checklist_items').delete().eq('os_id', orderIdToUse)
+        const checklistInserts = checklistSteps.map((step, i) => ({
+          os_id: orderIdToUse,
+          description: step.description,
+          equipment_id: (step as any).equipment_id || null,
+          technical_note: (step as any).technical_note || null,
+          is_completed: false,
+          position: i
+        }))
+        await supabase.from('os_checklist_items').insert(checklistInserts)
+      }
+
       console.log('✅ OS salva com sucesso! ID:', orderIdToUse)
       clearDraft()
       alert('✅ Ordem de Serviço salva com sucesso!')
@@ -1111,6 +1181,23 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
             }`}>
             <Package className="h-5 w-5" />
             🔧 Serviços e Materiais
+          </button>
+          <button
+            onClick={() => setActiveTab('etapas')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'etapas'
+                ? 'bg-orange-500 text-white border-b-4 border-orange-600'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <ListChecks className="h-5 w-5" />
+            Etapas
+            {checklistSteps.length > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                activeTab === 'etapas' ? 'bg-white/30 text-white' : 'bg-orange-100 text-orange-700'
+              }`}>
+                {checklistSteps.length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab('pagamento')}
@@ -1490,6 +1577,50 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId }: ServiceOrderMod
                     </div>
                   </div>
                 ))}
+              </motion.div>
+            )}
+
+            {activeTab === 'etapas' && (
+              <motion.div key="etapas" initial={{opacity: 0, x: -20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: 20}} className="space-y-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <ListChecks className="h-5 w-5 text-orange-500" />
+                      Etapas do Serviço
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Defina o checklist passo a passo que o técnico irá seguir no campo. Use os atalhos ou adicione etapas manualmente.
+                    </p>
+                  </div>
+                  {checklistSteps.length === 0 && (
+                    <span className="flex-shrink-0 px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-xs font-semibold">
+                      Nenhuma etapa definida
+                    </span>
+                  )}
+                  {checklistSteps.length > 0 && (
+                    <span className="flex-shrink-0 px-3 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-semibold">
+                      {checklistSteps.length} etapa{checklistSteps.length !== 1 ? 's' : ''} planejada{checklistSteps.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+
+                <ChecklistPlanner
+                  steps={checklistSteps}
+                  onChange={setChecklistSteps}
+                  customerEquipment={customerEquipment}
+                />
+
+                {checklistSteps.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-blue-800 mb-1">Como funciona a transferência</p>
+                    <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                      <li>Ao salvar, cada etapa vira um item interativo no celular do técnico</li>
+                      <li>O técnico marca as etapas conforme executa o serviço</li>
+                      <li>O progresso atualiza em tempo real aqui no escritório</li>
+                      <li>A OS só pode ser finalizada quando 100% das etapas forem concluídas</li>
+                    </ol>
+                  </div>
+                )}
               </motion.div>
             )}
 
