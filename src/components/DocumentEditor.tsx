@@ -1,24 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import {
-  Save,
-  X,
-  Eye,
-  Edit3,
-  Download,
-  Share2,
-  FileText,
-  Plus,
-  Trash2,
-  Copy,
-  Clock,
-  User,
-  MessageSquare,
-  Check,
-  AlertCircle,
-  Settings,
-  Printer
-} from 'lucide-react'
+import { Save, X, Eye, FileEdit as Edit3, Download, Share2, FileText, Plus, Trash2, Copy, Clock, User, MessageSquare, Check, AlertCircle, Settings, Printer } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
@@ -67,7 +49,7 @@ export default function DocumentEditor({ document, template, onClose, onSave, mo
     const { data } = await supabase
       .from('company_document_config')
       .select('*')
-      .single()
+      .maybeSingle()
     setCompanyConfig(data)
   }
 

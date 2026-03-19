@@ -129,9 +129,10 @@ export default function AdvancedDocumentEditorPro({
         .from('documents')
         .select('*')
         .eq('id', document.id)
-        .single()
+        .maybeSingle()
 
       if (error) throw error
+      if (!data) return
 
       setTitle(data.title || '')
       setContent(data.content || '')
