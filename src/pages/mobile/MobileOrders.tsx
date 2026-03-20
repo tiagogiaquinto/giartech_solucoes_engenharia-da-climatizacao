@@ -6,15 +6,28 @@ import {
   Calendar,
   MapPin,
   Clock,
-  Filter,
   Search,
   AlertCircle,
   CheckCircle,
-  PlayCircle
+  PlayCircle,
+  Navigation,
+  Phone,
+  ChevronRight
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
 import { formatDateSafe } from '../../utils/format'
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  pending: { label: 'Pendente', color: 'text-amber-700', bg: 'bg-amber-100' },
+  assigned: { label: 'Atribuída', color: 'text-blue-700', bg: 'bg-blue-100' },
+  in_progress: { label: 'Em Execução', color: 'text-blue-700', bg: 'bg-blue-100' },
+  em_andamento: { label: 'Em Execução', color: 'text-blue-700', bg: 'bg-blue-100' },
+  aguardando_material: { label: 'Aguard. Material', color: 'text-orange-700', bg: 'bg-orange-100' },
+  aguardando_aprovacao: { label: 'Aguard. Aprovação', color: 'text-yellow-700', bg: 'bg-yellow-100' },
+  completed: { label: 'Concluída', color: 'text-emerald-700', bg: 'bg-emerald-100' },
+  concluido: { label: 'Concluída', color: 'text-emerald-700', bg: 'bg-emerald-100' }
+}
 
 const MobileOrders = () => {
   const navigate = useNavigate()
@@ -34,33 +47,42 @@ const MobileOrders = () => {
   }, [orders, filter, searchTerm])
 
   const loadOrders = async () => {
-    if (!user?.employee_id) return
+    if (!user?.employee_id) {
+      setLoading(false)
+      return
+    }
 
     try {
       setLoading(true)
 
-      const { data, error } = await supabase
+      const { data: assignments } = await supabase
         .from('service_order_assignments')
-        .select(`
-          *,
-          service_orders (
-            id,
-            order_number,
-            status,
-            scheduled_date,
-            priority,
-            progress_percent,
-            customers (
-              name,
-              phone,
-              customer_addresses (street, number, city)
-            )
-          )
-        `)
+        .select('service_order_id, status, assigned_at')
         .eq('employee_id', user.employee_id)
         .order('assigned_at', { ascending: false })
 
-      setOrders(data || [])
+      if (!assignments?.length) {
+        setOrders([])
+        setLoading(false)
+        return
+      }
+
+      const osIds = assignments.map(a => a.service_order_id)
+
+      const { data: osData } = await supabase
+        .from('v_service_orders_technician')
+        .select('*')
+        .in('id', osIds)
+
+      const merged = assignments.map(assignment => {
+        const os = osData?.find(o => o.id === assignment.service_order_id)
+        return {
+          ...assignment,
+          service_order: os
+        }
+      }).filter(a => a.service_order)
+
+      setOrders(merged)
     } catch (err) {
       console.error('Error loading orders:', err)
     } finally {
@@ -71,45 +93,42 @@ const MobileOrders = () => {
   const filterOrders = () => {
     let filtered = orders
 
-    if (filter !== 'all') {
-      filtered = filtered.filter(o => o.status === filter)
+    if (filter === 'pending') {
+      filtered = filtered.filter(o => ['pending', 'assigned', 'aguardando_material', 'aguardando_aprovacao'].includes(o.status))
+    } else if (filter === 'in_progress') {
+      filtered = filtered.filter(o => ['in_progress', 'em_andamento'].includes(o.status))
+    } else if (filter === 'completed') {
+      filtered = filtered.filter(o => ['completed', 'concluido'].includes(o.status))
     }
 
     if (searchTerm) {
+      const term = searchTerm.toLowerCase()
       filtered = filtered.filter(o =>
-        o.service_orders.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.service_orders.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+        o.service_order?.order_number?.toLowerCase().includes(term) ||
+        o.service_order?.client_name?.toLowerCase().includes(term) ||
+        o.service_order?.customer_name?.toLowerCase().includes(term)
       )
     }
 
     setFilteredOrders(filtered)
   }
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      pending: 'bg-yellow-500',
-      in_progress: 'bg-blue-500',
-      completed: 'bg-green-500',
-      cancelled: 'bg-red-500'
-    }
-    return colors[status] || 'bg-gray-500'
+  const openGPS = (address: string, city: string) => {
+    const query = encodeURIComponent(`${address}, ${city}`)
+    window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank')
   }
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      pending: 'Pendente',
-      in_progress: 'Em Execução',
-      completed: 'Concluída',
-      cancelled: 'Cancelada'
-    }
-    return labels[status] || status
+  const callClient = (phone: string) => {
+    if (!phone) return
+    const cleaned = phone.replace(/\D/g, '')
+    window.open(`tel:${cleaned}`, '_self')
   }
 
   const getStatusIcon = (status: string) => {
-    if (status === 'pending') return <AlertCircle className="w-5 h-5" />
-    if (status === 'in_progress') return <PlayCircle className="w-5 h-5" />
-    if (status === 'completed') return <CheckCircle className="w-5 h-5" />
-    return <ClipboardList className="w-5 h-5" />
+    if (['pending', 'assigned', 'aguardando_material', 'aguardando_aprovacao'].includes(status)) return <AlertCircle className="w-4 h-4" />
+    if (['in_progress', 'em_andamento'].includes(status)) return <PlayCircle className="w-4 h-4" />
+    if (['completed', 'concluido'].includes(status)) return <CheckCircle className="w-4 h-4" />
+    return <ClipboardList className="w-4 h-4" />
   }
 
   const getPriorityColor = (priority: string) => {
@@ -118,54 +137,55 @@ const MobileOrders = () => {
     return 'border-l-blue-500'
   }
 
+  const pendingCount = orders.filter(o => ['pending', 'assigned', 'aguardando_material', 'aguardando_aprovacao'].includes(o.status)).length
+  const inProgressCount = orders.filter(o => ['in_progress', 'em_andamento'].includes(o.status)).length
+  const completedCount = orders.filter(o => ['completed', 'concluido'].includes(o.status)).length
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-500">Carregando ordens...</p>
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">Carregando ordens...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4 pb-8">
-      {/* Header */}
+    <div className="space-y-4 pb-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Minhas OS</h1>
-        <div className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-bold">
+        <h1 className="text-xl font-bold text-gray-900">Minhas Ordens</h1>
+        <div className="px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-bold">
           {filteredOrders.length}
         </div>
       </div>
 
-      {/* Search */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
           placeholder="Buscar por OS ou cliente..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base"
+          className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 text-sm"
         />
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2">
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
         {[
           { id: 'all', label: 'Todas', count: orders.length },
-          { id: 'pending', label: 'Pendentes', count: orders.filter(o => o.status === 'pending').length },
-          { id: 'in_progress', label: 'Em Execução', count: orders.filter(o => o.status === 'in_progress').length },
-          { id: 'completed', label: 'Concluídas', count: orders.filter(o => o.status === 'completed').length }
+          { id: 'pending', label: 'Pendentes', count: pendingCount },
+          { id: 'in_progress', label: 'Executando', count: inProgressCount },
+          { id: 'completed', label: 'Concluídas', count: completedCount }
         ].map((f) => (
           <button
             key={f.id}
             onClick={() => setFilter(f.id as any)}
-            className={`flex-shrink-0 px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
               filter === f.id
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-white text-gray-600 border-2 border-gray-200'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white text-gray-600 border border-gray-200'
             }`}
           >
             {f.label} ({f.count})
@@ -173,116 +193,117 @@ const MobileOrders = () => {
         ))}
       </div>
 
-      {/* Orders List */}
       {filteredOrders.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 text-center shadow-lg">
-          <ClipboardList className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ClipboardList className="w-8 h-8 text-gray-300" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-1">
             {searchTerm ? 'Nenhum resultado' : 'Nenhuma OS encontrada'}
           </h3>
-          <p className="text-gray-600">
-            {searchTerm
-              ? 'Tente buscar por outro termo'
-              : 'Você não tem ordens de serviço atribuídas no momento'}
+          <p className="text-sm text-gray-500">
+            {searchTerm ? 'Tente buscar por outro termo' : 'Você não tem ordens atribuídas.'}
           </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredOrders.map((assignment: any) => {
-            const order = assignment.service_orders
-            const customer = order.customers
+          {filteredOrders.map((assignment, index) => {
+            const os = assignment.service_order
+            const statusConf = STATUS_CONFIG[assignment.status] || STATUS_CONFIG.pending
+            const clientName = os.client_name || os.customer_name || 'Cliente'
+            const clientPhone = os.client_phone || os.customer_phone_from_customer
+            const clientAddress = os.client_address || os.formatted_address
+            const clientCity = os.client_city
 
             return (
-              <motion.button
-                key={assignment.id}
-                onClick={() => navigate(`/mobile/orders/${order.id}/execute`)}
-                whileTap={{ scale: 0.98 }}
-                className={`w-full bg-white rounded-2xl p-5 shadow-lg text-left border-l-4 ${
-                  getPriorityColor(order.priority)
-                }`}
+              <motion.div
+                key={assignment.service_order_id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03 }}
+                className={`bg-white rounded-2xl shadow-lg overflow-hidden border-l-4 ${getPriorityColor(os.priority)}`}
               >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-bold text-gray-900 text-lg">
-                        OS #{order.order_number}
-                      </span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold text-white flex items-center gap-1 ${
-                        getStatusColor(assignment.status)
-                      }`}>
-                        {getStatusIcon(assignment.status)}
-                        {getStatusLabel(assignment.status)}
-                      </span>
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="font-bold text-gray-900">OS #{os.order_number}</span>
+                        {os.priority === 'urgent' && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500 text-white">
+                            URGENTE
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-700 font-medium truncate">{clientName}</p>
                     </div>
-                    <p className="text-gray-900 font-semibold text-base">
-                      {customer?.name}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="space-y-2 mt-3">
-                  {order.scheduled_date && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        Agendado: {formatDateSafe(order.scheduled_date)}
-                      </span>
-                    </div>
-                  )}
-
-                  {customer?.customer_addresses?.[0] && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <MapPin className="w-4 h-4" />
-                      <span className="line-clamp-1">
-                        {customer.customer_addresses[0].street}, {customer.customer_addresses[0].number} - {customer.customer_addresses[0].city}
-                      </span>
-                    </div>
-                  )}
-
-                  {assignment.assigned_at && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Clock className="w-4 h-4" />
-                      <span>
-                        Atribuída em {formatDateSafe(assignment.assigned_at)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Progress Bar */}
-                {typeof order.progress_percent === 'number' && order.progress_percent > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-gray-500">Progresso</span>
-                      <span className="text-xs font-bold text-gray-700">{Math.round(order.progress_percent)}%</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${order.progress_percent >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                        style={{ width: `${Math.min(order.progress_percent, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Priority Badge */}
-                {order.priority && order.priority !== 'normal' && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                      order.priority === 'urgent'
-                        ? 'bg-red-100 text-red-700'
-                        : order.priority === 'high'
-                        ? 'bg-orange-100 text-orange-700'
-                        : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {order.priority === 'urgent' ? '🔥 URGENTE' :
-                       order.priority === 'high' ? '⚡ ALTA PRIORIDADE' : 'NORMAL'}
+                    <span className={`px-2 py-1 rounded-lg text-xs font-semibold shrink-0 flex items-center gap-1 ${statusConf.bg} ${statusConf.color}`}>
+                      {getStatusIcon(assignment.status)}
+                      {statusConf.label}
                     </span>
                   </div>
-                )}
-              </motion.button>
+
+                  <div className="space-y-1.5 text-xs text-gray-500">
+                    {os.service_date && (
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>{formatDateSafe(os.service_date)}</span>
+                      </div>
+                    )}
+                    {clientAddress && (
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span className="truncate">{clientAddress}{clientCity && `, ${clientCity}`}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {os.progress_percent > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] text-gray-500">Progresso</span>
+                        <span className="text-[10px] font-bold text-gray-700">{Math.round(os.progress_percent)}%</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${os.progress_percent >= 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                          style={{ width: `${Math.min(os.progress_percent, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3 pt-0 flex gap-2">
+                  {clientAddress && (
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => openGPS(clientAddress, clientCity || '')}
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl py-2.5 text-sm font-semibold"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      <span>GPS</span>
+                    </motion.button>
+                  )}
+
+                  {clientPhone && (
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => callClient(clientPhone)}
+                      className="w-11 h-11 flex items-center justify-center bg-emerald-100 text-emerald-600 rounded-xl"
+                    >
+                      <Phone className="w-4 h-4" />
+                    </motion.button>
+                  )}
+
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate(`/mobile/orders/${os.id}/execute`)}
+                    className="w-11 h-11 flex items-center justify-center bg-gray-100 text-gray-700 rounded-xl"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </motion.button>
+                </div>
+              </motion.div>
             )
           })}
         </div>
