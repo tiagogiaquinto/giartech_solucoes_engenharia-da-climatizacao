@@ -122,6 +122,11 @@ import CustomerServiceRequest from './pages/portal/CustomerServiceRequest'
 import PartnerPortalDashboard from './pages/portal/PartnerPortalDashboard'
 import PartnerPortalHistory from './pages/portal/PartnerPortalHistory'
 import { PortalProvider } from './contexts/PortalContext'
+import TechnicianLayout from './components/technician/TechnicianLayout'
+import TechnicianRoteiro from './pages/technician/TechnicianRoteiro'
+import TechnicianChat from './pages/technician/TechnicianChat'
+import TechnicianAgenda from './pages/technician/TechnicianAgenda'
+import TechnicianPerfil from './pages/technician/TechnicianPerfil'
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
   const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
@@ -190,8 +195,8 @@ const RoleBasedHome = () => {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (profile?.role === 'technician') {
-    return <Navigate to="/mobile" replace />
+  if (profile?.role === 'technician' || profile?.user_type === 'tecnico') {
+    return <Navigate to="/tecnico" replace />
   }
 
   if (profile?.role === 'viewer') {
@@ -428,6 +433,41 @@ function App() {
             <Route path="chat" element={<InternalChat />} />
             <Route path="profile" element={<Profile />} />
           </Route>
+
+          {/* Technician Mobile Routes */}
+          <Route path="/tecnico" element={
+            <MobileProtectedRoute>
+              <TechnicianLayout>
+                <TechnicianRoteiro />
+              </TechnicianLayout>
+            </MobileProtectedRoute>
+          } />
+          <Route path="/tecnico/chat" element={
+            <MobileProtectedRoute>
+              <TechnicianLayout>
+                <TechnicianChat />
+              </TechnicianLayout>
+            </MobileProtectedRoute>
+          } />
+          <Route path="/tecnico/agenda" element={
+            <MobileProtectedRoute>
+              <TechnicianLayout>
+                <TechnicianAgenda />
+              </TechnicianLayout>
+            </MobileProtectedRoute>
+          } />
+          <Route path="/tecnico/perfil" element={
+            <MobileProtectedRoute>
+              <TechnicianLayout>
+                <TechnicianPerfil />
+              </TechnicianLayout>
+            </MobileProtectedRoute>
+          } />
+          <Route path="/tecnico/os/:id" element={
+            <MobileProtectedRoute>
+              <MobileOSExecution />
+            </MobileProtectedRoute>
+          } />
 
           {/* OS Distribution Page */}
           <Route path="/os-distribution" element={
