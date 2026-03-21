@@ -78,15 +78,24 @@ const TechnicianRoteiro = () => {
 
     try {
       const todayStr = new Date().toISOString().split('T')[0]
+      const authId = user?.id
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('v_technician_service_orders')
         .select('*')
         .or(`scheduled_at.gte.${todayStr},service_date.gte.${todayStr},status.in.(pending,in_progress)`)
         .order('scheduled_at', { ascending: true })
 
+      if (authId) {
+        query = query.or(
+          `assigned_employee_auth_id.eq.${authId},technician_id.eq.${authId}`
+        )
+      }
+
+      const { data, error } = await query
+
       if (error || !data) {
-        const { data: fallback } = await supabase
+        let fallbackQuery = supabase
           .from('service_orders')
           .select(`
             id, order_number, status, priority, title, description,
@@ -97,6 +106,13 @@ const TechnicianRoteiro = () => {
           .or(`scheduled_at.gte.${todayStr},status.in.(pending,in_progress)`)
           .order('scheduled_at', { ascending: true })
 
+        if (authId) {
+          fallbackQuery = fallbackQuery.or(
+            `technician_id.eq.${authId}`
+          )
+        }
+
+        const { data: fallback } = await fallbackQuery
         setOrders(fallback || [])
       } else {
         setOrders(data)

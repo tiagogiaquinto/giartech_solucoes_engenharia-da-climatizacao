@@ -10,7 +10,7 @@ export const ROLE_REDIRECT: Record<UserRole, string> = {
   manager: '/',
   sales: '/',
   financial: '/',
-  technician: '/mobile',
+  technician: '/tecnico',
   viewer: '/portal/dashboard'
 }
 
