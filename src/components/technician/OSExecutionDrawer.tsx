@@ -2,15 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, PanInfo } from 'framer-motion'
 import {
   X,
-  MapPin,
   Navigation,
   Phone,
   CheckCircle2,
   Circle,
   Camera,
-  Trash2,
-  Plus,
-  ArrowLeft,
+  X as RemoveIcon,
   Wrench,
   Clock,
   ChevronRight,
@@ -18,7 +15,10 @@ import {
   Lock,
   Image as ImageIcon,
   PenLine,
-  RotateCcw
+  RotateCcw,
+  FileText,
+  Save,
+  CheckCheck
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
@@ -40,6 +40,7 @@ interface OSOrder {
   brand?: string
   model?: string
   progress_percent?: number
+  technician_notes?: string
 }
 
 interface ChecklistItem {
@@ -54,6 +55,7 @@ interface CapturedPhoto {
   id: string
   type: 'before' | 'after'
   dataUrl: string
+  persisted?: boolean
 }
 
 interface OSExecutionDrawerProps {
@@ -85,12 +87,13 @@ const DEFAULT_TASKS = [
   'Coletar assinatura do cliente'
 ]
 
-type TabId = 'info' | 'checklist' | 'fotos' | 'assinatura'
+type TabId = 'info' | 'checklist' | 'fotos' | 'notas' | 'assinatura'
 
 const TABS: { id: TabId; label: string; icon: typeof Wrench }[] = [
   { id: 'info', label: 'Detalhes', icon: Wrench },
   { id: 'checklist', label: 'Tarefas', icon: CheckCircle2 },
   { id: 'fotos', label: 'Fotos', icon: Camera },
+  { id: 'notas', label: 'Notas', icon: FileText },
   { id: 'assinatura', label: 'Assinatura', icon: PenLine }
 ]
 
@@ -99,17 +102,23 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
   const [tab, setTab] = useState<TabId>('info')
   const [items, setItems] = useState<ChecklistItem[]>([])
   const [photos, setPhotos] = useState<CapturedPhoto[]>([])
-  const [newTaskText, setNewTaskText] = useState('')
-  const [showAddTask, setShowAddTask] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [finishing, setFinishing] = useState(false)
   const [loadingChecklist, setLoadingChecklist] = useState(true)
   const [hasSigned, setHasSigned] = useState(false)
+  const [techNotes, setTechNotes] = useState('')
+  const [notesSaving, setNotesSaving] = useState(false)
+  const [notesSaved, setNotesSaved] = useState(false)
+  const [photosSaving, setPhotosSaving] = useState(false)
+  const [signatureSaving, setSignatureSaving] = useState(false)
+  const [signatureSaved, setSignatureSaved] = useState(false)
+  const [loadingPhotos, setLoadingPhotos] = useState(true)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const isDrawing = useRef(false)
   const lastPos = useRef<{ x: number; y: number } | null>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
+  const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const progress = items.length > 0
     ? Math.round((items.filter(i => i.is_completed).length / items.length) * 100)
@@ -148,16 +157,69 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
     }
   }, [order])
 
+  const loadPhotos = useCallback(async () => {
+    if (!order) return
+    setLoadingPhotos(true)
+    try {
+      const { data } = await supabase
+        .from('os_execution_photos')
+        .select('id, photo_type, data_url')
+        .eq('os_id', order.id)
+        .order('created_at', { ascending: true })
+
+      if (data) {
+        setPhotos(data.map(p => ({
+          id: p.id,
+          type: p.photo_type as 'before' | 'after',
+          dataUrl: p.data_url || '',
+          persisted: true
+        })))
+      }
+    } finally {
+      setLoadingPhotos(false)
+    }
+  }, [order])
+
+  const loadSignature = useCallback(async () => {
+    if (!order) return
+    const { data } = await supabase
+      .from('os_signatures')
+      .select('signature_png')
+      .eq('os_id', order.id)
+      .maybeSingle()
+
+    if (data?.signature_png && canvasRef.current) {
+      const img = new Image()
+      img.onload = () => {
+        const ctx = canvasRef.current?.getContext('2d')
+        if (ctx && canvasRef.current) {
+          ctx.drawImage(img, 0, 0)
+          setHasSigned(true)
+          setSignatureSaved(true)
+        }
+      }
+      img.src = data.signature_png
+    }
+  }, [order])
+
   useEffect(() => {
     if (order) {
       setTab('info')
       setPhotos([])
       setHasSigned(false)
-      setNewTaskText('')
-      setShowAddTask(false)
+      setSignatureSaved(false)
+      setNotesSaved(false)
+      setTechNotes(order.technician_notes || '')
       loadChecklist()
+      loadPhotos()
     }
-  }, [order, loadChecklist])
+  }, [order, loadChecklist, loadPhotos])
+
+  useEffect(() => {
+    if (tab === 'assinatura' && order) {
+      setTimeout(() => loadSignature(), 100)
+    }
+  }, [tab, order, loadSignature])
 
   const toggleItem = async (item: ChecklistItem) => {
     if (togglingId) return
@@ -171,52 +233,76 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
     setTogglingId(null)
   }
 
-  const addTask = async () => {
-    if (!newTaskText.trim() || !order) return
-    const position = items.length
-    const { data } = await supabase
-      .from('os_checklist_items')
-      .insert({ os_id: order.id, description: newTaskText.trim(), is_completed: false, position })
-      .select()
-      .maybeSingle()
-    if (data) setItems(prev => [...prev, data as ChecklistItem])
-    setNewTaskText('')
-    setShowAddTask(false)
+  const saveNotesDebounced = (value: string) => {
+    setTechNotes(value)
+    setNotesSaved(false)
+    if (notesTimer.current) clearTimeout(notesTimer.current)
+    notesTimer.current = setTimeout(async () => {
+      if (!order) return
+      setNotesSaving(true)
+      await supabase
+        .from('service_orders')
+        .update({ technician_notes: value })
+        .eq('id', order.id)
+      setNotesSaving(false)
+      setNotesSaved(true)
+    }, 1000)
   }
 
-  const deleteItem = async (itemId: string) => {
-    setItems(prev => prev.filter(i => i.id !== itemId))
-    await supabase.from('os_checklist_items').delete().eq('id', itemId)
-  }
-
-  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>, type: 'before' | 'after') => {
+  const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>, type: 'before' | 'after') => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !order || !user) return
     const reader = new FileReader()
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const dataUrl = ev.target?.result as string
-      setPhotos(prev => [...prev, { id: crypto.randomUUID(), type, dataUrl }])
+      const tempId = crypto.randomUUID()
+      setPhotos(prev => [...prev, { id: tempId, type, dataUrl, persisted: false }])
+      setPhotosSaving(true)
+      const { data } = await supabase
+        .from('os_execution_photos')
+        .insert({ os_id: order.id, photo_type: type, data_url: dataUrl, taken_by: user.id })
+        .select('id')
+        .maybeSingle()
+      setPhotosSaving(false)
+      if (data?.id) {
+        setPhotos(prev => prev.map(p => p.id === tempId ? { ...p, id: data.id, persisted: true } : p))
+      }
     }
     reader.readAsDataURL(file)
     e.target.value = ''
   }
 
-  const removePhoto = (id: string) => setPhotos(prev => prev.filter(p => p.id !== id))
+  const removePhoto = async (id: string) => {
+    const photo = photos.find(p => p.id === id)
+    setPhotos(prev => prev.filter(p => p.id !== id))
+    if (photo?.persisted) {
+      await supabase.from('os_execution_photos').delete().eq('id', id)
+    }
+  }
 
   const getCanvasPos = (e: React.TouchEvent | React.MouseEvent): { x: number; y: number } | null => {
     const canvas = canvasRef.current
     if (!canvas) return null
     const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
     if ('touches' in e) {
       const touch = e.touches[0]
-      return { x: touch.clientX - rect.left, y: touch.clientY - rect.top }
+      return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY
+      }
     }
-    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top }
+    return {
+      x: ((e as React.MouseEvent).clientX - rect.left) * scaleX,
+      y: ((e as React.MouseEvent).clientY - rect.top) * scaleY
+    }
   }
 
   const startDraw = (e: React.TouchEvent | React.MouseEvent) => {
     isDrawing.current = true
     lastPos.current = getCanvasPos(e)
+    setSignatureSaved(false)
   }
 
   const draw = (e: React.TouchEvent | React.MouseEvent) => {
@@ -249,6 +335,20 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
     if (!ctx) return
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     setHasSigned(false)
+    setSignatureSaved(false)
+  }
+
+  const saveSignature = async () => {
+    if (!hasSigned || !order || !user || signatureSaving) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    setSignatureSaving(true)
+    const png = canvas.toDataURL('image/png')
+    await supabase
+      .from('os_signatures')
+      .upsert({ os_id: order.id, signature_png: png, signed_by: user.id, signed_at: new Date().toISOString() }, { onConflict: 'os_id' })
+    setSignatureSaving(false)
+    setSignatureSaved(true)
   }
 
   const openInMaps = () => {
@@ -342,7 +442,7 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
               </div>
             </div>
 
-            <div className="flex border-b border-gray-100 flex-shrink-0 px-2">
+            <div className="flex border-b border-gray-100 flex-shrink-0 overflow-x-auto px-1">
               {TABS.map(t => {
                 const Icon = t.icon
                 const active = tab === t.id
@@ -350,7 +450,7 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
                   <button
                     key={t.id}
                     onClick={() => setTab(t.id)}
-                    className={`flex-1 flex flex-col items-center py-2 gap-0.5 transition-colors ${
+                    className={`flex-shrink-0 flex flex-col items-center py-2 px-3 gap-0.5 transition-colors ${
                       active ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-400'
                     }`}
                   >
@@ -362,6 +462,8 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
             </div>
 
             <div className="flex-1 overflow-y-auto overscroll-contain">
+
+              {/* ── INFO TAB ── */}
               {tab === 'info' && (
                 <div className="p-4 space-y-3">
                   {order.client_address && (
@@ -417,48 +519,15 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
                 </div>
               )}
 
+              {/* ── CHECKLIST TAB — read + toggle only, no add/delete ── */}
               {tab === 'checklist' && (
                 <div className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-gray-800">Checklist</h3>
-                    <button
-                      onClick={() => setShowAddTask(v => !v)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-xl text-sm font-semibold active:scale-95 transition-transform"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Adicionar
-                    </button>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-bold text-gray-800">Checklist de Execução</h3>
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                      {items.filter(i => i.is_completed).length}/{items.length}
+                    </span>
                   </div>
-
-                  <AnimatePresence>
-                    {showAddTask && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="bg-gray-50 rounded-2xl p-3 flex gap-2 border border-gray-200">
-                          <input
-                            type="text"
-                            value={newTaskText}
-                            onChange={e => setNewTaskText(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && addTask()}
-                            placeholder="Descreva a nova tarefa..."
-                            autoFocus
-                            className="flex-1 text-sm text-gray-800 placeholder-gray-400 bg-transparent outline-none"
-                          />
-                          <button
-                            onClick={addTask}
-                            disabled={!newTaskText.trim()}
-                            className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-sm font-semibold disabled:opacity-40 active:scale-95 transition-transform"
-                          >
-                            OK
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
 
                   {loadingChecklist ? (
                     <div className="flex justify-center py-8">
@@ -476,18 +545,16 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
                             item.is_completed ? 'border-green-200 bg-green-50' : 'border-gray-100 shadow-sm'
                           }`}
                         >
-                          <div className="flex items-center gap-3 p-4">
-                            <button
-                              onClick={() => toggleItem(item)}
-                              disabled={togglingId === item.id}
-                              className="flex-shrink-0 active:scale-90 transition-transform"
-                            >
-                              {item.is_completed ? (
-                                <CheckCircle2 className="w-8 h-8 text-green-500" />
-                              ) : (
-                                <Circle className="w-8 h-8 text-gray-300" />
-                              )}
-                            </button>
+                          <button
+                            onClick={() => toggleItem(item)}
+                            disabled={togglingId === item.id}
+                            className="w-full flex items-center gap-3 p-4 active:scale-[0.98] transition-transform text-left"
+                          >
+                            {item.is_completed ? (
+                              <CheckCircle2 className="w-8 h-8 text-green-500 flex-shrink-0" />
+                            ) : (
+                              <Circle className="w-8 h-8 text-gray-300 flex-shrink-0" />
+                            )}
                             <span
                               className={`flex-1 text-sm leading-relaxed ${
                                 item.is_completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'
@@ -495,15 +562,10 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
                             >
                               {item.description}
                             </span>
-                            {!item.is_completed && (
-                              <button
-                                onClick={() => deleteItem(item.id)}
-                                className="p-1.5 text-gray-200 active:text-red-400 transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                            {togglingId === item.id && (
+                              <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
                             )}
-                          </div>
+                          </button>
                         </motion.div>
                       ))}
                     </div>
@@ -511,6 +573,7 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
                 </div>
               )}
 
+              {/* ── FOTOS TAB ── */}
               {tab === 'fotos' && (
                 <div className="p-4 space-y-4">
                   <input
@@ -521,6 +584,13 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
                     className="hidden"
                     onChange={e => handlePhotoCapture(e, photoInputRef.current?.dataset.photoType as 'before' | 'after' || 'before')}
                   />
+
+                  {photosSaving && (
+                    <div className="flex items-center gap-2 bg-blue-50 rounded-xl px-3 py-2">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-xs text-blue-600 font-medium">Salvando foto...</span>
+                    </div>
+                  )}
 
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -541,7 +611,11 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
                         Capturar
                       </button>
                     </div>
-                    {beforePhotos.length === 0 ? (
+                    {loadingPhotos ? (
+                      <div className="h-20 flex items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : beforePhotos.length === 0 ? (
                       <div className="bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center">
                         <ImageIcon className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                         <p className="text-gray-400 text-sm">Nenhuma foto "antes" capturada</p>
@@ -555,8 +629,13 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
                               onClick={() => removePhoto(p.id)}
                               className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-xl flex items-center justify-center"
                             >
-                              <X className="w-4 h-4 text-white" />
+                              <RemoveIcon className="w-4 h-4 text-white" />
                             </button>
+                            {!p.persisted && (
+                              <div className="absolute bottom-2 left-2 bg-black/50 rounded-lg px-1.5 py-0.5">
+                                <span className="text-white text-[10px]">salvando...</span>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -598,8 +677,13 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
                               onClick={() => removePhoto(p.id)}
                               className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-xl flex items-center justify-center"
                             >
-                              <X className="w-4 h-4 text-white" />
+                              <RemoveIcon className="w-4 h-4 text-white" />
                             </button>
+                            {!p.persisted && (
+                              <div className="absolute bottom-2 left-2 bg-black/50 rounded-lg px-1.5 py-0.5">
+                                <span className="text-white text-[10px]">salvando...</span>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -608,6 +692,41 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
                 </div>
               )}
 
+              {/* ── NOTAS DO TÉCNICO TAB ── */}
+              {tab === 'notas' && (
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold text-gray-800">Observações do Técnico</h3>
+                      <p className="text-xs text-gray-400">Registre detalhes da execução, problemas encontrados etc.</p>
+                    </div>
+                    {notesSaving && (
+                      <div className="flex items-center gap-1 text-blue-500">
+                        <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-xs">salvando</span>
+                      </div>
+                    )}
+                    {notesSaved && !notesSaving && (
+                      <div className="flex items-center gap-1 text-green-500">
+                        <CheckCheck className="w-4 h-4" />
+                        <span className="text-xs font-medium">salvo</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <textarea
+                    value={techNotes}
+                    onChange={e => saveNotesDebounced(e.target.value)}
+                    placeholder="Descreva o que foi realizado, peças utilizadas, problemas encontrados, recomendações para o cliente..."
+                    rows={10}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none leading-relaxed"
+                  />
+
+                  <p className="text-xs text-gray-400 text-right">{techNotes.length} caracteres</p>
+                </div>
+              )}
+
+              {/* ── ASSINATURA TAB ── */}
               {tab === 'assinatura' && (
                 <div className="p-4 space-y-4">
                   <div className="flex items-center justify-between">
@@ -648,14 +767,30 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
                     </div>
                   )}
 
-                  {hasSigned && (
+                  {hasSigned && !signatureSaved && (
+                    <button
+                      onClick={saveSignature}
+                      disabled={signatureSaving}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-2xl font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-60"
+                    >
+                      {signatureSaving ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      {signatureSaving ? 'Salvando...' : 'Salvar Assinatura'}
+                    </button>
+                  )}
+
+                  {signatureSaved && (
                     <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
                       <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      <p className="text-green-700 text-xs font-medium">Assinatura registrada</p>
+                      <p className="text-green-700 text-xs font-medium">Assinatura salva com sucesso</p>
                     </div>
                   )}
                 </div>
               )}
+
             </div>
 
             <div
