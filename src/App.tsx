@@ -173,7 +173,7 @@ const MobileProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/mobile/login" state={{ from: location }} replace />
   }
 
   return <>{children}</>

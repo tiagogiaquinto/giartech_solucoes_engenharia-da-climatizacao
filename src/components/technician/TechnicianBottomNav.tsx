@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Home, MessageCircle, Calendar, User } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useUser } from '../../contexts/UserContext'
 
 const navItems = [
   { id: 'home', path: '/tecnico', icon: Home, label: 'Roteiro' },
@@ -14,17 +15,19 @@ const navItems = [
 const TechnicianBottomNav = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { user } = useUser()
   const [unreadCount, setUnreadCount] = useState(0)
   const [hasNewMessage, setHasNewMessage] = useState(false)
 
   useEffect(() => {
+    if (!user?.id) return
     loadUnreadCount()
 
     const notificationsChannel = supabase
-      .channel('notifications-realtime')
+      .channel(`notifications-realtime-${user.id}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications' },
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
         () => {
           setUnreadCount(prev => prev + 1)
           pulseChat()
@@ -33,7 +36,7 @@ const TechnicianBottomNav = () => {
       .subscribe()
 
     const messagesChannel = supabase
-      .channel('messages-realtime')
+      .channel(`messages-realtime-${user.id}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'internal_messages' },
@@ -49,14 +52,16 @@ const TechnicianBottomNav = () => {
       supabase.removeChannel(notificationsChannel)
       supabase.removeChannel(messagesChannel)
     }
-  }, [location.pathname])
+  }, [location.pathname, user?.id])
 
   const loadUnreadCount = async () => {
+    if (!user?.id) return
     try {
       const { count } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('is_read', false)
+        .eq('user_id', user.id)
 
       setUnreadCount(count || 0)
     } catch (err) {

@@ -50,16 +50,33 @@ const TechnicianPerfil = () => {
   }, [user])
 
   const loadStats = async () => {
+    if (!user?.employee_id) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
+      const { data: assignments } = await supabase
+        .from('service_order_assignments')
+        .select('service_order_id')
+        .eq('employee_id', user.employee_id)
+
+      const osIds = assignments?.map(a => a.service_order_id) ?? []
+
+      if (osIds.length === 0) {
+        setLoading(false)
+        return
+      }
+
       const { data } = await supabase
         .from('service_orders')
         .select('status, actual_hours')
+        .in('id', osIds)
 
       if (data) {
-        const completed = data.filter(d => d.status === 'completed').length
-        const pending = data.filter(d => d.status === 'pending').length
-        const inProgress = data.filter(d => d.status === 'in_progress').length
+        const completed = data.filter(d => ['completed', 'concluido'].includes(d.status)).length
+        const pending = data.filter(d => ['pending', 'pendente'].includes(d.status)).length
+        const inProgress = data.filter(d => ['in_progress', 'em_andamento'].includes(d.status)).length
         const totalHours = data.reduce((acc, d) => acc + (d.actual_hours || 0), 0)
 
         setStats({
@@ -68,7 +85,7 @@ const TechnicianPerfil = () => {
           pending_os: pending,
           in_progress_os: inProgress,
           average_rating: 4.8,
-          hours_worked: totalHours
+          hours_worked: Math.round(totalHours * 10) / 10
         })
       }
     } catch (err) {
@@ -80,7 +97,7 @@ const TechnicianPerfil = () => {
 
   const handleLogout = async () => {
     await signOut()
-    navigate('/login')
+    navigate('/mobile/login')
   }
 
   const menuItems = [

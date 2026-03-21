@@ -56,6 +56,13 @@ const BUDGET_STATUS_MAP: Record<string, { label: string; color: string }> = {
 
 type Tab = 'os' | 'orcamentos'
 
+const COLOR_MAP: Record<string, { bg: string; icon: string }> = {
+  blue:   { bg: 'bg-blue-100',   icon: 'text-blue-600' },
+  yellow: { bg: 'bg-yellow-100', icon: 'text-yellow-600' },
+  orange: { bg: 'bg-orange-100', icon: 'text-orange-600' },
+  green:  { bg: 'bg-green-100',  icon: 'text-green-600' },
+}
+
 export default function CustomerPortalDashboard() {
   const { portalUser } = usePortal()
   const [orders, setOrders] = useState<CustomerOrder[]>([])
@@ -155,8 +162,8 @@ export default function CustomerPortalDashboard() {
               transition={{ delay: i * 0.05 }}
               className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"
             >
-              <div className={`w-10 h-10 rounded-xl bg-${stat.color}-100 flex items-center justify-center mb-3`}>
-                <Icon size={20} className={`text-${stat.color}-600`} />
+              <div className={`w-10 h-10 rounded-xl ${COLOR_MAP[stat.color]?.bg ?? 'bg-gray-100'} flex items-center justify-center mb-3`}>
+                <Icon size={20} className={COLOR_MAP[stat.color]?.icon ?? 'text-gray-600'} />
               </div>
               <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
               <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
