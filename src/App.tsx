@@ -127,6 +127,12 @@ import TechnicianRoteiro from './pages/technician/TechnicianRoteiro'
 import TechnicianChat from './pages/technician/TechnicianChat'
 import TechnicianAgenda from './pages/technician/TechnicianAgenda'
 import TechnicianPerfil from './pages/technician/TechnicianPerfil'
+import CustomerRFM from './pages/CustomerRFM'
+import PosVenda from './pages/PosVenda'
+import ExecutiveDashboard from './pages/ExecutiveDashboard'
+import Materials from './pages/Materials'
+import WhatsAppCRM from './pages/WhatsAppCRM'
+import StaffManagement from './pages/StaffManagement'
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
   const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
@@ -1024,6 +1030,54 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <Documents />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/customer-rfm" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <CustomerRFM />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/pos-venda" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <PosVenda />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/executive-dashboard" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <ExecutiveDashboard />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/materials" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <Materials />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/whatsapp-crm" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <WhatsAppCRM />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/staff-management" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <StaffManagement />
               </WebLayout>
             </ProtectedRoute>
           } />
