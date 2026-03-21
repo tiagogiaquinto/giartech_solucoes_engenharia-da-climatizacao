@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import LoadingScreen from './components/LoadingScreen'
+import UpdateBanner from './components/UpdateBanner'
 import { autoInitialize } from './utils/thomazInitializer'
 import GlobalSearch from './components/GlobalSearch'
 import { useGlobalSearch } from './hooks/useGlobalSearch'
@@ -284,43 +285,7 @@ function App() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Verificar atualizações do sistema
-  useEffect(() => {
-    const checkForUpdates = async () => {
-      try {
-        const response = await fetch('/version.json?t=' + Date.now())
-
-        if (!response.ok) {
-          return
-        }
-
-        const contentType = response.headers.get('content-type')
-        if (!contentType || !contentType.includes('application/json')) {
-          return
-        }
-
-        const serverVersion = await response.json()
-        const localVersion = localStorage.getItem('app_version')
-
-        if (localVersion && localVersion !== serverVersion.version) {
-          console.log('Nova versão disponível:', serverVersion.version)
-          if (confirm(`Nova versão ${serverVersion.version} disponível!\n\n${serverVersion.description}\n\nDeseja atualizar agora?`)) {
-            localStorage.setItem('app_version', serverVersion.version)
-            window.location.reload()
-          }
-        } else if (!localVersion) {
-          localStorage.setItem('app_version', serverVersion.version)
-        }
-      } catch (error) {
-        // Silenciosamente ignora erros de verificação de versão
-      }
-    }
-
-    checkForUpdates()
-    const interval = setInterval(checkForUpdates, 5 * 60 * 1000)
-
-    return () => clearInterval(interval)
-  }, [])
+  // Verificação de versão gerenciada pelo hook useAppUpdate via Supabase Realtime
 
   // Notificações desabilitadas - podem ser habilitadas nas configurações
   // useEffect(() => {
@@ -352,6 +317,7 @@ function App() {
   return (
     <AuthProvider>
       <UserProvider>
+        <UpdateBanner />
         <Routes location={location}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/mobile/login" element={<MobileLogin />} />
