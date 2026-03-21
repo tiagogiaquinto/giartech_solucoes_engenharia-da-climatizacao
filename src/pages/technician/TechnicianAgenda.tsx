@@ -7,11 +7,11 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
-  User,
   Wrench,
   CheckCircle2,
-  AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Navigation,
+  Phone
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
@@ -22,18 +22,30 @@ interface AgendaEvent {
   title?: string
   client_name?: string
   client_address?: string
+  client_city?: string
+  client_phone?: string
   scheduled_at?: string
   scheduled_time?: string
   status: string
   priority?: string
   equipment?: string
+  brand?: string
+  model?: string
 }
 
-const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
+const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ]
+
+const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; icon: typeof Clock }> = {
+  pending: { label: 'Pendente', bg: 'bg-amber-100', text: 'text-amber-700', icon: Clock },
+  in_progress: { label: 'Em Execucao', bg: 'bg-blue-100', text: 'text-blue-700', icon: Wrench },
+  completed: { label: 'Concluida', bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle2 },
+  cancelled: { label: 'Cancelada', bg: 'bg-red-100', text: 'text-red-700', icon: Clock },
+  pausado: { label: 'Pausada', bg: 'bg-gray-100', text: 'text-gray-700', icon: Clock }
+}
 
 const TechnicianAgenda = () => {
   const navigate = useNavigate()
@@ -42,14 +54,16 @@ const TechnicianAgenda = () => {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [events, setEvents] = useState<AgendaEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     loadEvents()
   }, [currentDate, user])
 
-  const loadEvents = async () => {
-    setLoading(true)
+  const loadEvents = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true)
+    else setLoading(true)
+
     try {
       const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
@@ -70,11 +84,15 @@ const TechnicianAgenda = () => {
             title,
             client_name,
             client_address,
+            client_city,
+            client_phone,
             scheduled_at,
             scheduled_time,
             status,
             priority,
-            equipment
+            equipment,
+            brand,
+            model
           `)
           .gte('scheduled_at', startOfMonth.toISOString())
           .lte('scheduled_at', endOfMonth.toISOString())
@@ -88,6 +106,7 @@ const TechnicianAgenda = () => {
       console.error('Erro ao carregar eventos:', err)
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -170,20 +189,58 @@ const TechnicianAgenda = () => {
     }
   }
 
+  const openInMaps = (address: string, city?: string) => {
+    const query = city ? `${address}, ${city}` : address
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank')
+  }
+
   const days = getDaysInMonth()
   const selectedEvents = getEventsForSelectedDate()
+
+  const pendingCount = events.filter(e => e.status === 'pending').length
+  const inProgressCount = events.filter(e => e.status === 'in_progress').length
+  const completedCount = events.filter(e => e.status === 'completed').length
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 font-medium">Carregando agenda...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
+          <p className="text-sm text-gray-500">{events.length} servicos neste mes</p>
+        </div>
         <button
-          onClick={() => loadEvents()}
-          disabled={loading}
+          onClick={() => loadEvents(true)}
+          disabled={refreshing}
           className="p-3 bg-white rounded-2xl shadow-sm active:scale-95 transition-transform"
         >
-          <RefreshCw className={`w-5 h-5 text-blue-600 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-5 h-5 text-blue-600 ${refreshing ? 'animate-spin' : ''}`} />
         </button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-center">
+          <p className="text-2xl font-bold text-amber-700">{pendingCount}</p>
+          <p className="text-xs text-amber-600 font-medium">Pendentes</p>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 text-center">
+          <p className="text-2xl font-bold text-blue-700">{inProgressCount}</p>
+          <p className="text-xs text-blue-600 font-medium">Em Execucao</p>
+        </div>
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-3 text-center">
+          <p className="text-2xl font-bold text-green-700">{completedCount}</p>
+          <p className="text-xs text-green-600 font-medium">Concluidas</p>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -205,13 +262,15 @@ const TechnicianAgenda = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 p-2">
-          {WEEKDAYS.map((day) => (
-            <div key={day} className="text-center text-xs font-semibold text-gray-500 py-2">
+        <div className="grid grid-cols-7 gap-1 px-2 pt-2">
+          {WEEKDAYS.map((day, i) => (
+            <div key={i} className="text-center text-xs font-semibold text-gray-400 py-2">
               {day}
             </div>
           ))}
+        </div>
 
+        <div className="grid grid-cols-7 gap-1 p-2 pb-4">
           {days.map((day, index) => {
             if (day === null) {
               return <div key={`empty-${index}`} className="aspect-square" />
@@ -226,11 +285,11 @@ const TechnicianAgenda = () => {
               <button
                 key={day}
                 onClick={() => selectDay(day)}
-                className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all active:scale-95 ${
+                className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all active:scale-90 ${
                   isSelected(day)
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
                     : isToday(day)
-                    ? 'bg-blue-100 text-blue-700'
+                    ? 'bg-blue-100 text-blue-700 font-bold'
                     : 'hover:bg-gray-100'
                 }`}
               >
@@ -251,6 +310,11 @@ const TechnicianAgenda = () => {
                         isSelected(day) ? 'bg-white' : 'bg-blue-500'
                       }`} />
                     )}
+                    {!hasPending && !hasInProgress && (
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        isSelected(day) ? 'bg-white' : 'bg-green-500'
+                      }`} />
+                    )}
                   </div>
                 )}
               </button>
@@ -260,7 +324,7 @@ const TechnicianAgenda = () => {
       </div>
 
       <div>
-        <h3 className="text-lg font-bold text-gray-900 mb-3">
+        <h3 className="text-lg font-bold text-gray-900 mb-3 capitalize">
           {selectedDate.toLocaleDateString('pt-BR', {
             weekday: 'long',
             day: '2-digit',
@@ -268,76 +332,96 @@ const TechnicianAgenda = () => {
           })}
         </h3>
 
-        {loading ? (
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
-            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          </div>
-        ) : selectedEvents.length === 0 ? (
+        {selectedEvents.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
             <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h4 className="text-lg font-bold text-gray-900 mb-2">Sem agendamentos</h4>
+            <h4 className="text-xl font-bold text-gray-900 mb-2">Sem agendamentos</h4>
             <p className="text-gray-500">Nenhuma OS para este dia</p>
           </div>
         ) : (
           <div className="space-y-3">
             <AnimatePresence>
-              {selectedEvents.map((event, index) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() => navigate(`/tecnico/os/${event.id}`)}
-                  className="bg-white rounded-2xl shadow-sm p-4 cursor-pointer active:scale-[0.98] transition-all"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      event.status === 'completed' ? 'bg-green-100' :
-                      event.status === 'in_progress' ? 'bg-blue-100' :
-                      'bg-amber-100'
-                    }`}>
-                      {event.status === 'completed' ? (
-                        <CheckCircle2 className="w-6 h-6 text-green-600" />
-                      ) : event.status === 'in_progress' ? (
-                        <Wrench className="w-6 h-6 text-blue-600" />
-                      ) : (
-                        <Clock className="w-6 h-6 text-amber-600" />
-                      )}
-                    </div>
+              {selectedEvents.map((event, index) => {
+                const statusConfig = STATUS_CONFIG[event.status] || STATUS_CONFIG.pending
+                const StatusIcon = statusConfig.icon
+                const time = formatTime(event.scheduled_at, event.scheduled_time)
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-bold text-gray-900 truncate">
-                          {event.client_name || 'Cliente'}
-                        </h4>
-                        <span className="text-sm font-semibold text-blue-600">
-                          {formatTime(event.scheduled_at, event.scheduled_time)}
-                        </span>
+                return (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="bg-white rounded-2xl shadow-sm overflow-hidden w-full"
+                  >
+                    <div className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${statusConfig.bg} ${statusConfig.text}`}>
+                              {statusConfig.label}
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-900 truncate">
+                            {event.client_name || 'Cliente nao informado'}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            OS #{event.order_number}
+                          </p>
+                        </div>
+                        {time && (
+                          <div className="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-xl">
+                            <Clock className="w-4 h-4 text-gray-600" />
+                            <span className="text-sm font-bold text-gray-700">{time}</span>
+                          </div>
+                        )}
                       </div>
 
-                      <p className="text-sm text-gray-500 mb-2">
-                        OS #{event.order_number}
-                      </p>
-
                       {event.equipment && (
-                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                          <Wrench className="w-3 h-3" />
-                          <span>{event.equipment}</span>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                          <Wrench className="w-4 h-4 text-gray-400" />
+                          <span>{event.equipment} {event.brand && `- ${event.brand}`} {event.model && event.model}</span>
                         </div>
                       )}
 
                       {event.client_address && (
-                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                          <MapPin className="w-3 h-3" />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openInMaps(event.client_address!, event.client_city)
+                          }}
+                          className="flex items-center gap-2 text-sm text-blue-600 mb-2 active:opacity-70"
+                        >
+                          <MapPin className="w-4 h-4" />
                           <span className="truncate">{event.client_address}</span>
-                        </div>
+                          <Navigation className="w-3 h-3" />
+                        </button>
                       )}
-                    </div>
 
-                    <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                  </div>
-                </motion.div>
-              ))}
+                      {event.client_phone && (
+                        <a
+                          href={`tel:${event.client_phone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2 text-sm text-green-600 mb-3"
+                        >
+                          <Phone className="w-4 h-4" />
+                          <span>{event.client_phone}</span>
+                        </a>
+                      )}
+
+                      <button
+                        onClick={() => navigate(`/tecnico/os/${event.id}`)}
+                        className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold active:scale-[0.98] transition-all"
+                      >
+                        <StatusIcon className="w-5 h-5" />
+                        {event.status === 'completed' ? 'Ver Detalhes' :
+                         event.status === 'in_progress' ? 'Continuar Execucao' :
+                         'Iniciar OS'}
+                      </button>
+                    </div>
+                  </motion.div>
+                )
+              })}
             </AnimatePresence>
           </div>
         )}
