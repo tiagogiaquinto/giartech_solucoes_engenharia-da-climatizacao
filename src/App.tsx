@@ -127,6 +127,7 @@ import TechnicianRoteiro from './pages/technician/TechnicianRoteiro'
 import TechnicianChat from './pages/technician/TechnicianChat'
 import TechnicianAgenda from './pages/technician/TechnicianAgenda'
 import TechnicianPerfil from './pages/technician/TechnicianPerfil'
+import TechnicianOSPage from './pages/technician/TechnicianOSPage'
 import CustomerRFM from './pages/CustomerRFM'
 import PosVenda from './pages/PosVenda'
 import ExecutiveDashboard from './pages/ExecutiveDashboard'
@@ -471,7 +472,9 @@ function App() {
           } />
           <Route path="/tecnico/os/:id" element={
             <MobileProtectedRoute>
-              <MobileOSExecution />
+              <TechnicianLayout>
+                <TechnicianOSPage />
+              </TechnicianLayout>
             </MobileProtectedRoute>
           } />
 
