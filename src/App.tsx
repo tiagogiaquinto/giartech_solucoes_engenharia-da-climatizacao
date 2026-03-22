@@ -129,6 +129,7 @@ import TechnicianChat from './pages/technician/TechnicianChat'
 import TechnicianAgenda from './pages/technician/TechnicianAgenda'
 import TechnicianPerfil from './pages/technician/TechnicianPerfil'
 import TechnicianOSPage from './pages/technician/TechnicianOSPage'
+import TechnicianHistorico from './pages/technician/TechnicianHistorico'
 import CustomerRFM from './pages/CustomerRFM'
 import PosVenda from './pages/PosVenda'
 import ExecutiveDashboard from './pages/ExecutiveDashboard'
@@ -500,6 +501,13 @@ function App() {
             <TechnicianRoute>
               <TechnicianLayout>
                 <TechnicianPerfil />
+              </TechnicianLayout>
+            </TechnicianRoute>
+          } />
+          <Route path="/tecnico/historico" element={
+            <TechnicianRoute>
+              <TechnicianLayout>
+                <TechnicianHistorico />
               </TechnicianLayout>
             </TechnicianRoute>
           } />

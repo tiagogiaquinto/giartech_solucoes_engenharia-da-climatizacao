@@ -9,11 +9,13 @@ import {
   Calendar,
   CheckCircle2,
   Navigation,
-  Wrench
+  Wrench,
+  Flag
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
 import OSExecutionDrawer from '../../components/technician/OSExecutionDrawer'
+import BottomDrawerFinalizacaoOS from '../../components/technician/BottomDrawerFinalizacaoOS'
 
 interface ServiceOrderCard {
   id: string
@@ -64,6 +66,7 @@ const TechnicianRoteiro = () => {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrderCard | null>(null)
+  const [finalizingOrder, setFinalizingOrder] = useState<ServiceOrderCard | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
 
   const today = new Date().toLocaleDateString('pt-BR', {
@@ -107,9 +110,7 @@ const TechnicianRoteiro = () => {
           .order('scheduled_at', { ascending: true })
 
         if (authId) {
-          fallbackQuery = fallbackQuery.or(
-            `technician_id.eq.${authId}`
-          )
+          fallbackQuery = fallbackQuery.or(`technician_id.eq.${authId}`)
         }
 
         const { data: fallback } = await fallbackQuery
@@ -133,9 +134,10 @@ const TechnicianRoteiro = () => {
 
   const handleFinished = () => {
     setSelectedOrder(null)
+    setFinalizingOrder(null)
     setShowSuccess(true)
     loadOrders()
-    setTimeout(() => setShowSuccess(false), 3000)
+    setTimeout(() => setShowSuccess(false), 3500)
   }
 
   const formatTime = (dateStr?: string, timeStr?: string) => {
@@ -148,7 +150,7 @@ const TechnicianRoteiro = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#f0f4f8]">
+      <div className="flex items-center justify-center min-h-[80vh] bg-[#f0f4f8]">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-500 font-medium">Carregando roteiro...</p>
@@ -217,16 +219,16 @@ const TechnicianRoteiro = () => {
               const status = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending
               const time = formatTime(order.scheduled_at, order.scheduled_time)
               const priorityColor = PRIORITY_COLORS[order.priority] || 'bg-blue-600'
-              const priorityLabel = PRIORITY_LABELS[order.priority] || 'Normal'
+              const isCompleted = order.status === 'completed'
+              const isInProgress = order.status === 'in_progress'
 
               return (
-                <motion.button
+                <motion.div
                   key={order.id}
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.06 }}
-                  onClick={() => setSelectedOrder(order)}
-                  className="w-full text-left bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden active:scale-[0.98] transition-transform"
+                  className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
                 >
                   <div className={`h-1.5 w-full ${priorityColor}`} />
                   <div className="p-4">
@@ -274,7 +276,7 @@ const TechnicianRoteiro = () => {
                     )}
 
                     {order.progress_percent !== undefined && order.progress_percent > 0 && (
-                      <div className="mt-2">
+                      <div className="mt-2 mb-3">
                         <div className="flex justify-between text-[11px] text-gray-400 mb-1">
                           <span>Progresso</span>
                           <span className="font-bold">{order.progress_percent}%</span>
@@ -288,23 +290,38 @@ const TechnicianRoteiro = () => {
                       </div>
                     )}
 
-                    <div className={`mt-3 w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 ${
-                      order.status === 'completed'
-                        ? 'bg-green-50 text-green-700'
-                        : order.status === 'in_progress'
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'bg-blue-600 text-white'
-                    }`}>
-                      {order.status === 'completed' ? (
-                        <><CheckCircle2 className="w-4 h-4" /> Ver Detalhes</>
-                      ) : order.status === 'in_progress' ? (
-                        <><Wrench className="w-4 h-4" /> Continuar Execução</>
-                      ) : (
-                        <><Navigation className="w-4 h-4" /> Iniciar OS</>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={() => setSelectedOrder(order)}
+                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 ${
+                          isCompleted
+                            ? 'bg-gray-100 text-gray-600'
+                            : isInProgress
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'bg-blue-600 text-white'
+                        }`}
+                      >
+                        {isCompleted ? (
+                          <><CheckCircle2 className="w-4 h-4" /> Ver Detalhes</>
+                        ) : isInProgress ? (
+                          <><Wrench className="w-4 h-4" /> Continuar</>
+                        ) : (
+                          <><Navigation className="w-4 h-4" /> Iniciar OS</>
+                        )}
+                      </button>
+
+                      {!isCompleted && (
+                        <button
+                          onClick={() => setFinalizingOrder(order)}
+                          className="flex items-center gap-1.5 px-3.5 py-2.5 bg-green-600 text-white rounded-xl text-xs font-bold active:scale-95 transition-transform"
+                        >
+                          <Flag className="w-4 h-4" />
+                          Finalizar
+                        </button>
                       )}
                     </div>
                   </div>
-                </motion.button>
+                </motion.div>
               )
             })}
           </div>
@@ -314,6 +331,12 @@ const TechnicianRoteiro = () => {
       <OSExecutionDrawer
         order={selectedOrder}
         onClose={() => setSelectedOrder(null)}
+        onFinished={handleFinished}
+      />
+
+      <BottomDrawerFinalizacaoOS
+        order={finalizingOrder}
+        onClose={() => setFinalizingOrder(null)}
         onFinished={handleFinished}
       />
     </>
