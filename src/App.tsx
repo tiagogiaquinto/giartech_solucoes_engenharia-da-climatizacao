@@ -84,8 +84,7 @@ import { AIChatbot } from './components/AIChatbot'
 import ThomazSuperChat from './components/ThomazSuperChat'
 import ThomazChat from './pages/ThomazChat'
 import ReportsAdvanced from './pages/ReportsAdvanced'
-import Automations from './pages/Automations'
-import AutomationsEnhanced from './pages/AutomationsEnhanced'
+
 import CreditScoring from './pages/CreditScoring'
 import FinanceiroConsolidado from './pages/FinanceiroConsolidado'
 import RelatoriosConsolidado from './pages/RelatoriosConsolidado'
@@ -804,21 +803,6 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/automacoes" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <Automations />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/automations" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <AutomationsEnhanced />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
 
           <Route path="/financeiro" element={
             <ProtectedRoute moduleCode="financeiro">
