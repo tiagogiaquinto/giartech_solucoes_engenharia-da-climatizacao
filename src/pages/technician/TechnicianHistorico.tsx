@@ -47,12 +47,8 @@ const TechnicianHistorico = () => {
       const authId = user?.id
 
       let query = supabase
-        .from('service_orders')
-        .select(`
-          id, order_number, status, title,
-          client_name, client_address, client_city,
-          equipment, brand, scheduled_at, completed_at, progress_percent, description
-        `)
+        .from('v_technician_app_data')
+        .select('*')
         .in('status', ['completed', 'concluido'])
         .gte('completed_at', startOfMonth.toISOString())
         .lte('completed_at', endOfMonth.toISOString())
@@ -68,19 +64,17 @@ const TechnicianHistorico = () => {
       if (!error && data) {
         setOrders(data)
       } else {
-        const fallback = await supabase
-          .from('service_orders')
-          .select(`
-            id, order_number, status, title,
-            client_name, client_address, client_city,
-            equipment, brand, scheduled_at, completed_at, progress_percent, description
-          `)
+        let fallbackQuery = supabase
+          .from('v_technician_app_data')
+          .select('*')
           .in('status', ['completed', 'concluido'])
           .gte('completed_at', startOfMonth.toISOString())
           .lte('completed_at', endOfMonth.toISOString())
           .order('completed_at', { ascending: false })
           .limit(100)
-        setOrders(fallback.data || [])
+        if (authId) fallbackQuery = fallbackQuery.eq('technician_id', authId)
+        const { data: fb } = await fallbackQuery
+        setOrders(fb || [])
       }
     } catch {
       setOrders([])

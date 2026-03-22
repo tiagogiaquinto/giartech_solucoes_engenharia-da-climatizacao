@@ -1,22 +1,14 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Calendar,
-  Clock,
-  MapPin,
-  Navigation,
-  Phone,
-  Wrench,
-  RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-  PlayCircle
+  Clock, MapPin, Navigation, Phone, Wrench,
+  RefreshCw, AlertCircle, PlayCircle, CheckCircle2, Calendar
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
 import OSBottomDrawer from '../../components/technician/OSBottomDrawer'
 
-interface AgendaEvent {
+interface AgendaOrder {
   id: string
   order_number?: string
   title?: string
@@ -31,30 +23,41 @@ interface AgendaEvent {
   equipment?: string
   brand?: string
   model?: string
-  location_detail?: string
   description?: string
+  notes?: string
+  access_note?: string
+  location?: string
+  technician_id?: string
 }
 
-const PRIORITY_CONFIG: Record<string, { label: string; dot: string }> = {
-  urgent: { label: 'Urgente', dot: 'bg-red-500' },
-  high: { label: 'Alta', dot: 'bg-orange-500' },
-  normal: { label: 'Normal', dot: 'bg-blue-500' },
-  low: { label: 'Baixa', dot: 'bg-gray-400' }
+const PRIORITY_CONFIG: Record<string, { dot: string; label: string }> = {
+  urgente: { dot: 'bg-red-500', label: 'Urgente' },
+  urgent:  { dot: 'bg-red-500', label: 'Urgente' },
+  alta:    { dot: 'bg-orange-500', label: 'Alta' },
+  high:    { dot: 'bg-orange-500', label: 'Alta' },
+  normal:  { dot: 'bg-blue-400', label: 'Normal' },
+  baixa:   { dot: 'bg-gray-300', label: 'Baixa' },
+  low:     { dot: 'bg-gray-300', label: 'Baixa' },
 }
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pendente',
   pendente: 'Pendente',
-  in_progress: 'Em Execucao',
-  em_andamento: 'Em Execucao'
+  in_progress: 'Em Execução',
+  em_andamento: 'Em Execução',
+  aberta: 'Aberta',
+  open: 'Aberta',
 }
+
+const isActiveStatus = (s: string) =>
+  ['pending', 'pendente', 'in_progress', 'em_andamento', 'aberta', 'open'].includes(s)
 
 const TechnicianAgenda = () => {
   const { user } = useUser()
-  const [events, setEvents] = useState<AgendaEvent[]>([])
+  const [orders, setOrders] = useState<AgendaOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [selectedOrder, setSelectedOrder] = useState<AgendaEvent | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<AgendaOrder | null>(null)
 
   const today = new Date()
   const todayStr = today.toLocaleDateString('pt-BR', {
@@ -64,10 +67,10 @@ const TechnicianAgenda = () => {
   })
 
   useEffect(() => {
-    loadTodayEvents()
+    load()
   }, [user])
 
-  const loadTodayEvents = async (isRefresh = false) => {
+  const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
     else setLoading(true)
 
@@ -76,35 +79,37 @@ const TechnicianAgenda = () => {
       const startOfDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 0, 0, 0)
       const endOfDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 23, 59, 59)
 
-      const { data, error } = await supabase
-        .from('service_orders')
-        .select(`
-          id, order_number, title, client_name, client_address, client_city,
-          client_phone, scheduled_at, scheduled_time, status, priority,
-          equipment, brand, model, description
-        `)
-        .in('status', ['pending', 'pendente', 'in_progress', 'em_andamento'])
+      let query = supabase
+        .from('v_technician_app_data')
+        .select('*')
         .gte('scheduled_at', startOfDay.toISOString())
         .lte('scheduled_at', endOfDay.toISOString())
         .order('scheduled_at', { ascending: true })
 
+      if (user?.id) {
+        query = query.eq('technician_id', user.id)
+      }
+
+      const { data, error } = await query
+
       if (!error && data) {
-        setEvents(data)
+        setOrders(data.filter(o => isActiveStatus(o.status)))
       } else {
-        const fallback = await supabase
-          .from('service_orders')
-          .select(`
-            id, order_number, title, client_name, client_address, client_city,
-            client_phone, scheduled_at, scheduled_time, status, priority,
-            equipment, brand, model, description
-          `)
-          .in('status', ['pending', 'pendente', 'in_progress', 'em_andamento'])
+        let fallbackQuery = supabase
+          .from('v_technician_app_data')
+          .select('*')
           .order('scheduled_at', { ascending: true })
           .limit(20)
-        setEvents(fallback.data || [])
+
+        if (user?.id) {
+          fallbackQuery = fallbackQuery.eq('technician_id', user.id)
+        }
+
+        const { data: fb } = await fallbackQuery
+        setOrders((fb || []).filter(o => isActiveStatus(o.status)))
       }
     } catch {
-      setEvents([])
+      setOrders([])
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -124,8 +129,8 @@ const TechnicianAgenda = () => {
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank')
   }
 
-  const pendingCount = events.filter(e => ['pending', 'pendente'].includes(e.status)).length
-  const inProgressCount = events.filter(e => ['in_progress', 'em_andamento'].includes(e.status)).length
+  const pendingCount = orders.filter(o => ['pending', 'pendente'].includes(o.status)).length
+  const inProgressCount = orders.filter(o => ['in_progress', 'em_andamento'].includes(o.status)).length
 
   if (loading) {
     return (
@@ -147,7 +152,7 @@ const TechnicianAgenda = () => {
             <p className="text-sm text-gray-400 capitalize mt-0.5">{todayStr}</p>
           </div>
           <button
-            onClick={() => loadTodayEvents(true)}
+            onClick={() => load(true)}
             disabled={refreshing}
             className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 active:scale-95 transition-transform"
           >
@@ -171,40 +176,42 @@ const TechnicianAgenda = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-blue-700 leading-none">{inProgressCount}</p>
-              <p className="text-xs text-blue-600 font-medium mt-0.5">Em Execucao</p>
+              <p className="text-xs text-blue-600 font-medium mt-0.5">Em Execução</p>
             </div>
           </div>
         </div>
 
-        {events.length === 0 ? (
+        {orders.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 text-center mt-4"
           >
-            <Calendar className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-gray-700 mb-1">Dia livre!</h3>
-            <p className="text-gray-400 text-sm">Nenhuma OS agendada para hoje</p>
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-8 h-8 text-green-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-700 mb-1">Tudo em dia!</h3>
+            <p className="text-gray-400 text-sm">Nenhuma OS para agora</p>
           </motion.div>
         ) : (
           <div className="space-y-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              {events.length} {events.length === 1 ? 'atendimento' : 'atendimentos'} hoje
+              {orders.length} {orders.length === 1 ? 'atendimento' : 'atendimentos'} hoje
             </p>
 
             <AnimatePresence>
-              {events.map((event, index) => {
-                const time = formatTime(event.scheduled_at, event.scheduled_time)
-                const priority = PRIORITY_CONFIG[event.priority || 'normal'] || PRIORITY_CONFIG.normal
-                const isInProgress = ['in_progress', 'em_andamento'].includes(event.status)
+              {orders.map((order, index) => {
+                const time = formatTime(order.scheduled_at, order.scheduled_time)
+                const priority = PRIORITY_CONFIG[order.priority || 'normal'] || PRIORITY_CONFIG.normal
+                const isInProgress = ['in_progress', 'em_andamento'].includes(order.status)
 
                 return (
                   <motion.button
-                    key={event.id}
+                    key={order.id}
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.06 }}
-                    onClick={() => setSelectedOrder(event)}
+                    onClick={() => setSelectedOrder(order)}
                     className="w-full text-left bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden active:scale-[0.98] transition-transform"
                   >
                     <div className={`h-1.5 w-full ${isInProgress ? 'bg-blue-500' : 'bg-amber-400'}`} />
@@ -215,17 +222,17 @@ const TechnicianAgenda = () => {
                           <div className="flex items-center gap-2 mb-1">
                             <div className={`w-2 h-2 rounded-full ${priority.dot}`} />
                             <span className={`text-xs font-semibold ${isInProgress ? 'text-blue-600' : 'text-amber-600'}`}>
-                              {STATUS_LABELS[event.status] || event.status}
+                              {STATUS_LABELS[order.status] || order.status}
                             </span>
-                            <span className="text-xs text-gray-400">OS #{event.order_number}</span>
+                            <span className="text-xs text-gray-400">OS #{order.order_number}</span>
                           </div>
                           <h3 className="text-base font-bold text-gray-900 truncate">
-                            {event.client_name || 'Cliente nao informado'}
+                            {order.client_name || 'Cliente não informado'}
                           </h3>
-                          {event.equipment && (
+                          {order.equipment && (
                             <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1">
                               <Wrench className="w-3.5 h-3.5 text-gray-400" />
-                              <span>{event.equipment}{event.brand ? ` — ${event.brand}` : ''}</span>
+                              <span>{order.equipment}{order.brand ? ` — ${order.brand}` : ''}</span>
                             </div>
                           )}
                         </div>
@@ -239,28 +246,28 @@ const TechnicianAgenda = () => {
                       </div>
 
                       <div className="space-y-1.5">
-                        {event.client_address && (
+                        {order.client_address && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              openInMaps(event.client_address!, event.client_city)
+                              openInMaps(order.client_address!, order.client_city)
                             }}
                             className="flex items-center gap-2 text-xs text-blue-600 active:opacity-70 w-full"
                           >
                             <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span className="truncate">{event.client_address}{event.client_city ? `, ${event.client_city}` : ''}</span>
+                            <span className="truncate">{order.client_address}{order.client_city ? `, ${order.client_city}` : ''}</span>
                             <Navigation className="w-3 h-3 flex-shrink-0" />
                           </button>
                         )}
 
-                        {event.client_phone && (
+                        {order.client_phone && (
                           <a
-                            href={`tel:${event.client_phone}`}
+                            href={`tel:${order.client_phone}`}
                             onClick={(e) => e.stopPropagation()}
                             className="flex items-center gap-2 text-xs text-green-600"
                           >
                             <Phone className="w-3.5 h-3.5" />
-                            <span>{event.client_phone}</span>
+                            <span>{order.client_phone}</span>
                           </a>
                         )}
                       </div>
@@ -293,7 +300,7 @@ const TechnicianAgenda = () => {
         onClose={() => setSelectedOrder(null)}
         onFinished={() => {
           setSelectedOrder(null)
-          loadTodayEvents()
+          load()
         }}
       />
     </>

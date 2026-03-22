@@ -32,7 +32,6 @@ interface ServiceOrder {
   brand?: string
   model?: string
   description?: string
-  location_detail?: string
 }
 
 interface ChecklistItem {
@@ -287,10 +286,24 @@ const OSBottomDrawer = ({ order, onClose, onFinished, readOnly = false }: OSBott
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
               className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl"
-              style={{ maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}
+              style={{ maxHeight: '95vh', display: 'flex', flexDirection: 'column' }}
             >
-              <div className="flex items-center justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="flex items-center justify-center pt-3 pb-2 flex-shrink-0">
                 <div className="w-10 h-1 bg-gray-300 rounded-full" />
+              </div>
+
+              <div className="px-5 pb-2 flex-shrink-0">
+                <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
+                  <span className="font-medium">Checklist</span>
+                  <span className={`font-bold ${progressPercent === 100 ? 'text-green-600' : 'text-blue-600'}`}>{progressPercent}%</span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <motion.div
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 0.4 }}
+                    className={`h-full rounded-full ${progressPercent === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+                  />
+                </div>
               </div>
 
               <div className="px-5 py-3 flex-shrink-0 border-b border-gray-100">
@@ -348,7 +361,7 @@ const OSBottomDrawer = ({ order, onClose, onFinished, readOnly = false }: OSBott
                 </div>
               </div>
 
-              {(order.equipment || order.location_detail || order.description) && (
+              {(order.equipment || order.description) && (
                 <div className="px-5 py-3 flex-shrink-0 border-b border-gray-100 bg-gray-50">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -358,11 +371,6 @@ const OSBottomDrawer = ({ order, onClose, onFinished, readOnly = false }: OSBott
                       {order.equipment && (
                         <p className="font-semibold text-gray-900 text-sm truncate">
                           {order.equipment}{order.brand ? ` — ${order.brand}` : ''}{order.model ? ` ${order.model}` : ''}
-                        </p>
-                      )}
-                      {order.location_detail && (
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          <MapPin className="w-3 h-3 inline mr-1" />{order.location_detail}
                         </p>
                       )}
                       {order.description && (
@@ -380,20 +388,6 @@ const OSBottomDrawer = ({ order, onClose, onFinished, readOnly = false }: OSBott
                     <span className={`text-sm font-bold ${isComplete ? 'text-green-600' : 'text-gray-500'}`}>
                       {completedCount}/{totalCount}
                     </span>
-                  </div>
-
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
-                      <span>Progresso</span>
-                      <span className={`font-bold ${isComplete ? 'text-green-600' : 'text-blue-600'}`}>{progressPercent}%</span>
-                    </div>
-                    <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                      <motion.div
-                        animate={{ width: `${progressPercent}%` }}
-                        transition={{ duration: 0.4 }}
-                        className={`h-full rounded-full ${isComplete ? 'bg-green-500' : 'bg-blue-500'}`}
-                      />
-                    </div>
                   </div>
 
                   {loadingChecklist ? (
@@ -457,7 +451,7 @@ const OSBottomDrawer = ({ order, onClose, onFinished, readOnly = false }: OSBott
                     }`}
                   >
                     <PenLine className="w-5 h-5" />
-                    Finalizar e Colher Assinatura
+                    Finalizar Atendimento
                   </button>
                 </div>
               )}

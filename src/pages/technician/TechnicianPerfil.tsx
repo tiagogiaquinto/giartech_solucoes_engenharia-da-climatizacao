@@ -61,25 +61,18 @@ const TechnicianPerfil = () => {
   useEffect(() => { loadStats() }, [user])
 
   const loadStats = async () => {
-    if (!user?.employee_id && !user?.id) {
+    if (!user?.id) {
       setLoading(false)
       return
     }
     setLoading(true)
     try {
       let query = supabase
-        .from('service_orders')
-        .select('status, actual_hours, completed_at')
+        .from('v_technician_app_data')
+        .select('status, completed_at')
 
-      if (user?.employee_id) {
-        const { data: assignments } = await supabase
-          .from('service_order_assignments')
-          .select('service_order_id')
-          .eq('employee_id', user.employee_id)
-        const osIds = assignments?.map(a => a.service_order_id) ?? []
-        if (osIds.length > 0) {
-          query = query.in('id', osIds)
-        }
+      if (user?.id) {
+        query = query.eq('technician_id', user.id)
       }
 
       const { data } = await query
@@ -88,7 +81,6 @@ const TechnicianPerfil = () => {
         const completed = data.filter(d => ['completed', 'concluido'].includes(d.status)).length
         const pending = data.filter(d => ['pending', 'pendente'].includes(d.status)).length
         const inProgress = data.filter(d => ['in_progress', 'em_andamento'].includes(d.status)).length
-        const totalHours = data.reduce((acc, d) => acc + (d.actual_hours || 0), 0)
 
         setStats({
           total_os: data.length,
@@ -96,7 +88,7 @@ const TechnicianPerfil = () => {
           pending_os: pending,
           in_progress_os: inProgress,
           average_rating: 4.8,
-          hours_worked: Math.round(totalHours * 10) / 10
+          hours_worked: 0
         })
 
         const now = new Date()
