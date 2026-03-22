@@ -34,6 +34,7 @@ interface UserProfile {
   name: string
   full_name: string
   role: UserRole
+  user_type?: string
   is_active: boolean
   permissions: ModulePermission[]
   sensitive: SensitivePermissions
@@ -178,6 +179,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         name: accountData?.full_name || authUser.email || 'Usuário',
         full_name: accountData?.full_name || authUser.email || 'Usuário',
         role: resolvedRole,
+        user_type: accountData?.user_type ?? undefined,
         is_active: isActive,
         permissions,
         sensitive,
@@ -202,7 +204,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const isSuperAdmin = profile?.role === 'super_admin'
   const isAdmin = isSuperAdmin || profile?.role === 'admin'
   const isManager = isAdmin || profile?.role === 'manager'
-  const isTechnician = profile?.role === 'technician'
+  const isTechnician = profile?.role === 'technician' || profile?.user_type === 'tecnico'
   const isExternal = profile?.role === 'viewer'
   const isPremium = isManager
   const isEnterprise = isAdmin

@@ -102,8 +102,15 @@ const TechnicianBottomNav = () => {
 
   return (
     <nav
-      className="sticky bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.07)]"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      className="bg-white border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.07)]"
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 999,
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)'
+      }}
     >
       <div className="flex items-center justify-around h-[68px] px-1">
         {navItems.map((item) => {

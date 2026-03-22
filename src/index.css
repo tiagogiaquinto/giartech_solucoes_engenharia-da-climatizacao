@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Technician Mobile Layout ────────────────────────────── */
+.mobile-container {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #f0f4f8;
+  overflow: hidden;
+}
+
+.mobile-container__inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.mobile-container__content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
+}
+/* ────────────────────────────────────────────────────────── */
+
 @layer utilities {
   .pb-safe {
     padding-bottom: max(12px, env(safe-area-inset-bottom));
