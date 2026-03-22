@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../navigation/Sidebar'
+import { isMobile } from '../../utils/pwa'
 
 interface WebLayoutProps {
   children?: React.ReactNode
@@ -8,50 +9,46 @@ interface WebLayoutProps {
 
 const WebLayout: React.FC<WebLayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [mainContentWidth, setMainContentWidth] = useState('calc(100% - 280px)')
+  const [mobile, setMobile] = useState(false)
   const [mainContentMargin, setMainContentMargin] = useState('280px')
 
-  // Handle sidebar collapse state changes
-  const handleSidebarCollapse = (collapsed: boolean) => {
-    setSidebarCollapsed(collapsed)
-  }
-
-  // Update main content width and margin when sidebar state changes
   useEffect(() => {
-    if (sidebarCollapsed) {
-      setMainContentWidth('calc(100% - 80px)')
+    const checkMobile = () => {
+      const mobileDetected = isMobile() || window.innerWidth < 768
+      setMobile(mobileDetected)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  useEffect(() => {
+    if (mobile) {
+      setMainContentMargin('0px')
+    } else if (sidebarCollapsed) {
       setMainContentMargin('80px')
     } else {
-      setMainContentWidth('calc(100% - 280px)')
       setMainContentMargin('280px')
     }
-  }, [sidebarCollapsed])
+  }, [sidebarCollapsed, mobile])
 
-  // Keyboard shortcut for quick access (Alt + H)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.altKey && e.key === 'h') {
-        // Quick access functionality
         console.log('Quick access activated with Alt+H')
-        // Add your quick access functionality here
       }
     }
-    
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Web Sidebar */}
-      <Sidebar onCollapse={handleSidebarCollapse} />
+      {!mobile && <Sidebar onCollapse={setSidebarCollapsed} />}
 
-      {/* Main Content - Web Optimized */}
       <main
         className="min-h-screen transition-all duration-300"
-        style={{
-          marginLeft: mainContentMargin
-        }}
+        style={{ marginLeft: mainContentMargin }}
       >
         {children || <Outlet />}
       </main>

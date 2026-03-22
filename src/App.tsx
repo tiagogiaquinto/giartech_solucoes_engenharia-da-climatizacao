@@ -204,7 +204,7 @@ const TechnicianRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (profile?.role !== 'technician') {
+  if (profile?.role !== 'technician' && profile?.user_type !== 'tecnico') {
     return <Navigate to="/" replace />
   }
 
@@ -227,7 +227,7 @@ const StaffRoute = ({ children, moduleCode }: { children: React.ReactNode; modul
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (profile?.role === 'technician') {
+  if (profile?.role === 'technician' || profile?.user_type === 'tecnico') {
     return <Navigate to="/tecnico" replace />
   }
 
