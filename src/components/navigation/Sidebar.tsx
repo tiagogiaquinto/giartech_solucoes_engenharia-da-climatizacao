@@ -64,7 +64,8 @@ interface MenuItem {
 const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'inicio', path: '/', icon: BarChart3, label: 'Dashboard CFO', description: '20+ KPIs executivos em tempo real para decisões estratégicas', moduleCode: 'dashboard' },
   { id: 'agenda', path: '/calendar', icon: Calendar, label: 'Agenda', description: 'Compromissos e eventos', moduleCode: 'agenda' },
-  { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes', description: 'Gestão de clientes PF/PJ', moduleCode: 'clientes' },
+  { id: 'cadastro-clientes-parceiros', path: '/cadastro-clientes-parceiros', icon: UserCog, label: 'Clientes e Parceiros', description: 'Cadastro de clientes PF/PJ e parceiros comerciais', moduleCode: 'clientes' },
+  { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes (legado)', description: 'Gestão de clientes PF/PJ', moduleCode: 'clientes' },
   { id: 'crm-professional', path: '/crm-professional', icon: Target, label: 'CRM Profissional', description: 'Pipeline de vendas e pós-venda completo', moduleCode: 'crm' },
   { id: 'crm-templates', path: '/crm-templates', icon: MessageSquare, label: 'Mensagens do CRM', description: 'Configure mensagens personalizadas para WhatsApp, Email e SMS', moduleCode: 'mensagens_crm' },
   { id: 'customer-gamification', path: '/customer-gamification', icon: Star, label: 'Gamificação de Clientes', description: 'Sistema de pontos, níveis, badges e benefícios', moduleCode: 'gamificacao' },

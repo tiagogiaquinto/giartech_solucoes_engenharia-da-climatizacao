@@ -136,6 +136,7 @@ import ExecutiveDashboard from './pages/ExecutiveDashboard'
 import Materials from './pages/Materials'
 import WhatsAppCRM from './pages/WhatsAppCRM'
 import StaffManagement from './pages/StaffManagement'
+import CadastroClientesParceiros from './pages/CadastroClientesParceiros'
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
   const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
@@ -627,6 +628,14 @@ function App() {
                 <ClientManagement />
               </WebLayout>
             </ProtectedRoute>
+          } />
+
+          <Route path="/cadastro-clientes-parceiros" element={
+            <StaffRoute moduleCode="clientes">
+              <WebLayout>
+                <CadastroClientesParceiros />
+              </WebLayout>
+            </StaffRoute>
           } />
 
           <Route path="/clientes/:id/360" element={
