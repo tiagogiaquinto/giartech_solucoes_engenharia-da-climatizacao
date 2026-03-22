@@ -168,7 +168,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         const { data: empData } = await supabase
           .from('employees')
           .select('id')
-          .eq('user_id', authUser.id)
+          .eq('auth_account_id', authUser.id)
           .maybeSingle()
         employee_id = empData?.id
       } catch { /* no employee linked */ }

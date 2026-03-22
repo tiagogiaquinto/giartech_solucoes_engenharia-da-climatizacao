@@ -53,12 +53,11 @@ const MobileLogin = () => {
         throw new Error('Usuário não encontrado')
       }
 
-      // Buscar funcionário vinculado
       const { data: employeeData } = await supabase
         .from('employees')
         .select('*')
-        .eq('user_id', userData.user_id)
-        .single()
+        .eq('auth_account_id', userData.user_id)
+        .maybeSingle()
 
       // Simular login (em produção, usar auth real)
       login({
