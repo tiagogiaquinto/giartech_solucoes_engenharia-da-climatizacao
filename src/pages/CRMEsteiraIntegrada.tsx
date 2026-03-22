@@ -1,14 +1,32 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Target, Users, Plus, Clock, DollarSign, Phone, Mail, MessageSquare,
-  ArrowRight, Search, Eye, GripVertical, Bell, AlertTriangle,
-  Heart, Star, Activity, Zap, TrendingUp, Award, User, Send, X, Edit3, Calendar, MapPin
-} from 'lucide-react'
+import { Target, Users, Plus, Clock, DollarSign, Phone, Mail, MessageSquare, ArrowRight, Search, Eye, GripVertical, Bell, AlertTriangle, Heart, Star, Activity, Zap, TrendingUp, Award, User, Send, X, FileEdit as Edit3, Calendar, MapPin, Share2, CheckCircle, XCircle, RefreshCw, Building2, UserCheck, ExternalLink, ChevronDown } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { formatDateSafe, formatCurrency } from '../utils/format'
 import { useToast } from '../hooks/useToast'
 import CRMOpportunityModal from '../components/CRMOpportunityModal'
+
+interface Referral {
+  id: string
+  type: 'partner' | 'customer'
+  referrer_name: string
+  referred_name: string
+  phone?: string
+  document?: string
+  notes?: string
+  status: string
+  commission_type?: string
+  commission_value?: number
+  commission_paid?: boolean
+  cashback_percent?: number
+  credit_amount?: number
+  order_value?: number
+  referral_source?: string
+  referral_date?: string
+  created_at: string
+  partner_account_id?: string
+  service_order_id?: string
+}
 
 interface Pipeline {
   id: string
@@ -76,8 +94,19 @@ const CRMEsteiraIntegrada = () => {
     health_score_medio: 0
   })
 
+  const [referrals, setReferrals] = useState<Referral[]>([])
+  const [referralFilter, setReferralFilter] = useState<'all' | 'partner' | 'customer'>('all')
+  const [referralStatusFilter, setReferralStatusFilter] = useState<string>('all')
+  const [referralStats, setReferralStats] = useState({
+    total: 0,
+    pendentes: 0,
+    concluidos: 0,
+    total_comissoes: 0
+  })
+
   useEffect(() => {
     loadEsteiraCompleta()
+    loadReferrals()
 
     const opportunitiesChannel = supabase
       .channel('crm-opportunities-changes')
@@ -166,6 +195,132 @@ const CRMEsteiraIntegrada = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadReferrals = async () => {
+    try {
+      const [partnerRes, customerRes] = await Promise.all([
+        supabase
+          .from('partner_referrals')
+          .select(`
+            id,
+            customer_name,
+            customer_phone,
+            customer_document,
+            notes,
+            status,
+            commission_type,
+            commission_value,
+            commission_paid,
+            created_at,
+            partner_account_id,
+            service_order_id,
+            portal_accounts!partner_referrals_partner_account_id_fkey(name)
+          `)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('customer_referrals')
+          .select(`
+            id,
+            status,
+            referral_date,
+            referral_source,
+            order_value,
+            cashback_percent,
+            credit_amount,
+            created_at,
+            service_order_id,
+            referrer:customers!customer_referrals_referrer_customer_id_fkey(name, celular),
+            referred:customers!customer_referrals_referred_customer_id_fkey(name)
+          `)
+          .order('created_at', { ascending: false })
+      ])
+
+      const partnerList: Referral[] = (partnerRes.data || []).map((r: any) => ({
+        id: r.id,
+        type: 'partner' as const,
+        referrer_name: r.portal_accounts?.name || 'Parceiro',
+        referred_name: r.customer_name || '-',
+        phone: r.customer_phone,
+        document: r.customer_document,
+        notes: r.notes,
+        status: r.status,
+        commission_type: r.commission_type,
+        commission_value: r.commission_value,
+        commission_paid: r.commission_paid,
+        created_at: r.created_at,
+        partner_account_id: r.partner_account_id,
+        service_order_id: r.service_order_id
+      }))
+
+      const customerList: Referral[] = (customerRes.data || []).map((r: any) => ({
+        id: r.id,
+        type: 'customer' as const,
+        referrer_name: r.referrer?.name || '-',
+        referred_name: r.referred?.name || '-',
+        phone: r.referrer?.celular,
+        notes: undefined,
+        status: r.status,
+        cashback_percent: r.cashback_percent,
+        credit_amount: r.credit_amount,
+        order_value: r.order_value,
+        referral_source: r.referral_source,
+        referral_date: r.referral_date,
+        created_at: r.created_at,
+        service_order_id: r.service_order_id
+      }))
+
+      const all = [...partnerList, ...customerList].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+
+      setReferrals(all)
+
+      const pendentes = all.filter(r => r.status === 'pendente').length
+      const concluidos = all.filter(r => ['concluido', 'credito_gerado', 'confirmada'].includes(r.status)).length
+      const totalComissoes = partnerList
+        .filter(r => r.commission_paid)
+        .reduce((sum, r) => sum + (r.commission_value || 0), 0)
+
+      setReferralStats({
+        total: all.length,
+        pendentes,
+        concluidos,
+        total_comissoes: totalComissoes
+      })
+    } catch (error) {
+      console.error('Erro ao carregar indicações:', error)
+    }
+  }
+
+  const updateReferralStatus = async (referral: Referral, newStatus: string) => {
+    try {
+      const table = referral.type === 'partner' ? 'partner_referrals' : 'customer_referrals'
+      const { error } = await supabase
+        .from(table)
+        .update({ status: newStatus })
+        .eq('id', referral.id)
+
+      if (error) throw error
+
+      showToast('Status atualizado com sucesso!', 'success')
+      loadReferrals()
+    } catch (error: any) {
+      showToast('Erro ao atualizar status', 'error')
+    }
+  }
+
+  const getReferralStatusInfo = (status: string) => {
+    const map: Record<string, { label: string; color: string; bg: string }> = {
+      pendente:      { label: 'Pendente',     color: 'text-yellow-700', bg: 'bg-yellow-100' },
+      em_andamento:  { label: 'Em Andamento', color: 'text-blue-700',   bg: 'bg-blue-100' },
+      concluido:     { label: 'Concluído',    color: 'text-green-700',  bg: 'bg-green-100' },
+      cancelado:     { label: 'Cancelado',    color: 'text-red-700',    bg: 'bg-red-100' },
+      confirmada:    { label: 'Confirmada',   color: 'text-green-700',  bg: 'bg-green-100' },
+      credito_gerado:{ label: 'Crédito Gerado', color: 'text-emerald-700', bg: 'bg-emerald-100' },
+      expirada:      { label: 'Expirada',     color: 'text-gray-600',   bg: 'bg-gray-100' }
+    }
+    return map[status] || { label: status, color: 'text-gray-700', bg: 'bg-gray-100' }
   }
 
   const handleDragStart = (opportunity: Opportunity) => {
@@ -497,7 +652,7 @@ const CRMEsteiraIntegrada = () => {
 
         {/* Tabs e Busca */}
         <div className="flex items-center justify-between gap-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {pipelines.map(pipeline => (
               <button
                 key={pipeline.id}
@@ -514,6 +669,20 @@ const CRMEsteiraIntegrada = () => {
                 </span>
               </button>
             ))}
+            <button
+              onClick={() => setActiveTab('indicacoes')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                activeTab === 'indicacoes'
+                  ? 'bg-orange-500 text-white shadow-md'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+              }`}
+            >
+              <Share2 className="w-4 h-4" />
+              Indicações
+              <span className="px-2 py-0.5 rounded-full text-xs bg-black bg-opacity-10">
+                {referralStats.total}
+              </span>
+            </button>
           </div>
 
           <div className="flex-1 max-w-md">
@@ -531,8 +700,263 @@ const CRMEsteiraIntegrada = () => {
         </div>
       </div>
 
+      {/* Indicações Panel */}
+      {activeTab === 'indicacoes' && (
+        <div className="space-y-4">
+          {/* Stats */}
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl p-5 shadow-md border-l-4 border-orange-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 font-medium">Total Indicações</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">{referralStats.total}</p>
+                </div>
+                <Share2 className="w-10 h-10 text-orange-500 opacity-80" />
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-5 shadow-md border-l-4 border-yellow-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 font-medium">Pendentes</p>
+                  <p className="text-3xl font-bold text-yellow-600 mt-1">{referralStats.pendentes}</p>
+                </div>
+                <Clock className="w-10 h-10 text-yellow-500 opacity-80" />
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-5 shadow-md border-l-4 border-green-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 font-medium">Concluídas</p>
+                  <p className="text-3xl font-bold text-green-600 mt-1">{referralStats.concluidos}</p>
+                </div>
+                <CheckCircle className="w-10 h-10 text-green-500 opacity-80" />
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-5 shadow-md border-l-4 border-blue-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 font-medium">Comissões Pagas</p>
+                  <p className="text-2xl font-bold text-blue-600 mt-1">{formatCurrency(referralStats.total_comissoes)}</p>
+                </div>
+                <DollarSign className="w-10 h-10 text-blue-500 opacity-80" />
+              </div>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="bg-white rounded-xl shadow-md p-4 flex items-center gap-4 flex-wrap">
+            <div className="flex gap-2">
+              {(['all', 'partner', 'customer'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setReferralFilter(f)}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    referralFilter === f
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {f === 'all' ? 'Todas' : f === 'partner' ? 'De Parceiros' : 'De Clientes'}
+                </button>
+              ))}
+            </div>
+            <div className="h-6 w-px bg-gray-200" />
+            <div className="flex gap-2 flex-wrap">
+              {['all', 'pendente', 'em_andamento', 'concluido', 'cancelado', 'confirmada', 'credito_gerado'].map(s => {
+                const info = s === 'all' ? { label: 'Todos', color: 'text-gray-700', bg: 'bg-gray-100' } : getReferralStatusInfo(s)
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setReferralStatusFilter(s)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                      referralStatusFilter === s
+                        ? 'border-orange-400 ring-2 ring-orange-200 ' + info.bg + ' ' + info.color
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {info.label}
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              onClick={loadReferrals}
+              className="ml-auto p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Atualizar"
+            >
+              <RefreshCw className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
+
+          {/* Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <AnimatePresence>
+              {referrals
+                .filter(r => referralFilter === 'all' || r.type === referralFilter)
+                .filter(r => referralStatusFilter === 'all' || r.status === referralStatusFilter)
+                .filter(r =>
+                  !searchTerm ||
+                  r.referrer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  r.referred_name?.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                .map(referral => {
+                  const statusInfo = getReferralStatusInfo(referral.status)
+                  const isPartner = referral.type === 'partner'
+                  const partnerStatuses = ['pendente', 'em_andamento', 'concluido', 'cancelado']
+                  const customerStatuses = ['pendente', 'confirmada', 'credito_gerado', 'cancelada', 'expirada']
+                  const nextStatuses = isPartner ? partnerStatuses : customerStatuses
+
+                  return (
+                    <motion.div
+                      key={`${referral.type}-${referral.id}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="bg-white rounded-xl border-2 border-gray-200 hover:border-orange-300 hover:shadow-lg transition-all p-5"
+                    >
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`p-2 rounded-lg ${isPartner ? 'bg-blue-100' : 'bg-orange-100'}`}>
+                            {isPartner
+                              ? <Building2 className="w-4 h-4 text-blue-600" />
+                              : <UserCheck className="w-4 h-4 text-orange-600" />
+                            }
+                          </div>
+                          <div>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isPartner ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                              {isPartner ? 'Parceiro' : 'Cliente'}
+                            </span>
+                          </div>
+                        </div>
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusInfo.bg} ${statusInfo.color}`}>
+                          {statusInfo.label}
+                        </span>
+                      </div>
+
+                      {/* Quem indicou → Quem foi indicado */}
+                      <div className="mb-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="text-sm font-bold text-gray-900 truncate">{referral.referrer_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 pl-6">
+                          <ArrowRight className="w-3 h-3 text-orange-400" />
+                          <span className="text-sm text-gray-600 truncate">{referral.referred_name}</span>
+                        </div>
+                      </div>
+
+                      {/* Contact */}
+                      {referral.phone && (
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                          <Phone className="w-3 h-3" />
+                          <span>{referral.phone}</span>
+                        </div>
+                      )}
+
+                      {/* Financial Info */}
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        {isPartner && referral.commission_value && (
+                          <div className="bg-blue-50 rounded-lg p-2 text-center">
+                            <p className="text-xs text-blue-600 font-medium">Comissão</p>
+                            <p className="text-sm font-bold text-blue-800">
+                              {referral.commission_type === 'percentage'
+                                ? `${referral.commission_value}%`
+                                : formatCurrency(referral.commission_value)}
+                            </p>
+                          </div>
+                        )}
+                        {isPartner && (
+                          <div className={`rounded-lg p-2 text-center ${referral.commission_paid ? 'bg-green-50' : 'bg-gray-50'}`}>
+                            <p className="text-xs text-gray-500 font-medium">Pagamento</p>
+                            <p className={`text-sm font-bold ${referral.commission_paid ? 'text-green-700' : 'text-gray-500'}`}>
+                              {referral.commission_paid ? 'Pago' : 'Pendente'}
+                            </p>
+                          </div>
+                        )}
+                        {!isPartner && referral.order_value && (
+                          <div className="bg-green-50 rounded-lg p-2 text-center">
+                            <p className="text-xs text-green-600 font-medium">Valor OS</p>
+                            <p className="text-sm font-bold text-green-800">{formatCurrency(referral.order_value)}</p>
+                          </div>
+                        )}
+                        {!isPartner && referral.credit_amount && (
+                          <div className="bg-emerald-50 rounded-lg p-2 text-center">
+                            <p className="text-xs text-emerald-600 font-medium">Crédito</p>
+                            <p className="text-sm font-bold text-emerald-800">{formatCurrency(referral.credit_amount)}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Notes */}
+                      {referral.notes && (
+                        <p className="text-xs text-gray-500 italic mb-3 line-clamp-2 bg-gray-50 rounded px-2 py-1.5">
+                          {referral.notes}
+                        </p>
+                      )}
+
+                      {/* Date + Source */}
+                      <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+                        <span>{new Date(referral.created_at).toLocaleDateString('pt-BR')}</span>
+                        {referral.referral_source && (
+                          <span className="bg-gray-100 px-2 py-0.5 rounded">{referral.referral_source}</span>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="border-t border-gray-100 pt-3">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {nextStatuses
+                            .filter(s => s !== referral.status)
+                            .slice(0, 3)
+                            .map(s => {
+                              const si = getReferralStatusInfo(s)
+                              return (
+                                <button
+                                  key={s}
+                                  onClick={() => updateReferralStatus(referral, s)}
+                                  className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all hover:opacity-80 ${si.bg} ${si.color}`}
+                                >
+                                  {si.label}
+                                </button>
+                              )
+                            })
+                          }
+                          {referral.phone && (
+                            <a
+                              href={`https://wa.me/${referral.phone.replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-auto p-1.5 hover:bg-green-50 rounded-lg transition-colors"
+                              title="WhatsApp"
+                            >
+                              <MessageSquare className="w-4 h-4 text-green-600" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )
+                })
+              }
+            </AnimatePresence>
+          </div>
+
+          {referrals.filter(r =>
+            (referralFilter === 'all' || r.type === referralFilter) &&
+            (referralStatusFilter === 'all' || r.status === referralStatusFilter)
+          ).length === 0 && (
+            <div className="bg-white rounded-xl shadow-md p-16 text-center">
+              <Share2 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <p className="text-gray-500 font-medium text-lg">Nenhuma indicação encontrada</p>
+              <p className="text-gray-400 text-sm mt-1">As indicações de parceiros e clientes aparecerão aqui</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Kanban Board */}
-      {activePipeline && (
+      {activePipeline && activeTab !== 'indicacoes' && (
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex gap-4 overflow-x-auto pb-4">
             {activePipeline.stages.map(stage => (
