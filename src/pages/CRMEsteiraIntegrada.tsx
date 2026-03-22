@@ -103,6 +103,18 @@ const CRMEsteiraIntegrada = () => {
     concluidos: 0,
     total_comissoes: 0
   })
+  const [commissionModal, setCommissionModal] = useState<{
+    open: boolean
+    referral: Referral | null
+  }>({ open: false, referral: null })
+  const [commissionForm, setCommissionForm] = useState({
+    commission_type: 'fixed',
+    commission_value: '',
+    commission_paid: false,
+    cashback_percent: '',
+    credit_amount: '',
+    notes: ''
+  })
 
   useEffect(() => {
     loadEsteiraCompleta()
@@ -321,6 +333,53 @@ const CRMEsteiraIntegrada = () => {
       expirada:      { label: 'Expirada',     color: 'text-gray-600',   bg: 'bg-gray-100' }
     }
     return map[status] || { label: status, color: 'text-gray-700', bg: 'bg-gray-100' }
+  }
+
+  const openCommissionModal = (referral: Referral) => {
+    setCommissionForm({
+      commission_type: referral.commission_type || 'fixed',
+      commission_value: referral.commission_value != null ? String(referral.commission_value) : '',
+      commission_paid: referral.commission_paid || false,
+      cashback_percent: referral.cashback_percent != null ? String(referral.cashback_percent) : '',
+      credit_amount: referral.credit_amount != null ? String(referral.credit_amount) : '',
+      notes: referral.notes || ''
+    })
+    setCommissionModal({ open: true, referral })
+  }
+
+  const saveCommission = async () => {
+    const { referral } = commissionModal
+    if (!referral) return
+
+    try {
+      if (referral.type === 'partner') {
+        const { error } = await supabase
+          .from('partner_referrals')
+          .update({
+            commission_type: commissionForm.commission_type,
+            commission_value: commissionForm.commission_value ? Number(commissionForm.commission_value) : null,
+            commission_paid: commissionForm.commission_paid,
+            notes: commissionForm.notes || null
+          })
+          .eq('id', referral.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('customer_referrals')
+          .update({
+            cashback_percent: commissionForm.cashback_percent ? Number(commissionForm.cashback_percent) : null,
+            credit_amount: commissionForm.credit_amount ? Number(commissionForm.credit_amount) : null
+          })
+          .eq('id', referral.id)
+        if (error) throw error
+      }
+
+      showToast('Comissão atualizada com sucesso!', 'success')
+      setCommissionModal({ open: false, referral: null })
+      loadReferrals()
+    } catch (error: any) {
+      showToast('Erro ao salvar comissão', 'error')
+    }
   }
 
   const handleDragStart = (opportunity: Opportunity) => {
@@ -904,7 +963,7 @@ const CRMEsteiraIntegrada = () => {
                       </div>
 
                       {/* Actions */}
-                      <div className="border-t border-gray-100 pt-3">
+                      <div className="border-t border-gray-100 pt-3 space-y-2">
                         <div className="flex items-center gap-1 flex-wrap">
                           {nextStatuses
                             .filter(s => s !== referral.status)
@@ -934,6 +993,15 @@ const CRMEsteiraIntegrada = () => {
                             </a>
                           )}
                         </div>
+                        <button
+                          onClick={() => openCommissionModal(referral)}
+                          className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
+                        >
+                          <DollarSign className="w-3.5 h-3.5" />
+                          {isPartner
+                            ? (referral.commission_value != null ? 'Editar Comissão' : 'Designar Comissão')
+                            : (referral.credit_amount != null || referral.cashback_percent != null ? 'Editar Benefício' : 'Designar Benefício')}
+                        </button>
                       </div>
                     </motion.div>
                   )
@@ -1390,6 +1458,164 @@ const CRMEsteiraIntegrada = () => {
                 >
                   <Send className="w-5 h-5" />
                   Enviar WhatsApp
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Comissão / Benefício */}
+      <AnimatePresence>
+        {commissionModal.open && commissionModal.referral && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-2xl max-w-lg w-full"
+            >
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-blue-600" />
+                    {commissionModal.referral.type === 'partner' ? 'Designar Comissão' : 'Designar Benefício'}
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    {commissionModal.referral.referrer_name} → {commissionModal.referral.referred_name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setCommissionModal({ open: false, referral: null })}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {commissionModal.referral.type === 'partner' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Comissão</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { value: 'fixed', label: 'Valor Fixo (R$)' },
+                          { value: 'percentage', label: 'Percentual (%)' }
+                        ].map(opt => (
+                          <button
+                            key={opt.value}
+                            onClick={() => setCommissionForm(f => ({ ...f, commission_type: opt.value }))}
+                            className={`py-3 rounded-lg border-2 text-sm font-semibold transition-all ${
+                              commissionForm.commission_type === opt.value
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {commissionForm.commission_type === 'percentage' ? 'Percentual (%)' : 'Valor (R$)'}
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                          {commissionForm.commission_type === 'percentage' ? '%' : 'R$'}
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          step={commissionForm.commission_type === 'percentage' ? '0.1' : '0.01'}
+                          value={commissionForm.commission_value}
+                          onChange={e => setCommissionForm(f => ({ ...f, commission_value: e.target.value }))}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder={commissionForm.commission_type === 'percentage' ? 'Ex: 5' : 'Ex: 150,00'}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                      <textarea
+                        value={commissionForm.notes}
+                        onChange={e => setCommissionForm(f => ({ ...f, notes: e.target.value }))}
+                        rows={3}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        placeholder="Observações sobre a comissão..."
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <input
+                        type="checkbox"
+                        id="commission_paid"
+                        checked={commissionForm.commission_paid}
+                        onChange={e => setCommissionForm(f => ({ ...f, commission_paid: e.target.checked }))}
+                        className="w-5 h-5 rounded text-green-600 border-gray-300 cursor-pointer"
+                      />
+                      <label htmlFor="commission_paid" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                        Comissão já foi paga ao parceiro
+                      </label>
+                      {commissionForm.commission_paid && (
+                        <CheckCircle className="w-5 h-5 text-green-600 ml-auto" />
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Cashback / Desconto (%)</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">%</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={commissionForm.cashback_percent}
+                          onChange={e => setCommissionForm(f => ({ ...f, cashback_percent: e.target.value }))}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Ex: 10"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Crédito em Conta (R$)</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">R$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={commissionForm.credit_amount}
+                          onChange={e => setCommissionForm(f => ({ ...f, credit_amount: e.target.value }))}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Ex: 50,00"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400">Você pode definir cashback (%) ou crédito em conta (R$), ou ambos.</p>
+                  </>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setCommissionModal({ open: false, referral: null })}
+                  className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={saveCommission}
+                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Salvar
                 </button>
               </div>
             </motion.div>
