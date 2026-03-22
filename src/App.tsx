@@ -1198,8 +1198,8 @@ function App() {
           <PremiumBanner feature={premiumFeature} />
         )}
 
-      {/* Thomaz Super Chat - Assistente Inteligente Único */}
-      <ThomazSuperChat />
+      {/* Thomaz Super Chat - Assistente Inteligente Único (oculto na área do técnico) */}
+      {!location.pathname.startsWith('/tecnico') && <ThomazSuperChat />}
 
       {/* Busca Global (Cmd+K) */}
       <GlobalSearch isOpen={isSearchOpen} onClose={closeSearch} />
