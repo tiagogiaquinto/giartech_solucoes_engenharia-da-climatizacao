@@ -33,7 +33,7 @@ interface TechnicianStats {
 
 const TechnicianPerfil = () => {
   const navigate = useNavigate()
-  const { user, signOut } = useUser()
+  const { user, logout } = useUser()
   const [stats, setStats] = useState<TechnicianStats>({
     total_os: 0,
     completed_os: 0,
@@ -96,7 +96,7 @@ const TechnicianPerfil = () => {
   }
 
   const handleLogout = async () => {
-    await signOut()
+    await logout()
     navigate('/mobile/login')
   }
 
