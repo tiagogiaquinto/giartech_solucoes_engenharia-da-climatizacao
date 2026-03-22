@@ -7,6 +7,7 @@ import {
   Users, Package, FileText, Briefcase, Shield, Zap
 } from 'lucide-react'
 import MarginAlertPanel from '../components/MarginAlertPanel'
+import OSProfitabilityWidget from '../components/OSProfitabilityWidget'
 import PMOCSchedulePanel from '../components/PMOCSchedulePanel'
 import { supabase } from '../lib/supabase'
 import { InteractiveKPICard } from '../components/InteractiveKPICard'
@@ -980,6 +981,9 @@ const CFODashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <MarginAlertPanel />
+          <OSProfitabilityWidget />
+        </div>
+        <div className="mt-6">
           <PMOCSchedulePanel />
         </div>
       </div>
