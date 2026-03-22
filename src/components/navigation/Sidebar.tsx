@@ -70,6 +70,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'crm-templates', path: '/crm-templates', icon: MessageSquare, label: 'Mensagens do CRM', description: 'Configure mensagens personalizadas para WhatsApp, Email e SMS', moduleCode: 'mensagens_crm' },
   { id: 'customer-gamification', path: '/customer-gamification', icon: Star, label: 'Gamificação de Clientes', description: 'Sistema de pontos, níveis, badges e benefícios', moduleCode: 'gamificacao' },
   { id: 'customer-gamification-manager', path: '/customer-gamification-manager', icon: Settings, label: 'Gerenciar Gamificação', description: 'Controle quais clientes participam', moduleCode: 'gamificacao' },
+  { id: 'partner-gamification', path: '/partner-gamification', icon: Trophy, label: 'Gamificação de Parceiros', description: 'Rankings, níveis e conquistas dos parceiros de indicação', moduleCode: 'gamificacao' },
   { id: 'customer-rfm', path: '/customer-rfm', icon: BarChart2, label: 'Análise RFM', description: 'Segmentação de clientes por recência, frequência e valor', moduleCode: 'clientes' },
   { id: 'pos-venda', path: '/pos-venda', icon: Heart, label: 'Pós-Venda', description: 'Acompanhamento pós-atendimento e fidelização', moduleCode: 'crm' },
   { id: 'whatsapp-crm', path: '/whatsapp-crm', icon: Smartphone, label: 'WhatsApp CRM', description: 'Gestão de conversas e contatos no WhatsApp', moduleCode: 'crm' },
