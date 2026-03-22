@@ -94,6 +94,7 @@ import CustomerCredits from './pages/CustomerCredits'
 import CustomerGamification from './pages/CustomerGamification'
 import CustomerGamificationManager from './pages/CustomerGamificationManager'
 import PartnerGamification from './pages/PartnerGamification'
+import GamificationHub from './pages/GamificationHub'
 import TechnicianPerformance from './pages/TechnicianPerformance'
 import MobileLayout from './components/layouts/MobileLayout'
 import MobileHome from './pages/mobile/MobileHome'
@@ -879,6 +880,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <PartnerGamification />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/gamification" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <GamificationHub />
               </WebLayout>
             </ProtectedRoute>
           } />
