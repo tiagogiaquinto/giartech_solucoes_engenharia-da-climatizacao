@@ -80,8 +80,6 @@ import Documents from './pages/Documents'
 import EmailSettings from './pages/EmailSettings'
 import EmailInbox from './pages/EmailInbox'
 import EmailCompose from './pages/EmailCompose'
-import { AIChatbot } from './components/AIChatbot'
-import ThomazSuperChat from './components/ThomazSuperChat'
 import ThomazChat from './pages/ThomazChat'
 import ReportsAdvanced from './pages/ReportsAdvanced'
 
@@ -1208,9 +1206,6 @@ function App() {
         {showPremiumBanner && (
           <PremiumBanner feature={premiumFeature} />
         )}
-
-      {/* Thomaz Super Chat - Assistente Inteligente Único (oculto na área do técnico) */}
-      {!location.pathname.startsWith('/tecnico') && <ThomazSuperChat />}
 
       {/* Busca Global (Cmd+K) */}
       <GlobalSearch isOpen={isSearchOpen} onClose={closeSearch} />
