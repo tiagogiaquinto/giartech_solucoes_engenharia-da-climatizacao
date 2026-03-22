@@ -222,16 +222,16 @@ export default function CadastroClientesParceiros() {
           setPartnerLoading(false)
           return
         }
-        const { error } = await supabase.from('portal_accounts').insert([{
-          full_name: partnerForm.full_name,
-          email: partnerForm.email,
-          password_hash: partnerForm.password,
-          role: 'parceiro',
-          document_cpf_cnpj: partnerForm.document_cpf_cnpj || null,
-          phone: partnerForm.phone || null,
-          is_active: partnerForm.is_active,
-          linked_customer_id: partnerForm.linked_customer_id || null
-        }])
+        const { error } = await supabase.rpc('create_portal_account', {
+          p_email: partnerForm.email,
+          p_password: partnerForm.password,
+          p_full_name: partnerForm.full_name,
+          p_role: 'parceiro',
+          p_document_cpf_cnpj: partnerForm.document_cpf_cnpj || null,
+          p_phone: partnerForm.phone || null,
+          p_is_active: partnerForm.is_active,
+          p_linked_customer_id: partnerForm.linked_customer_id || null
+        })
         if (error) throw error
         showToast('Parceiro cadastrado!')
       }
@@ -239,7 +239,7 @@ export default function CadastroClientesParceiros() {
       await loadPartners()
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro ao salvar parceiro.'
-      setPartnerError(msg.includes('duplicate') ? 'Email já cadastrado.' : msg)
+      setPartnerError(msg.includes('duplicate') || msg.includes('duplicate_email') ? 'Email já cadastrado.' : msg)
     } finally {
       setPartnerLoading(false)
     }
