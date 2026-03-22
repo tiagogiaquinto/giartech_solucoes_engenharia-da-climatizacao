@@ -39,58 +39,82 @@ Deno.serve(async (req: Request) => {
 
     if (method === 'email' || method === 'both') {
       try {
-        const emailBody = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-              .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-              .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; font-weight: bold; }
-              .info-box { background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0; border-radius: 5px; }
-              .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 30px; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>🎉 Bem-vindo ao ${companyName || 'Giartech Sistema'}!</h1>
-              </div>
-              <div class="content">
-                <p>Olá!</p>
-                <p>Você foi convidado para acessar nosso sistema de gestão empresarial como <strong>${roleNames[role] || role}</strong>.</p>
+        const emailBody = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Convite de Acesso</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="background:#1e3a5f;padding:36px 40px;text-align:center;">
+              <p style="margin:0;color:#93c5fd;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:600;">${companyName || 'Giartech Soluções'}</p>
+              <h1 style="margin:12px 0 0;color:#ffffff;font-size:26px;font-weight:700;line-height:1.3;">Você foi convidado!</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px 40px 32px;">
+              <p style="margin:0 0 20px;font-size:15px;color:#4b5563;line-height:1.7;">
+                Você foi convidado para acessar o sistema de gestão da <strong>${companyName || 'Giartech Soluções'}</strong> como <strong>${roleNames[role] || role}</strong>.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f7ff;border-radius:10px;border:1px solid #bfdbfe;margin:0 0 24px;">
+                <tr>
+                  <td style="padding:24px 28px;">
+                    <p style="margin:0 0 14px;font-size:13px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Informações do Convite</p>
+                    <table cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="font-size:13px;color:#6b7280;padding:4px 0;width:80px;">E-mail:</td>
+                        <td style="font-size:14px;color:#111827;font-weight:600;padding:4px 0;">${email}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px;color:#6b7280;padding:4px 0;">Função:</td>
+                        <td style="font-size:14px;color:#111827;padding:4px 0;">${roleNames[role] || role}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px;color:#6b7280;padding:4px 0;">Validade:</td>
+                        <td style="padding:4px 0;"><span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;">7 dias</span></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${inviteLink}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 40px;border-radius:10px;">
+                      Aceitar Convite
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">
+                Ou acesse: <a href="${inviteLink}" style="color:#2563eb;">${inviteLink}</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:24px 40px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">
+                <strong style="color:#1e3a5f;">Thomaz AI</strong> — Assistente Virtual Giartech
+              </p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;">Este é um e-mail automático. Não responda esta mensagem.</p>
+              <p style="margin:12px 0 0;font-size:11px;color:#d1d5db;">&copy; ${new Date().getFullYear()} ${companyName || 'Giartech Soluções'}. Todos os direitos reservados.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
-                <div class="info-box">
-                  <h3>📋 Informações do Convite:</h3>
-                  <p><strong>Email:</strong> ${email}</p>
-                  <p><strong>Função:</strong> ${roleNames[role] || role}</p>
-                  <p><strong>Validade:</strong> 7 dias</p>
-                </div>
-
-                <p>Para criar sua conta e definir sua senha, clique no botão abaixo:</p>
-
-                <center>
-                  <a href="${inviteLink}" class="button">Aceitar Convite</a>
-                </center>
-
-                <p style="color: #6b7280; font-size: 14px;">Ou copie e cole este link no navegador:<br>
-                <code style="background: #e5e7eb; padding: 5px; display: inline-block; margin-top: 5px;">${inviteLink}</code></p>
-
-                <p><strong>⏰ Importante:</strong> Este convite expira em 7 dias.</p>
-
-                <div class="footer">
-                  <p>Este é um email automático. Não responda esta mensagem.</p>
-                  <p>© ${new Date().getFullYear()} ${companyName || 'Giartech Sistema'}. Todos os direitos reservados.</p>
-                </div>
-              </div>
-            </div>
-          </body>
-          </html>
-        `;
-
-        const emailResponse = await fetch(`${req.headers.get('origin')}/functions/v1/send-smtp-email`, {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || req.headers.get('origin') || '';
+        const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-giartech-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -98,8 +122,8 @@ Deno.serve(async (req: Request) => {
           },
           body: JSON.stringify({
             to: email,
-            subject: `Convite para acessar ${companyName || 'Giartech Sistema'}`,
-            html: emailBody
+            subject: `Convite para acessar ${companyName || 'Giartech Soluções'}`,
+            htmlContent: emailBody
           })
         });
 
