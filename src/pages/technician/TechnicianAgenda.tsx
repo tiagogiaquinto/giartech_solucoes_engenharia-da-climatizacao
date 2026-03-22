@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Calendar,
   Clock,
   MapPin,
-  ChevronLeft,
-  ChevronRight,
-  Wrench,
-  CheckCircle2,
-  RefreshCw,
   Navigation,
-  Phone
+  Phone,
+  Wrench,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  PlayCircle
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
+import OSBottomDrawer from '../../components/technician/OSBottomDrawer'
 
 interface AgendaEvent {
   id: string
@@ -31,162 +31,92 @@ interface AgendaEvent {
   equipment?: string
   brand?: string
   model?: string
+  location_detail?: string
+  description?: string
 }
 
-const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
-const MONTHS = [
-  'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-]
+const PRIORITY_CONFIG: Record<string, { label: string; dot: string }> = {
+  urgent: { label: 'Urgente', dot: 'bg-red-500' },
+  high: { label: 'Alta', dot: 'bg-orange-500' },
+  normal: { label: 'Normal', dot: 'bg-blue-500' },
+  low: { label: 'Baixa', dot: 'bg-gray-400' }
+}
 
-const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; icon: typeof Clock }> = {
-  pending: { label: 'Pendente', bg: 'bg-amber-100', text: 'text-amber-700', icon: Clock },
-  in_progress: { label: 'Em Execucao', bg: 'bg-blue-100', text: 'text-blue-700', icon: Wrench },
-  completed: { label: 'Concluida', bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle2 },
-  cancelled: { label: 'Cancelada', bg: 'bg-red-100', text: 'text-red-700', icon: Clock },
-  pausado: { label: 'Pausada', bg: 'bg-gray-100', text: 'text-gray-700', icon: Clock }
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pendente',
+  pendente: 'Pendente',
+  in_progress: 'Em Execucao',
+  em_andamento: 'Em Execucao'
 }
 
 const TechnicianAgenda = () => {
-  const navigate = useNavigate()
   const { user } = useUser()
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState(new Date())
   const [events, setEvents] = useState<AgendaEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<AgendaEvent | null>(null)
+
+  const today = new Date()
+  const todayStr = today.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long'
+  })
 
   useEffect(() => {
-    loadEvents()
-  }, [currentDate, user])
+    loadTodayEvents()
+  }, [user])
 
-  const loadEvents = async (isRefresh = false) => {
+  const loadTodayEvents = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
     else setLoading(true)
 
     try {
-      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+      const todayDate = new Date()
+      const startOfDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 0, 0, 0)
+      const endOfDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 23, 59, 59)
 
       const { data, error } = await supabase
-        .from('v_technician_service_orders')
-        .select('*')
-        .gte('scheduled_at', startOfMonth.toISOString())
-        .lte('scheduled_at', endOfMonth.toISOString())
+        .from('service_orders')
+        .select(`
+          id, order_number, title, client_name, client_address, client_city,
+          client_phone, scheduled_at, scheduled_time, status, priority,
+          equipment, brand, model, description
+        `)
+        .in('status', ['pending', 'pendente', 'in_progress', 'em_andamento'])
+        .gte('scheduled_at', startOfDay.toISOString())
+        .lte('scheduled_at', endOfDay.toISOString())
         .order('scheduled_at', { ascending: true })
 
-      if (error) {
-        const { data: fallbackData } = await supabase
+      if (!error && data) {
+        setEvents(data)
+      } else {
+        const fallback = await supabase
           .from('service_orders')
           .select(`
-            id,
-            order_number,
-            title,
-            client_name,
-            client_address,
-            client_city,
-            client_phone,
-            scheduled_at,
-            scheduled_time,
-            status,
-            priority,
-            equipment,
-            brand,
-            model
+            id, order_number, title, client_name, client_address, client_city,
+            client_phone, scheduled_at, scheduled_time, status, priority,
+            equipment, brand, model, description
           `)
-          .gte('scheduled_at', startOfMonth.toISOString())
-          .lte('scheduled_at', endOfMonth.toISOString())
+          .in('status', ['pending', 'pendente', 'in_progress', 'em_andamento'])
           .order('scheduled_at', { ascending: true })
-
-        setEvents(fallbackData || [])
-      } else {
-        setEvents(data || [])
+          .limit(20)
+        setEvents(fallback.data || [])
       }
-    } catch (err) {
-      console.error('Erro ao carregar eventos:', err)
+    } catch {
+      setEvents([])
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
   }
 
-  const getDaysInMonth = () => {
-    const year = currentDate.getFullYear()
-    const month = currentDate.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const daysInMonth = lastDay.getDate()
-    const startingDay = firstDay.getDay()
-
-    const days: (number | null)[] = []
-
-    for (let i = 0; i < startingDay; i++) {
-      days.push(null)
-    }
-
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(i)
-    }
-
-    return days
-  }
-
-  const getEventsForDay = (day: number) => {
-    const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
-      .toISOString()
-      .split('T')[0]
-
-    return events.filter(e => {
-      if (!e.scheduled_at) return false
-      return e.scheduled_at.startsWith(dateStr)
-    })
-  }
-
-  const getEventsForSelectedDate = () => {
-    const dateStr = selectedDate.toISOString().split('T')[0]
-    return events.filter(e => {
-      if (!e.scheduled_at) return false
-      return e.scheduled_at.startsWith(dateStr)
-    })
-  }
-
-  const previousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
-  }
-
-  const nextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
-  }
-
-  const isToday = (day: number) => {
-    const today = new Date()
-    return (
-      day === today.getDate() &&
-      currentDate.getMonth() === today.getMonth() &&
-      currentDate.getFullYear() === today.getFullYear()
-    )
-  }
-
-  const isSelected = (day: number) => {
-    return (
-      day === selectedDate.getDate() &&
-      currentDate.getMonth() === selectedDate.getMonth() &&
-      currentDate.getFullYear() === selectedDate.getFullYear()
-    )
-  }
-
-  const selectDay = (day: number) => {
-    setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))
-  }
-
   const formatTime = (dateStr?: string, timeStr?: string) => {
     if (timeStr) return timeStr
-    if (!dateStr) return '--:--'
+    if (!dateStr) return null
     try {
       return new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    } catch {
-      return '--:--'
-    }
+    } catch { return null }
   }
 
   const openInMaps = (address: string, city?: string) => {
@@ -194,16 +124,12 @@ const TechnicianAgenda = () => {
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank')
   }
 
-  const days = getDaysInMonth()
-  const selectedEvents = getEventsForSelectedDate()
-
-  const pendingCount = events.filter(e => e.status === 'pending').length
-  const inProgressCount = events.filter(e => e.status === 'in_progress').length
-  const completedCount = events.filter(e => e.status === 'completed').length
+  const pendingCount = events.filter(e => ['pending', 'pendente'].includes(e.status)).length
+  const inProgressCount = events.filter(e => ['in_progress', 'em_andamento'].includes(e.status)).length
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[80vh]">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-500 font-medium">Carregando agenda...</p>
@@ -213,220 +139,164 @@ const TechnicianAgenda = () => {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
-          <p className="text-sm text-gray-500">{events.length} servicos neste mes</p>
-        </div>
-        <button
-          onClick={() => loadEvents(true)}
-          disabled={refreshing}
-          className="p-3 bg-white rounded-2xl shadow-sm active:scale-95 transition-transform"
-        >
-          <RefreshCw className={`w-5 h-5 text-blue-600 ${refreshing ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-center">
-          <p className="text-2xl font-bold text-amber-700">{pendingCount}</p>
-          <p className="text-xs text-amber-600 font-medium">Pendentes</p>
-        </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 text-center">
-          <p className="text-2xl font-bold text-blue-700">{inProgressCount}</p>
-          <p className="text-xs text-blue-600 font-medium">Em Execucao</p>
-        </div>
-        <div className="bg-green-50 border border-green-200 rounded-2xl p-3 text-center">
-          <p className="text-2xl font-bold text-green-700">{completedCount}</p>
-          <p className="text-xs text-green-600 font-medium">Concluidas</p>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          <button
-            onClick={previousMonth}
-            className="p-2 hover:bg-gray-100 rounded-xl active:scale-95 transition-all"
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </button>
-          <h2 className="text-lg font-bold text-gray-900">
-            {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </h2>
-          <button
-            onClick={nextMonth}
-            className="p-2 hover:bg-gray-100 rounded-xl active:scale-95 transition-all"
-          >
-            <ChevronRight className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-7 gap-1 px-2 pt-2">
-          {WEEKDAYS.map((day, i) => (
-            <div key={i} className="text-center text-xs font-semibold text-gray-400 py-2">
-              {day}
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-1 p-2 pb-4">
-          {days.map((day, index) => {
-            if (day === null) {
-              return <div key={`empty-${index}`} className="aspect-square" />
-            }
-
-            const dayEvents = getEventsForDay(day)
-            const hasEvents = dayEvents.length > 0
-            const hasPending = dayEvents.some(e => e.status === 'pending')
-            const hasInProgress = dayEvents.some(e => e.status === 'in_progress')
-
-            return (
-              <button
-                key={day}
-                onClick={() => selectDay(day)}
-                className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all active:scale-90 ${
-                  isSelected(day)
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                    : isToday(day)
-                    ? 'bg-blue-100 text-blue-700 font-bold'
-                    : 'hover:bg-gray-100'
-                }`}
-              >
-                <span className={`text-sm font-semibold ${
-                  isSelected(day) ? 'text-white' : ''
-                }`}>
-                  {day}
-                </span>
-                {hasEvents && (
-                  <div className="flex gap-0.5 mt-0.5">
-                    {hasPending && (
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        isSelected(day) ? 'bg-white' : 'bg-amber-500'
-                      }`} />
-                    )}
-                    {hasInProgress && (
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        isSelected(day) ? 'bg-white' : 'bg-blue-500'
-                      }`} />
-                    )}
-                    {!hasPending && !hasInProgress && (
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        isSelected(day) ? 'bg-white' : 'bg-green-500'
-                      }`} />
-                    )}
-                  </div>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-lg font-bold text-gray-900 mb-3 capitalize">
-          {selectedDate.toLocaleDateString('pt-BR', {
-            weekday: 'long',
-            day: '2-digit',
-            month: 'long'
-          })}
-        </h3>
-
-        {selectedEvents.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
-            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h4 className="text-xl font-bold text-gray-900 mb-2">Sem agendamentos</h4>
-            <p className="text-gray-500">Nenhuma OS para este dia</p>
+    <>
+      <div className="px-4 pt-5 pb-28 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Agenda de Hoje</h1>
+            <p className="text-sm text-gray-400 capitalize mt-0.5">{todayStr}</p>
           </div>
+          <button
+            onClick={() => loadTodayEvents(true)}
+            disabled={refreshing}
+            className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 active:scale-95 transition-transform"
+          >
+            <RefreshCw className={`w-5 h-5 text-blue-600 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-amber-700 leading-none">{pendingCount}</p>
+              <p className="text-xs text-amber-600 font-medium mt-0.5">Pendentes</p>
+            </div>
+          </div>
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+              <PlayCircle className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-blue-700 leading-none">{inProgressCount}</p>
+              <p className="text-xs text-blue-600 font-medium mt-0.5">Em Execucao</p>
+            </div>
+          </div>
+        </div>
+
+        {events.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 text-center mt-4"
+          >
+            <Calendar className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-gray-700 mb-1">Dia livre!</h3>
+            <p className="text-gray-400 text-sm">Nenhuma OS agendada para hoje</p>
+          </motion.div>
         ) : (
           <div className="space-y-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {events.length} {events.length === 1 ? 'atendimento' : 'atendimentos'} hoje
+            </p>
+
             <AnimatePresence>
-              {selectedEvents.map((event, index) => {
-                const statusConfig = STATUS_CONFIG[event.status] || STATUS_CONFIG.pending
-                const StatusIcon = statusConfig.icon
+              {events.map((event, index) => {
                 const time = formatTime(event.scheduled_at, event.scheduled_time)
+                const priority = PRIORITY_CONFIG[event.priority || 'normal'] || PRIORITY_CONFIG.normal
+                const isInProgress = ['in_progress', 'em_andamento'].includes(event.status)
 
                 return (
-                  <motion.div
+                  <motion.button
                     key={event.id}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="bg-white rounded-2xl shadow-sm overflow-hidden w-full"
+                    transition={{ delay: index * 0.06 }}
+                    onClick={() => setSelectedOrder(event)}
+                    className="w-full text-left bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden active:scale-[0.98] transition-transform"
                   >
+                    <div className={`h-1.5 w-full ${isInProgress ? 'bg-blue-500' : 'bg-amber-400'}`} />
+
                     <div className="p-4">
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 pr-2">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${statusConfig.bg} ${statusConfig.text}`}>
-                              {statusConfig.label}
+                            <div className={`w-2 h-2 rounded-full ${priority.dot}`} />
+                            <span className={`text-xs font-semibold ${isInProgress ? 'text-blue-600' : 'text-amber-600'}`}>
+                              {STATUS_LABELS[event.status] || event.status}
                             </span>
+                            <span className="text-xs text-gray-400">OS #{event.order_number}</span>
                           </div>
-                          <h3 className="text-lg font-bold text-gray-900 truncate">
+                          <h3 className="text-base font-bold text-gray-900 truncate">
                             {event.client_name || 'Cliente nao informado'}
                           </h3>
-                          <p className="text-sm text-gray-500">
-                            OS #{event.order_number}
-                          </p>
+                          {event.equipment && (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1">
+                              <Wrench className="w-3.5 h-3.5 text-gray-400" />
+                              <span>{event.equipment}{event.brand ? ` — ${event.brand}` : ''}</span>
+                            </div>
+                          )}
                         </div>
+
                         {time && (
-                          <div className="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-xl">
-                            <Clock className="w-4 h-4 text-gray-600" />
+                          <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-xl flex-shrink-0">
+                            <Clock className="w-3.5 h-3.5 text-gray-500" />
                             <span className="text-sm font-bold text-gray-700">{time}</span>
                           </div>
                         )}
                       </div>
 
-                      {event.equipment && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                          <Wrench className="w-4 h-4 text-gray-400" />
-                          <span>{event.equipment} {event.brand && `- ${event.brand}`} {event.model && event.model}</span>
+                      <div className="space-y-1.5">
+                        {event.client_address && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openInMaps(event.client_address!, event.client_city)
+                            }}
+                            className="flex items-center gap-2 text-xs text-blue-600 active:opacity-70 w-full"
+                          >
+                            <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="truncate">{event.client_address}{event.client_city ? `, ${event.client_city}` : ''}</span>
+                            <Navigation className="w-3 h-3 flex-shrink-0" />
+                          </button>
+                        )}
+
+                        {event.client_phone && (
+                          <a
+                            href={`tel:${event.client_phone}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-2 text-xs text-green-600"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            <span>{event.client_phone}</span>
+                          </a>
+                        )}
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                        <span className="text-xs text-gray-400">Toque para abrir a OS</span>
+                        <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg ${
+                          isInProgress
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {isInProgress ? (
+                            <><PlayCircle className="w-3.5 h-3.5" /> Continuar</>
+                          ) : (
+                            <><CheckCircle2 className="w-3.5 h-3.5" /> Iniciar</>
+                          )}
                         </div>
-                      )}
-
-                      {event.client_address && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openInMaps(event.client_address!, event.client_city)
-                          }}
-                          className="flex items-center gap-2 text-sm text-blue-600 mb-2 active:opacity-70"
-                        >
-                          <MapPin className="w-4 h-4" />
-                          <span className="truncate">{event.client_address}</span>
-                          <Navigation className="w-3 h-3" />
-                        </button>
-                      )}
-
-                      {event.client_phone && (
-                        <a
-                          href={`tel:${event.client_phone}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-2 text-sm text-green-600 mb-3"
-                        >
-                          <Phone className="w-4 h-4" />
-                          <span>{event.client_phone}</span>
-                        </a>
-                      )}
-
-                      <button
-                        onClick={() => navigate(`/tecnico/os/${event.id}`)}
-                        className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold active:scale-[0.98] transition-all"
-                      >
-                        <StatusIcon className="w-5 h-5" />
-                        {event.status === 'completed' ? 'Ver Detalhes' :
-                         event.status === 'in_progress' ? 'Continuar Execucao' :
-                         'Iniciar OS'}
-                      </button>
+                      </div>
                     </div>
-                  </motion.div>
+                  </motion.button>
                 )
               })}
             </AnimatePresence>
           </div>
         )}
       </div>
-    </div>
+
+      <OSBottomDrawer
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onFinished={() => {
+          setSelectedOrder(null)
+          loadTodayEvents()
+        }}
+      />
+    </>
   )
 }
 
