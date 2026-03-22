@@ -56,6 +56,14 @@ export const StockCheckPanel: React.FC<StockCheckPanelProps> = ({
 
     setCreating(true)
     try {
+      const { data: poData } = await supabase.rpc('fn_check_and_request_stock_for_os', {
+        p_os_id: serviceOrderId
+      })
+      if (poData && poData.shortage_count > 0) {
+        setCreated(true)
+        onRequisitionCreated?.(poData.shortage_count)
+        return
+      }
       await supabase.from('os_stock_requisitions').insert(
         shortages.map(item => ({
           service_order_id: serviceOrderId,

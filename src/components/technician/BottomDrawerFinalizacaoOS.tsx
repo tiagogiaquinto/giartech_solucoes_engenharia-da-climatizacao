@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, CheckCircle2, MapPin, User, Wrench, PenTool, RotateCcw, Send, ChevronUp } from 'lucide-react'
+import { X, CheckCircle2, MapPin, User, Wrench, PenTool, RotateCcw, Send, ChevronUp, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
+import { generateVisitReportPDF } from '../../utils/generateVisitReportPDF'
 
 interface ChecklistItem {
   id: string
@@ -226,6 +227,26 @@ const BottomDrawerFinalizacaoOS = ({ order, onClose, onFinished }: BottomDrawerF
           related_table: 'service_orders',
           related_id: order.id
         })
+
+      try {
+        await generateVisitReportPDF({
+          order_number: order.order_number,
+          customer_name: order.client_name || clientName.trim(),
+          customer_address: order.client_address,
+          customer_city: order.client_city,
+          technician_name: user.email || 'Técnico',
+          completed_at: new Date().toISOString(),
+          equipment: order.equipment,
+          brand: order.brand,
+          model: order.model,
+          checklist_items: checklist,
+          tech_signature: techSig || undefined,
+          client_signature: clientSig || undefined,
+          client_signer_name: clientName.trim(),
+        })
+      } catch {
+        /* PDF generation is best-effort — don't block finalization */
+      }
 
       onFinished()
     } catch (err) {
