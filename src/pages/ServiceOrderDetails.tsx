@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, FileText, Package, Users, DollarSign, Clock, CheckCircle, AlertCircle, FileEdit as Edit, Trash2, Download, Eye } from 'lucide-react'
+import { ArrowLeft, FileText, Package, Users, DollarSign, Clock, CheckCircle, AlertCircle, FileEdit as Edit, Trash2, Download, Eye, MessageCircle, Share2 } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
 import { formatDateSafe } from '../utils/format'
 import { OSFiscalHealth } from '../components/OSFiscalHealth'
 import { OSPaymentFlow } from '../components/OSPaymentFlow'
 import { OSChatPanel } from '../components/OSChatPanel'
+import { generateVisitReportPDF } from '../utils/generateVisitReportPDF'
 
 const ServiceOrderDetails = () => {
   const { id } = useParams()
@@ -102,6 +103,75 @@ const ServiceOrderDetails = () => {
     }
   }
 
+  const handleDownloadReport = async () => {
+    if (!order) return
+    if (order.report_pdf_url) {
+      window.open(order.report_pdf_url, '_blank')
+      return
+    }
+    const completionData = await supabase
+      .from('os_completion_data')
+      .select('technician_signature, client_signature, client_name')
+      .eq('os_id', id)
+      .maybeSingle()
+
+    const checklistData = await supabase
+      .from('os_checklist_items')
+      .select('description, is_completed, technical_note')
+      .eq('os_id', id)
+
+    const materialsData = await supabase
+      .from('service_order_materials')
+      .select('quantity, inventory_items(name, unit)')
+      .eq('service_order_id', id)
+
+    await generateVisitReportPDF({
+      order_number: order.order_number,
+      customer_name: customer?.nome_razao || customer?.name || order.client_name || 'Cliente',
+      customer_address: order.client_address,
+      customer_city: order.client_city,
+      customer_phone: customer?.telefone || customer?.phone,
+      technician_name: team[0]?.employees?.nome || 'Técnico',
+      completed_at: order.completed_at || order.created_at,
+      description: order.description,
+      report: order.report,
+      checklist_items: checklistData.data || [],
+      materials_used: (materialsData.data || []).map((m: any) => ({
+        name: m.inventory_items?.name || 'Material',
+        quantity: m.quantity,
+        unit: m.inventory_items?.unit
+      })),
+      tech_signature: completionData.data?.technician_signature,
+      client_signature: completionData.data?.client_signature,
+      client_signer_name: completionData.data?.client_name,
+      total_value: order.total_value || order.net_value || order.final_price,
+    })
+  }
+
+  const handleShareWhatsApp = () => {
+    if (!order) return
+    const phone = (customer?.whatsapp || customer?.telefone || customer?.phone || '').replace(/\D/g, '')
+    const reportUrl = order.report_pdf_url || ''
+    const orderNum = order.order_number
+    const customerName = customer?.nome_razao || customer?.name || order.client_name || 'Cliente'
+
+    let message = `Olá ${customerName}! 👋\n\n`
+    message += `O serviço da OS #${orderNum} foi concluído com sucesso pela equipe Giartech. ✅\n\n`
+
+    if (reportUrl) {
+      message += `📄 Acesse o Relatório de Visita Técnica:\n${reportUrl}\n\n`
+    }
+
+    message += `Qualquer dúvida, estamos à disposição!\n_Equipe Giartech Soluções_`
+
+    const encodedMsg = encodeURIComponent(message)
+    const waUrl = phone
+      ? `https://api.whatsapp.com/send?phone=55${phone}&text=${encodedMsg}`
+      : `https://api.whatsapp.com/send?text=${encodedMsg}`
+
+    window.open(waUrl, '_blank')
+  }
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
@@ -184,6 +254,29 @@ const ServiceOrderDetails = () => {
             </button>
 
             <div className="flex items-center gap-2">
+              <button
+                onClick={handleDownloadReport}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-900 transition-colors"
+                title="Baixar Relatório de Visita Técnica (PDF)"
+              >
+                <FileText className="h-4 w-4" />
+                Laudo PDF
+              </button>
+
+              {(order?.status === 'completed' || order?.status === 'concluido') && (
+                <button
+                  onClick={handleShareWhatsApp}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  title="Compartilhar laudo via WhatsApp"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp
+                  {order?.report_pdf_url && (
+                    <span className="ml-1 w-2 h-2 rounded-full bg-green-300 inline-block" title="PDF disponível" />
+                  )}
+                </button>
+              )}
+
               <button
                 onClick={() => navigate(`/service-orders/${id}/edit`)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

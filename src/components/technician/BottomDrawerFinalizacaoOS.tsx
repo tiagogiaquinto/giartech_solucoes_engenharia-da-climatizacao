@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, CheckCircle2, MapPin, User, Wrench, PenTool, RotateCcw, Send, ChevronUp, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
-import { generateVisitReportPDF } from '../../utils/generateVisitReportPDF'
+import { buildReportBlob } from '../../utils/generateVisitReportPDF'
 
 interface ChecklistItem {
   id: string
@@ -229,13 +229,14 @@ const BottomDrawerFinalizacaoOS = ({ order, onClose, onFinished }: BottomDrawerF
         })
 
       try {
-        await generateVisitReportPDF({
+        const completedAt = new Date().toISOString()
+        const blob = await buildReportBlob({
           order_number: order.order_number,
           customer_name: order.client_name || clientName.trim(),
           customer_address: order.client_address,
           customer_city: order.client_city,
           technician_name: user.email || 'Técnico',
-          completed_at: new Date().toISOString(),
+          completed_at: completedAt,
           equipment: order.equipment,
           brand: order.brand,
           model: order.model,
@@ -244,6 +245,39 @@ const BottomDrawerFinalizacaoOS = ({ order, onClose, onFinished }: BottomDrawerF
           client_signature: clientSig || undefined,
           client_signer_name: clientName.trim(),
         })
+
+        const safeName = (order.client_name || clientName.trim()).replace(/[^a-zA-Z0-9]/g, '_')
+        const filename = `RVT-OS-${order.order_number}-${safeName}.pdf`
+
+        const { data: uploadData } = await supabase.storage
+          .from('visit-reports')
+          .upload(filename, blob, {
+            contentType: 'application/pdf',
+            upsert: true
+          })
+
+        if (uploadData) {
+          const { data: urlData } = supabase.storage
+            .from('visit-reports')
+            .getPublicUrl(uploadData.path)
+
+          if (urlData?.publicUrl) {
+            await supabase
+              .from('service_orders')
+              .update({
+                report_pdf_url: urlData.publicUrl,
+                report_generated_at: completedAt
+              })
+              .eq('id', order.id)
+          }
+        }
+
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        a.click()
+        URL.revokeObjectURL(url)
       } catch {
         /* PDF generation is best-effort — don't block finalization */
       }
