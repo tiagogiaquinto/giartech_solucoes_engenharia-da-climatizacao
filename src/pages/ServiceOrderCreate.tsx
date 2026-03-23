@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Plus, Trash2, Save, X, User, Calendar, FileText, Package, Users, Clock, DollarSign, TrendingUp, AlertCircle, Check, Printer, Send, Download, Eye, FileDown, Search, ChevronDown, ChevronUp, Building2, CreditCard, FileSignature, Wrench } from 'lucide-react'
+import { Plus, Trash2, Save, X, User, Calendar, FileText, Package, Users, Clock, DollarSign, TrendingUp, AlertCircle, Check, Printer, Send, Download, Eye, FileDown, Search, ChevronDown, ChevronUp, Building2, CreditCard, FileSignature, Wrench, MapPin } from 'lucide-react'
 import { supabase, getServiceOrderById } from '../lib/supabase'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { getCompanyInfo } from '../utils/companyData'
@@ -13,6 +13,7 @@ import { RealtimeCalculationPanel } from '../components/RealtimeCalculationPanel
 import { formatDateSafe } from '../utils/format'
 import { PortalAccountSelector } from '../components/ServiceOrder/PortalAccountSelector'
 import { useUser } from '../contexts/UserContext'
+import OSAddressesContacts, { OSAddress, OSContact } from '../components/ServiceOrder/OSAddressesContacts'
 
 interface ServiceItem {
   id: string
@@ -81,7 +82,10 @@ const ServiceOrderCreate = () => {
   const [emailMessage, setEmailMessage] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
   const [orderNumber, setOrderNumber] = useState('')
-  const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'pagamento' | 'garantia' | 'contrato'>('dados')
+  const [activeTab, setActiveTab] = useState<'dados' | 'local' | 'servicos' | 'pagamento' | 'garantia' | 'contrato'>('dados')
+  const [osAddresses, setOsAddresses] = useState<OSAddress[]>([])
+  const [osContacts, setOsContacts] = useState<OSContact[]>([])
+  const [savedOsId, setSavedOsId] = useState<string | null>(editId || null)
 
   const [formData, setFormData] = useState<{
     customer_id: string
@@ -805,6 +809,25 @@ const ServiceOrderCreate = () => {
         }
       }
 
+      setSavedOsId(order.id)
+
+      const addrRows = osAddresses.filter(a => a.logradouro || a.cep || a.cidade)
+      const contactRows = osContacts.filter(c => c.nome || c.telefone)
+
+      await supabase.from('service_order_addresses').delete().eq('service_order_id', order.id)
+      await supabase.from('service_order_contacts').delete().eq('service_order_id', order.id)
+
+      if (addrRows.length > 0) {
+        await supabase.from('service_order_addresses').insert(
+          addrRows.map(({ id: _, service_order_id: __, ...rest }) => ({ ...rest, service_order_id: order.id }))
+        )
+      }
+      if (contactRows.length > 0) {
+        await supabase.from('service_order_contacts').insert(
+          contactRows.map(({ id: _, service_order_id: __, ...rest }) => ({ ...rest, service_order_id: order.id }))
+        )
+      }
+
       alert(isEditMode ? 'Ordem de Serviço atualizada com sucesso!' : 'Ordem de Serviço criada com sucesso!')
       navigate('/service-orders')
     } catch (error) {
@@ -1291,6 +1314,16 @@ const ServiceOrderCreate = () => {
             Dados Básicos
           </button>
           <button
+            onClick={() => setActiveTab('local')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'local'
+                ? 'bg-blue-600 text-white border-b-4 border-blue-700'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <MapPin className="h-5 w-5" />
+            Local / Contatos
+          </button>
+          <button
             onClick={() => setActiveTab('servicos')}
             className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
               activeTab === 'servicos'
@@ -1474,6 +1507,25 @@ const ServiceOrderCreate = () => {
                 </div>
               </div>
             )}
+          </div>
+          )}
+
+          {/* ABA: LOCAL / CONTATOS */}
+          {activeTab === 'local' && (
+          <div className="bg-white rounded-xl p-6 shadow-sm border">
+            <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-blue-600" />
+              Endereços de Instalação e Contatos no Local
+            </h2>
+            <p className="text-sm text-gray-500 mb-5">
+              Informe o(s) endereço(s) onde o serviço será executado e as pessoas de contato no local.
+              Não precisa ser o endereço cadastrado do cliente.
+            </p>
+            <OSAddressesContacts
+              serviceOrderId={savedOsId || undefined}
+              onAddressesChange={setOsAddresses}
+              onContactsChange={setOsContacts}
+            />
           </div>
           )}
 

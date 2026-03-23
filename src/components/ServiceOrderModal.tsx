@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Plus, Trash2, Package, Users, DollarSign, Info, Calculator, Shield, User, Calendar, FileText, Clock, Search, Receipt, Download, AlertTriangle, ShoppingCart, TrendingUp, TrendingDown, Percent, ListChecks } from 'lucide-react'
+import { X, Save, Plus, Trash2, Package, Users, DollarSign, Info, Calculator, Shield, User, Calendar, FileText, Clock, Search, Receipt, Download, AlertTriangle, ShoppingCart, TrendingUp, TrendingDown, Percent, ListChecks, MapPin } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import ServiceOrderCostManager from './ServiceOrderCostManager'
 import TemplateSelectorModal from './TemplateSelectorModal'
@@ -8,6 +8,7 @@ import { fillTemplate } from '../services/templateFillService'
 import { PortalAccountSelector } from './ServiceOrder/PortalAccountSelector'
 import { useUser } from '../contexts/UserContext'
 import ChecklistPlanner, { ChecklistStep } from './ServiceOrder/ChecklistPlanner'
+import OSAddressesContacts, { OSAddress, OSContact } from './ServiceOrder/OSAddressesContacts'
 
 interface TaxRate {
   id: string
@@ -80,7 +81,9 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId, budgetId }: Servi
   const canEditStakeholders = !orderId || ['super_admin', 'admin', 'manager'].includes(profile?.role || '')
   const [portalAccountId, setPortalAccountId] = useState('')
   const [partnerAccountId, setPartnerAccountId] = useState('')
-  const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'etapas' | 'pagamento' | 'garantia' | 'contrato'>('dados')
+  const [activeTab, setActiveTab] = useState<'dados' | 'local' | 'servicos' | 'etapas' | 'pagamento' | 'garantia' | 'contrato'>('dados')
+  const [osAddresses, setOsAddresses] = useState<OSAddress[]>([])
+  const [osContacts, setOsContacts] = useState<OSContact[]>([])
   const [loading, setLoading] = useState(false)
   const [materialSearch, setMaterialSearch] = useState('')
   const [laborSearch, setLaborSearch] = useState('')
@@ -1108,6 +1111,21 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId, budgetId }: Servi
         await supabase.from('os_checklist_items').insert(checklistInserts)
       }
 
+      const addrRows = osAddresses.filter(a => a.logradouro || a.cep || a.cidade)
+      const contactRows = osContacts.filter(c => c.nome || c.telefone)
+      await supabase.from('service_order_addresses').delete().eq('service_order_id', orderIdToUse)
+      await supabase.from('service_order_contacts').delete().eq('service_order_id', orderIdToUse)
+      if (addrRows.length > 0) {
+        await supabase.from('service_order_addresses').insert(
+          addrRows.map(({ id: _, service_order_id: __, ...rest }) => ({ ...rest, service_order_id: orderIdToUse }))
+        )
+      }
+      if (contactRows.length > 0) {
+        await supabase.from('service_order_contacts').insert(
+          contactRows.map(({ id: _, service_order_id: __, ...rest }) => ({ ...rest, service_order_id: orderIdToUse }))
+        )
+      }
+
       console.log('✅ OS salva com sucesso! ID:', orderIdToUse)
       clearDraft()
       alert('✅ Ordem de Serviço salva com sucesso!')
@@ -1171,6 +1189,16 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId, budgetId }: Servi
             }`}>
             <User className="h-5 w-5" />
             📋 Dados Básicos
+          </button>
+          <button
+            onClick={() => setActiveTab('local')}
+            className={`flex-1 px-6 py-4 font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'local'
+                ? 'bg-blue-600 text-white border-b-4 border-blue-700'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}>
+            <MapPin className="h-5 w-5" />
+            Local / Contatos
           </button>
           <button
             onClick={() => setActiveTab('servicos')}
@@ -1440,6 +1468,26 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId, budgetId }: Servi
                       </p>
                     </div>
                   )}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'local' && (
+              <motion.div key="local" initial={{opacity: 0, x: -20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: 20}} className="space-y-4">
+                <div>
+                  <h3 className="text-base font-semibold flex items-center gap-2 mb-1">
+                    <MapPin className="h-5 w-5 text-blue-500" />
+                    Endereços de Instalação e Contatos no Local
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Informe o(s) endereço(s) onde o serviço será executado e as pessoas de contato.
+                    Não precisa ser o endereço cadastrado do cliente.
+                  </p>
+                  <OSAddressesContacts
+                    serviceOrderId={orderId || undefined}
+                    onAddressesChange={setOsAddresses}
+                    onContactsChange={setOsContacts}
+                  />
                 </div>
               </motion.div>
             )}
