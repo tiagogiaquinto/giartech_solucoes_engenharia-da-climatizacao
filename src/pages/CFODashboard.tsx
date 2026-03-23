@@ -1,16 +1,15 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
-  TrendingUp, TrendingDown, DollarSign, AlertTriangle, Target, Award,
-  Activity, BarChart3, PieChart as PieChartIcon, RefreshCw, Download,
-  Bell, CheckCircle, XCircle, Clock, Calendar, ArrowUpRight, ArrowDownRight,
-  Users, Package, FileText, Briefcase, Shield, Zap
+  TrendingUp, TrendingDown, DollarSign, AlertTriangle, Target,
+  Activity, BarChart3, RefreshCw,
+  Bell, XCircle, Calendar, ArrowUpRight, ArrowDownRight,
+  Users, Package, FileText, Shield, ChevronDown, Filter
 } from 'lucide-react'
 import MarginAlertPanel from '../components/MarginAlertPanel'
 import OSProfitabilityWidget from '../components/OSProfitabilityWidget'
 import PMOCSchedulePanel from '../components/PMOCSchedulePanel'
 import { supabase } from '../lib/supabase'
-import { InteractiveKPICard } from '../components/InteractiveKPICard'
 import { useNavigate } from 'react-router-dom'
 import { formatDateSafe } from '../utils/format'
 import { Bar, Radar } from 'react-chartjs-2'
@@ -30,52 +29,30 @@ import {
 } from 'chart.js'
 
 ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  RadialLinearScale,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
+  CategoryScale, LinearScale, PointElement, LineElement,
+  BarElement, ArcElement, RadialLinearScale, Title, Tooltip, Legend, Filler
 )
 
-type PeriodFilter = 'day' | 'week' | 'month' | 'quarter'
+type FilterMode = 'month' | 'quarter' | 'year' | 'custom'
 
-interface CFOKPIs {
-  total_revenue: number
-  total_expenses: number
-  net_profit: number
-  profit_margin: number
+interface PeriodKPIs {
+  periodo_inicio: string
+  periodo_fim: string
+  faturamento_bruto: number
+  total_impostos: number
+  aliquota_impostos: number
+  custo_materiais: number
+  custo_mao_obra: number
+  custo_extras: number
+  custo_total_pessoal: number
+  total_despesas_fixas: number
+  lucro_liquido: number
   ebitda: number
-  ebitda_margin: number
-  gross_margin: number
-  operating_margin: number
-  accounts_receivable: number
-  accounts_payable: number
-  net_working_capital: number
-  total_customers: number
-  total_customers_pj: number
-  total_customers_pf: number
-  active_customers: number
-  customer_retention_rate: number
-  avg_customer_ltv: number
-  total_completed_orders: number
-  orders_in_progress: number
-  avg_order_value: number
-  total_revenue_from_orders: number
-  avg_profit_per_order: number
-  total_inventory_cost: number
-  total_inventory_value: number
-  potential_profit: number
-  inventory_turnover: number
-  roi_percentage: number
-  payback_period_days: number
-  break_even_point: number
-  operational_efficiency: number
+  ebitda_margem: number
+  margem_liquida_pct: number
+  qtd_os_fechadas: number
+  qtd_clientes_atendidos: number
+  ticket_medio: number
 }
 
 interface FinancialAlert {
@@ -104,26 +81,6 @@ interface CustomerIntelligence {
   churn_probability: number
 }
 
-interface PeriodKPIs {
-  periodo_inicio: string
-  periodo_fim: string
-  faturamento_bruto: number
-  total_impostos: number
-  aliquota_impostos: number
-  custo_materiais: number
-  custo_mao_obra: number
-  custo_extras: number
-  custo_total_pessoal: number
-  total_despesas_fixas: number
-  lucro_liquido: number
-  ebitda: number
-  ebitda_margem: number
-  margem_liquida_pct: number
-  qtd_os_fechadas: number
-  qtd_clientes_atendidos: number
-  ticket_medio: number
-}
-
 interface CashFlowEntry {
   id: string
   description: string
@@ -137,171 +94,172 @@ interface CashFlowEntry {
   trimestre: string
 }
 
-interface FinancialIntelligenceSummary {
-  revenue: number
-  expenses: number
-  ebitda: number
-  ebitdaMargin: number
-  chartLabels: string[]
-  chartEntradas: number[]
-  chartSaidas: number[]
+interface GlobalKPIs {
+  total_customers: number
+  total_customers_pj: number
+  total_customers_pf: number
+  total_inventory_value: number
+  potential_profit: number
+  inventory_turnover: number
+  orders_in_progress: number
+  gross_margin: number
+  operating_margin: number
 }
 
-const PERIOD_COLUMN: Record<PeriodFilter, string> = {
-  day: 'dia',
-  week: 'semana',
-  month: 'mes',
-  quarter: 'trimestre',
-}
+const MONTHS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+]
 
-const PERIOD_LABELS: Record<PeriodFilter, string> = {
-  day: 'Hoje',
-  week: 'Esta Semana',
-  month: 'Este Mês',
-  quarter: 'Este Trimestre',
-}
+const pad = (n: number) => String(n).padStart(2, '0')
+const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
-const getPeriodStartISO = (filter: PeriodFilter): string => {
+const getDateRange = (
+  mode: FilterMode,
+  selectedYear: number,
+  selectedMonth: number,
+  selectedQuarter: number,
+  customStart: string,
+  customEnd: string
+): { start: string; end: string; label: string } => {
   const now = new Date()
-  if (filter === 'day') {
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
-  }
-  if (filter === 'week') {
-    const day = now.getDay()
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1)
-    return new Date(now.getFullYear(), now.getMonth(), diff).toISOString()
-  }
-  if (filter === 'month') {
-    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  }
-  const q = Math.floor(now.getMonth() / 3)
-  return new Date(now.getFullYear(), q * 3, 1).toISOString()
-}
 
-const getDateRange = (period: 'month' | 'quarter' | 'year' | 'custom', customStart?: string, customEnd?: string) => {
-  const now = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
-
-  if (period === 'custom' && customStart && customEnd) return { start: customStart, end: customEnd }
-  if (period === 'month') {
-    return { start: fmt(new Date(now.getFullYear(), now.getMonth(), 1)), end: fmt(now) }
+  if (mode === 'custom' && customStart && customEnd) {
+    const s = new Date(customStart + 'T00:00:00')
+    const e = new Date(customEnd + 'T00:00:00')
+    return {
+      start: customStart,
+      end: customEnd,
+      label: `${s.toLocaleDateString('pt-BR')} – ${e.toLocaleDateString('pt-BR')}`
+    }
   }
-  if (period === 'quarter') {
-    const q = Math.floor(now.getMonth() / 3)
-    return { start: fmt(new Date(now.getFullYear(), q * 3, 1)), end: fmt(now) }
-  }
-  return { start: fmt(new Date(now.getFullYear(), 0, 1)), end: fmt(now) }
-}
 
-const formatChartLabel = (iso: string, filter: PeriodFilter): string => {
-  const d = new Date(iso)
-  if (filter === 'day') return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  if (filter === 'week') return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' })
-  if (filter === 'month') return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-  return `T${Math.floor(d.getMonth() / 3) + 1}/${d.getFullYear()}`
+  if (mode === 'month') {
+    const first = new Date(selectedYear, selectedMonth, 1)
+    const last = new Date(selectedYear, selectedMonth + 1, 0)
+    const isCurrentMonth = selectedYear === now.getFullYear() && selectedMonth === now.getMonth()
+    return {
+      start: fmt(first),
+      end: isCurrentMonth ? fmt(now) : fmt(last),
+      label: `${MONTHS[selectedMonth]} ${selectedYear}`
+    }
+  }
+
+  if (mode === 'quarter') {
+    const qStart = selectedQuarter * 3
+    const first = new Date(selectedYear, qStart, 1)
+    const last = new Date(selectedYear, qStart + 3, 0)
+    const isCurrentQ = selectedYear === now.getFullYear() && Math.floor(now.getMonth() / 3) === selectedQuarter
+    return {
+      start: fmt(first),
+      end: isCurrentQ ? fmt(now) : fmt(last),
+      label: `T${selectedQuarter + 1}/${selectedYear}`
+    }
+  }
+
+  return {
+    start: `${selectedYear}-01-01`,
+    end: selectedYear === now.getFullYear() ? fmt(now) : `${selectedYear}-12-31`,
+    label: `Ano ${selectedYear}`
+  }
 }
 
 const CFODashboard = () => {
   const navigate = useNavigate()
-  const [kpis, setKpis] = useState<CFOKPIs | null>(null)
+  const now = new Date()
+
+  const [filterMode, setFilterMode] = useState<FilterMode>('month')
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth())
+  const [selectedQuarter, setSelectedQuarter] = useState(Math.floor(now.getMonth() / 3))
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+
   const [periodKpis, setPeriodKpis] = useState<PeriodKPIs | null>(null)
+  const [globalKpis, setGlobalKpis] = useState<GlobalKPIs | null>(null)
   const [alerts, setAlerts] = useState<FinancialAlert[]>([])
   const [marginAlerts, setMarginAlerts] = useState<any[]>([])
   const [topCustomers, setTopCustomers] = useState<CustomerIntelligence[]>([])
+  const [cashFlow, setCashFlow] = useState<{ labels: string[]; entradas: number[]; saidas: number[] } | null>(null)
+
   const [loading, setLoading] = useState(true)
-  const [intelligenceLoading, setIntelligenceLoading] = useState(false)
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('month')
-  const [intelligence, setIntelligence] = useState<FinancialIntelligenceSummary | null>(null)
-  const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter' | 'year' | 'custom'>('month')
-  const [customStart, setCustomStart] = useState('')
-  const [customEnd, setCustomEnd] = useState('')
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  useEffect(() => {
-    loadCFOData()
-    const interval = setInterval(loadCFOData, 5 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [selectedPeriod, customStart, customEnd])
+  const dateRange = getDateRange(filterMode, selectedYear, selectedMonth, selectedQuarter, customStart, customEnd)
 
-  useEffect(() => {
-    loadFinancialIntelligence()
-  }, [periodFilter])
+  const availableYears = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i)
 
-  const loadFinancialIntelligence = useCallback(async () => {
-    setIntelligenceLoading(true)
+  const loadData = useCallback(async () => {
+    if (filterMode === 'custom' && (!customStart || !customEnd)) return
+    setLoading(true)
     try {
-      const col = PERIOD_COLUMN[periodFilter]
-      const periodStart = getPeriodStartISO(periodFilter)
+      const { start, end } = getDateRange(filterMode, selectedYear, selectedMonth, selectedQuarter, customStart, customEnd)
 
-      const { data, error } = await supabase
-        .from('v_financial_intelligence')
-        .select('*')
-        .gte(col, periodStart)
-        .order('reference_date', { ascending: true })
-
-      if (error) throw error
-
-      const entries: CashFlowEntry[] = data || []
-
-      const revenue = entries.filter(e => e.type === 'entrada').reduce((s, e) => s + Number(e.amount), 0)
-      const expenses = entries.filter(e => e.type === 'saida').reduce((s, e) => s + Number(e.amount), 0)
-      const opEx = expenses
-      const ebitda = revenue - opEx
-      const ebitdaMargin = revenue > 0 ? (ebitda / revenue) * 100 : 0
-
-      const grouped: Record<string, { entrada: number; saida: number }> = {}
-      entries.forEach(e => {
-        const key = e[col as keyof CashFlowEntry] as string
-        if (!grouped[key]) grouped[key] = { entrada: 0, saida: 0 }
-        if (e.type === 'entrada') grouped[key].entrada += Number(e.amount)
-        else grouped[key].saida += Number(e.amount)
-      })
-
-      const sortedKeys = Object.keys(grouped).sort()
-      const chartLabels = sortedKeys.map(k => formatChartLabel(k, periodFilter))
-      const chartEntradas = sortedKeys.map(k => grouped[k].entrada)
-      const chartSaidas = sortedKeys.map(k => grouped[k].saida)
-
-      setIntelligence({ revenue, expenses, ebitda, ebitdaMargin, chartLabels, chartEntradas, chartSaidas })
-    } catch (err) {
-      console.error('Erro ao carregar inteligência financeira:', err)
-    } finally {
-      setIntelligenceLoading(false)
-    }
-  }, [periodFilter])
-
-  const loadCFOData = async () => {
-    try {
-      setLoading(true)
-      const { start, end } = getDateRange(
-        selectedPeriod === 'custom' ? 'custom' : selectedPeriod,
-        customStart || undefined,
-        customEnd || undefined
-      )
-
-      const [periodRes, alertsRes, customersRes, kpisRes, marginAlertsRes] = await Promise.all([
+      const [periodRes, alertsRes, customersRes, kpisRes, marginAlertsRes, cashFlowRes] = await Promise.all([
         supabase.rpc('get_cfo_kpis_period', { p_start_date: start, p_end_date: end }),
         supabase.from('financial_alerts').select('*').eq('is_active', true)
           .order('severity', { ascending: true }).order('created_at', { ascending: false }).limit(10),
         supabase.from('v_customer_intelligence').select('*').order('total_revenue', { ascending: false }).limit(10),
         supabase.from('v_cfo_kpis').select('*').maybeSingle(),
         supabase.from('margin_alerts').select('*').eq('is_dismissed', false)
-          .order('created_at', { ascending: false }).limit(20)
+          .order('created_at', { ascending: false }).limit(20),
+        supabase.from('v_financial_intelligence').select('*')
+          .gte('reference_date', start)
+          .lte('reference_date', end)
+          .order('reference_date', { ascending: true })
       ])
 
       if (periodRes.data) setPeriodKpis(periodRes.data as PeriodKPIs)
       setAlerts(alertsRes.data || [])
       setTopCustomers(customersRes.data || [])
-      if (kpisRes.data) setKpis(kpisRes.data)
+
+      if (kpisRes.data) {
+        setGlobalKpis({
+          total_customers: kpisRes.data.total_customers || 0,
+          total_customers_pj: kpisRes.data.total_customers_pj || 0,
+          total_customers_pf: kpisRes.data.total_customers_pf || 0,
+          total_inventory_value: kpisRes.data.total_inventory_value || 0,
+          potential_profit: kpisRes.data.potential_profit || 0,
+          inventory_turnover: kpisRes.data.inventory_turnover || 0,
+          orders_in_progress: kpisRes.data.orders_in_progress || 0,
+          gross_margin: kpisRes.data.gross_margin || 0,
+          operating_margin: kpisRes.data.operating_margin || 0,
+        })
+      }
+
       setMarginAlerts(marginAlertsRes.data || [])
+
+      const entries: CashFlowEntry[] = cashFlowRes.data || []
+      const grouped: Record<string, { entrada: number; saida: number }> = {}
+      entries.forEach(e => {
+        const key = e.reference_date?.slice(0, 10) || ''
+        if (!grouped[key]) grouped[key] = { entrada: 0, saida: 0 }
+        if (e.type === 'entrada') grouped[key].entrada += Number(e.amount)
+        else grouped[key].saida += Number(e.amount)
+      })
+      const sortedKeys = Object.keys(grouped).sort()
+      setCashFlow({
+        labels: sortedKeys.map(k => {
+          const d = new Date(k + 'T00:00:00')
+          return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+        }),
+        entradas: sortedKeys.map(k => grouped[k].entrada),
+        saidas: sortedKeys.map(k => grouped[k].saida),
+      })
+
       setLastUpdated(new Date())
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao carregar dados CFO:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [filterMode, selectedYear, selectedMonth, selectedQuarter, customStart, customEnd])
+
+  useEffect(() => {
+    loadData()
+    const interval = setInterval(loadData, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [loadData])
 
   const formatCurrency = (value: number | null | undefined) => {
     if (!value) return 'R$ 0'
@@ -311,256 +269,300 @@ const CFODashboard = () => {
     }).format(value)
   }
 
-  const formatPercent = (value: number | null | undefined) => {
-    if (value === null || value === undefined || isNaN(value)) return '0.0%'
-    return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
+  const formatPercent = (value: number | null | undefined, withSign = true) => {
+    if (value === null || value === undefined || isNaN(value)) return '0,0%'
+    const sign = withSign && value > 0 ? '+' : ''
+    return `${sign}${value.toFixed(1)}%`
   }
 
   const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical': return 'bg-red-100 text-red-800 border-red-300'
-      case 'warning': return 'bg-yellow-100 text-yellow-800 border-yellow-300'
-      case 'info': return 'bg-blue-100 text-blue-800 border-blue-300'
-      default: return 'bg-gray-100 text-gray-800 border-gray-300'
-    }
+    if (severity === 'critical') return 'bg-red-50 text-red-800 border-red-200'
+    if (severity === 'warning') return 'bg-yellow-50 text-yellow-800 border-yellow-200'
+    return 'bg-blue-50 text-blue-800 border-blue-200'
   }
 
   const getSeverityIcon = (severity: string) => {
-    switch (severity) {
-      case 'critical': return <XCircle className="h-5 w-5 text-red-600" />
-      case 'warning': return <AlertTriangle className="h-5 w-5 text-yellow-600" />
-      default: return <Bell className="h-5 w-5 text-blue-600" />
-    }
+    if (severity === 'critical') return <XCircle className="h-5 w-5 text-red-600 shrink-0" />
+    if (severity === 'warning') return <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0" />
+    return <Bell className="h-5 w-5 text-blue-600 shrink-0" />
   }
 
-  const getABCColor = (classification: string) => {
-    switch (classification) {
-      case 'A': return 'bg-green-100 text-green-800 border-green-300'
-      case 'B': return 'bg-blue-100 text-blue-800 border-blue-300'
-      case 'C': return 'bg-orange-100 text-orange-800 border-orange-300'
-      default: return 'bg-gray-100 text-gray-800 border-gray-300'
-    }
+  const getABCColor = (c: string) => {
+    if (c === 'A') return 'bg-emerald-100 text-emerald-800 border-emerald-200'
+    if (c === 'B') return 'bg-blue-100 text-blue-800 border-blue-200'
+    return 'bg-orange-100 text-orange-800 border-orange-200'
   }
 
   const getRiskLevel = (score: number) => {
     if (score >= 70) return { label: 'Alto Risco', color: 'text-red-600' }
-    if (score >= 40) return { label: 'Risco Médio', color: 'text-yellow-600' }
-    return { label: 'Baixo Risco', color: 'text-green-600' }
+    if (score >= 40) return { label: 'Médio', color: 'text-yellow-600' }
+    return { label: 'Baixo', color: 'text-emerald-600' }
   }
 
-  const financialHealthMetrics = [
-    { label: 'Margem Bruta', value: kpis?.gross_margin || 0, target: 60, color: 'rgb(34, 197, 94)' },
-    { label: 'Margem Operacional', value: kpis?.operating_margin || 0, target: 40, color: 'rgb(59, 130, 246)' },
-    { label: 'Margem Líquida', value: kpis?.profit_margin || 0, target: 30, color: 'rgb(249, 115, 22)' },
-    { label: 'Margem EBITDA', value: kpis?.ebitda_margin || 0, target: 35, color: 'rgb(20, 184, 166)' }
+  const p = periodKpis
+
+  const marginMetrics = [
+    { label: 'Margem Bruta', value: globalKpis?.gross_margin || 0, target: 60, color: 'rgb(34, 197, 94)' },
+    { label: 'Margem Operacional', value: globalKpis?.operating_margin || 0, target: 40, color: 'rgb(59, 130, 246)' },
+    { label: 'Margem Líquida', value: p?.margem_liquida_pct || 0, target: 30, color: 'rgb(249, 115, 22)' },
+    { label: 'Margem EBITDA', value: p?.ebitda_margem || 0, target: 35, color: 'rgb(20, 184, 166)' }
   ]
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <RefreshCw className="h-12 w-12 animate-spin text-blue-600" />
-      </div>
-    )
-  }
+  const totalCustos = p ? (p.total_impostos + p.custo_materiais + p.custo_mao_obra + p.custo_total_pessoal + p.total_despesas_fixas) : 0
+  const saldo = p ? (p.faturamento_bruto - totalCustos) : 0
+  const receitas = cashFlow?.entradas.reduce((a, b) => a + b, 0) || 0
+  const despesas = cashFlow?.saidas.reduce((a, b) => a + b, 0) || 0
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-[1800px] mx-auto px-6 py-8 space-y-8">
 
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        {/* ─── HEADER ─── */}
+        <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-1">Dashboard CFO</h1>
-            <p className="text-gray-500 text-sm">Inteligência Financeira Executiva</p>
+            <p className="text-gray-500 text-sm">
+              Inteligência Financeira Executiva
+              {!loading && <span className="ml-2 text-blue-600 font-medium">— {dateRange.label}</span>}
+            </p>
           </div>
+
+          {/* ─── FILTROS AVANÇADOS ─── */}
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
-              {(['month', 'quarter', 'year', 'custom'] as const).map(p => (
-                <button key={p} onClick={() => setSelectedPeriod(p)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    selectedPeriod === p ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'
-                  }`}>
-                  {p === 'month' ? 'Mês' : p === 'quarter' ? 'Trimestre' : p === 'year' ? 'Ano' : 'Período'}
-                </button>
-              ))}
-            </div>
-            {selectedPeriod === 'custom' && (
+            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm flex flex-col gap-3">
               <div className="flex items-center gap-2">
-                <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
-                <span className="text-gray-500 text-sm">até</span>
-                <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
+                <Filter className="h-4 w-4 text-gray-400" />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filtrar por</span>
               </div>
-            )}
-            {lastUpdated && (
-              <span className="text-xs text-gray-400">
-                Atualizado {lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-            <button onClick={loadCFOData}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Atualizar
-            </button>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {(['month', 'quarter', 'year', 'custom'] as FilterMode[]).map(m => (
+                  <button key={m} onClick={() => setFilterMode(m)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      filterMode === m
+                        ? 'bg-slate-800 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}>
+                    {m === 'month' ? 'Mês' : m === 'quarter' ? 'Trimestre' : m === 'year' ? 'Ano' : 'Personalizado'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {filterMode !== 'custom' && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-500">Ano:</span>
+                    <div className="relative">
+                      <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))}
+                        className="pl-2 pr-6 py-1 text-sm border border-gray-200 rounded-lg bg-white appearance-none cursor-pointer">
+                        {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
+                {filterMode === 'month' && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-500">Mês:</span>
+                    <div className="relative">
+                      <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}
+                        className="pl-2 pr-6 py-1 text-sm border border-gray-200 rounded-lg bg-white appearance-none cursor-pointer">
+                        {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
+                {filterMode === 'quarter' && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-500">Trimestre:</span>
+                    <div className="relative">
+                      <select value={selectedQuarter} onChange={e => setSelectedQuarter(Number(e.target.value))}
+                        className="pl-2 pr-6 py-1 text-sm border border-gray-200 rounded-lg bg-white appearance-none cursor-pointer">
+                        {[0, 1, 2, 3].map(q => <option key={q} value={q}>T{q + 1}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
+                {filterMode === 'custom' && (
+                  <div className="flex items-center gap-2">
+                    <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+                      className="px-2 py-1 border border-gray-200 rounded-lg text-sm bg-white" />
+                    <span className="text-gray-400 text-xs">até</span>
+                    <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+                      className="px-2 py-1 border border-gray-200 rounded-lg text-sm bg-white" />
+                  </div>
+                )}
+
+                <button onClick={loadData}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                  Aplicar
+                </button>
+              </div>
+
+              {lastUpdated && (
+                <p className="text-xs text-gray-400 text-right -mt-1">
+                  Atualizado às {lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Executive KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <InteractiveKPICard
-            title="Receita Total"
-            value={formatCurrency(kpis?.total_revenue || 0)}
-            subtitle={`Lucro: ${formatCurrency(kpis?.net_profit || 0)}`}
-            icon={DollarSign}
-            color="from-green-500 to-emerald-600"
-            trend={{ value: kpis?.profit_margin || 0, label: 'Margem de lucro' }}
-            onClick={() => navigate('/financeiro')}
-            details={[
-              { label: 'Despesas', value: formatCurrency(kpis?.total_expenses || 0) },
-              { label: 'Lucro Líquido', value: formatCurrency(kpis?.net_profit || 0) },
-              { label: 'Margem', value: formatPercent(kpis?.profit_margin || 0) }
-            ]}
-          />
-          <InteractiveKPICard
-            title="EBITDA"
-            value={formatCurrency(kpis?.ebitda || 0)}
-            subtitle={`Margem: ${formatPercent(kpis?.ebitda_margin || 0)}`}
-            icon={TrendingUp}
-            color="from-blue-500 to-cyan-600"
-            trend={{ value: kpis?.ebitda_margin || 0, label: 'Margem EBITDA' }}
-            onClick={() => navigate('/financeiro')}
-            details={[
-              { label: 'Margem Bruta', value: formatPercent(kpis?.gross_margin || 0) },
-              { label: 'Margem Operacional', value: formatPercent(kpis?.operating_margin || 0) },
-              { label: 'Margem EBITDA', value: formatPercent(kpis?.ebitda_margin || 0) }
-            ]}
-          />
-          <InteractiveKPICard
-            title="ROI"
-            value={formatPercent(kpis?.roi_percentage || 0)}
-            subtitle={`Break-even: ${formatCurrency(kpis?.break_even_point || 0)}`}
-            icon={Target}
-            color="from-teal-500 to-cyan-600"
-            trend={{ value: kpis?.roi_percentage || 0, label: 'Retorno sobre investimento' }}
-            onClick={() => navigate('/financeiro')}
-            details={[
-              { label: 'Break-even', value: formatCurrency(kpis?.break_even_point || 0) },
-              { label: 'Payback', value: `${kpis?.payback_period_days || 0} dias` },
-              { label: 'ROI', value: formatPercent(kpis?.roi_percentage || 0) }
-            ]}
-          />
-          <InteractiveKPICard
-            title="Capital de Giro"
-            value={formatCurrency(kpis?.net_working_capital || 0)}
-            subtitle={`Eficiência: ${formatPercent(kpis?.operational_efficiency || 0)}`}
-            icon={Activity}
-            color="from-orange-500 to-red-600"
-            trend={{ value: kpis?.operational_efficiency || 0, label: 'Eficiência operacional' }}
-            onClick={() => navigate('/financeiro')}
-            details={[
-              { label: 'A Receber', value: formatCurrency(kpis?.accounts_receivable || 0) },
-              { label: 'A Pagar', value: formatCurrency(kpis?.accounts_payable || 0) },
-              { label: 'Capital Líquido', value: formatCurrency(kpis?.net_working_capital || 0) }
-            ]}
-          />
+        {/* ─── BADGE DO PERÍODO ─── */}
+        <div className="flex items-center gap-3 py-2 px-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700 font-medium w-fit">
+          <Calendar className="h-4 w-4 text-blue-500" />
+          Exibindo dados de: <span className="font-bold">{dateRange.label}</span>
+          {p && (
+            <span className="text-blue-500 font-normal">
+              ({p.qtd_os_fechadas} OS • {p.qtd_clientes_atendidos} clientes atendidos)
+            </span>
+          )}
         </div>
 
-        {/* ─── FINANCIAL INTELLIGENCE PANEL ─── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden"
-        >
-          {/* Panel header with period filter */}
+        {/* ─── KPI CARDS DO PERÍODO ─── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {[
+            {
+              title: 'Faturamento Bruto',
+              value: formatCurrency(p?.faturamento_bruto),
+              sub: `Lucro: ${formatCurrency(p?.lucro_liquido)}`,
+              trend: p?.margem_liquida_pct || 0,
+              trendLabel: 'Margem líquida',
+              icon: DollarSign,
+              gradient: 'from-emerald-500 to-green-600',
+              details: [
+                { label: 'EBITDA', val: formatCurrency(p?.ebitda) },
+                { label: 'Margem EBITDA', val: formatPercent(p?.ebitda_margem, false) },
+                { label: 'Ticket Médio', val: formatCurrency(p?.ticket_medio) },
+              ],
+              onClick: () => navigate('/financeiro')
+            },
+            {
+              title: 'EBITDA',
+              value: formatCurrency(p?.ebitda),
+              sub: `Margem: ${formatPercent(p?.ebitda_margem, false)}`,
+              trend: p?.ebitda_margem || 0,
+              trendLabel: 'Margem EBITDA',
+              icon: TrendingUp,
+              gradient: 'from-blue-500 to-cyan-600',
+              details: [
+                { label: 'Impostos', val: formatCurrency(p?.total_impostos) },
+                { label: 'Custo Mat.', val: formatCurrency(p?.custo_materiais) },
+                { label: 'Mão de Obra', val: formatCurrency(p?.custo_mao_obra) },
+              ],
+              onClick: () => navigate('/financeiro')
+            },
+            {
+              title: 'Lucro Líquido',
+              value: formatCurrency(p?.lucro_liquido),
+              sub: `Margem: ${formatPercent(p?.margem_liquida_pct, false)}`,
+              trend: p?.margem_liquida_pct || 0,
+              trendLabel: 'Margem líquida',
+              icon: Target,
+              gradient: 'from-teal-500 to-cyan-600',
+              details: [
+                { label: 'Desp. Fixas', val: formatCurrency(p?.total_despesas_fixas) },
+                { label: 'Custo Pessoal', val: formatCurrency(p?.custo_total_pessoal) },
+                { label: 'Extras', val: formatCurrency(p?.custo_extras) },
+              ],
+              onClick: () => navigate('/financeiro')
+            },
+            {
+              title: 'Fluxo de Caixa',
+              value: formatCurrency(receitas - despesas),
+              sub: `Receitas: ${formatCurrency(receitas)}`,
+              trend: receitas > 0 ? ((receitas - despesas) / receitas) * 100 : 0,
+              trendLabel: 'do faturamento',
+              icon: Activity,
+              gradient: 'from-orange-500 to-red-500',
+              details: [
+                { label: 'Entradas', val: formatCurrency(receitas) },
+                { label: 'Saídas', val: formatCurrency(despesas) },
+                { label: 'Saldo', val: formatCurrency(receitas - despesas) },
+              ],
+              onClick: () => navigate('/financeiro')
+            }
+          ].map(card => {
+            const trend = card.trend || 0
+            const positive = trend >= 0
+            return (
+              <motion.div key={card.title}
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -2, boxShadow: '0 10px 30px rgba(0,0,0,0.12)' }}
+                onClick={card.onClick}
+                className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 cursor-pointer transition-all">
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`w-11 h-11 bg-gradient-to-br ${card.gradient} rounded-xl flex items-center justify-center`}>
+                    <card.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <span className={`flex items-center gap-1 text-sm font-semibold ${positive ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {positive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                    {formatPercent(trend, false)}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 mb-1">{card.title}</p>
+                <p className={`text-2xl font-bold mb-1 ${loading ? 'opacity-40' : ''}`}>
+                  {loading ? '...' : card.value}
+                </p>
+                <p className="text-xs text-gray-400 mb-4">{card.sub}</p>
+                <div className="border-t border-gray-100 pt-3 space-y-1">
+                  {card.details.map(d => (
+                    <div key={d.label} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500">{d.label}</span>
+                      <span className="font-semibold text-gray-700">{loading ? '–' : d.val}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+
+        {/* ─── GRÁFICO FLUXO DE CAIXA ─── */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-slate-700 to-slate-900 rounded-xl flex items-center justify-center">
                 <BarChart3 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Inteligência Financeira</h2>
-                <p className="text-sm text-gray-500">Dados em tempo real — {PERIOD_LABELS[periodFilter]}</p>
+                <h2 className="text-xl font-bold text-gray-900">Fluxo de Caixa</h2>
+                <p className="text-sm text-gray-500">{dateRange.label} — Entradas vs Saídas</p>
               </div>
             </div>
-            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-              {(['day', 'week', 'month', 'quarter'] as PeriodFilter[]).map(f => (
-                <button key={f} onClick={() => setPeriodFilter(f)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                    periodFilter === f
-                      ? 'bg-slate-800 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}>
-                  {f === 'day' ? 'Dia' : f === 'week' ? 'Semana' : f === 'month' ? 'Mês' : 'Trimestre'}
-                </button>
-              ))}
+            <div className="flex gap-4 text-sm">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-400 inline-block" />Entradas: <strong>{formatCurrency(receitas)}</strong></span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-400 inline-block" />Saídas: <strong>{formatCurrency(despesas)}</strong></span>
             </div>
           </div>
 
-          {/* KPI strip */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100">
-            {[
-              {
-                label: 'Receita',
-                value: formatCurrency(intelligence?.revenue ?? 0),
-                sub: 'Entradas no período',
-                color: 'text-emerald-600',
-                bg: 'bg-white'
-              },
-              {
-                label: 'Despesas',
-                value: formatCurrency(intelligence?.expenses ?? 0),
-                sub: 'Saídas no período',
-                color: 'text-red-500',
-                bg: 'bg-white'
-              },
-              {
-                label: 'EBITDA',
-                value: formatCurrency(intelligence?.ebitda ?? 0),
-                sub: `Margem ${(intelligence?.ebitdaMargin ?? 0).toFixed(1)}%`,
-                color: (intelligence?.ebitda ?? 0) >= 0 ? 'text-blue-600' : 'text-red-500',
-                bg: 'bg-white'
-              },
-              {
-                label: 'Saldo',
-                value: formatCurrency((intelligence?.revenue ?? 0) - (intelligence?.expenses ?? 0)),
-                sub: 'Resultado líquido',
-                color: ((intelligence?.revenue ?? 0) - (intelligence?.expenses ?? 0)) >= 0 ? 'text-teal-600' : 'text-red-500',
-                bg: 'bg-white'
-              }
-            ].map(kpi => (
-              <div key={kpi.label} className={`${kpi.bg} px-5 py-4 flex flex-col gap-0.5`}>
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{kpi.label}</span>
-                <span className={`text-2xl font-bold ${kpi.color} ${intelligenceLoading ? 'opacity-40' : ''}`}>
-                  {intelligenceLoading ? '...' : kpi.value}
-                </span>
-                <span className="text-xs text-gray-400">{kpi.sub}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Bar chart */}
           <div className="px-6 py-5">
-            {intelligenceLoading ? (
-              <div className="h-52 flex items-center justify-center text-gray-400">
+            {loading ? (
+              <div className="h-56 flex items-center justify-center text-gray-400">
                 <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                <span className="text-sm">Carregando dados...</span>
+                <span className="text-sm">Carregando...</span>
               </div>
-            ) : !intelligence || intelligence.chartLabels.length === 0 ? (
-              <div className="h-52 flex flex-col items-center justify-center text-gray-400 gap-2">
+            ) : !cashFlow || cashFlow.labels.length === 0 ? (
+              <div className="h-56 flex flex-col items-center justify-center text-gray-400 gap-2">
                 <BarChart3 className="h-8 w-8 opacity-30" />
-                <span className="text-sm">Nenhuma movimentação no período selecionado</span>
-                <span className="text-xs text-gray-300">As OS concluídas geram entradas automaticamente</span>
+                <span className="text-sm">Nenhuma movimentação no per��odo selecionado</span>
               </div>
             ) : (
-              <div className="h-52">
+              <div className="h-56">
                 <Bar
                   data={{
-                    labels: intelligence.chartLabels,
+                    labels: cashFlow.labels,
                     datasets: [
                       {
                         label: 'Entradas',
-                        data: intelligence.chartEntradas,
+                        data: cashFlow.entradas,
                         backgroundColor: 'rgba(16, 185, 129, 0.75)',
                         borderColor: 'rgb(16, 185, 129)',
                         borderWidth: 1,
@@ -568,7 +570,7 @@ const CFODashboard = () => {
                       },
                       {
                         label: 'Saídas',
-                        data: intelligence.chartSaidas,
+                        data: cashFlow.saidas,
                         backgroundColor: 'rgba(239, 68, 68, 0.65)',
                         borderColor: 'rgb(239, 68, 68)',
                         borderWidth: 1,
@@ -590,9 +592,7 @@ const CFODashboard = () => {
                     scales: {
                       y: {
                         beginAtZero: true,
-                        ticks: {
-                          callback: v => `R$ ${Number(v).toLocaleString('pt-BR', { notation: 'compact' })}`
-                        },
+                        ticks: { callback: v => `R$ ${Number(v).toLocaleString('pt-BR', { notation: 'compact' })}` },
                         grid: { color: 'rgba(0,0,0,0.04)' }
                       },
                       x: { grid: { display: false } }
@@ -604,13 +604,10 @@ const CFODashboard = () => {
           </div>
         </motion.div>
 
-        {/* Period KPIs - Real-time from RPC */}
-        {periodKpis && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-          >
+        {/* ─── KPIs DO PERÍODO (Detalhamento) ─── */}
+        {p && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
@@ -618,17 +615,17 @@ const CFODashboard = () => {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">KPIs do Período</h2>
-                  <p className="text-sm text-gray-600">
-                    {new Date(periodKpis.periodo_inicio + 'T00:00:00').toLocaleDateString('pt-BR')} — {new Date(periodKpis.periodo_fim + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  <p className="text-sm text-gray-500">
+                    {new Date(p.periodo_inicio + 'T00:00:00').toLocaleDateString('pt-BR')} — {new Date(p.periodo_fim + 'T00:00:00').toLocaleDateString('pt-BR')}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`text-lg font-bold ${periodKpis.lucro_liquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {periodKpis.lucro_liquido >= 0
-                    ? <TrendingUp className="inline h-5 w-5 mr-1" />
-                    : <TrendingDown className="inline h-5 w-5 mr-1" />}
-                  {formatCurrency(periodKpis.lucro_liquido)}
+                {p.lucro_liquido >= 0
+                  ? <TrendingUp className="h-5 w-5 text-emerald-600" />
+                  : <TrendingDown className="h-5 w-5 text-red-600" />}
+                <span className={`text-xl font-bold ${p.lucro_liquido >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {formatCurrency(p.lucro_liquido)}
                 </span>
                 <span className="text-sm text-gray-500">lucro líquido</span>
               </div>
@@ -636,30 +633,30 @@ const CFODashboard = () => {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               {[
-                { label: 'Faturamento Bruto', value: formatCurrency(periodKpis.faturamento_bruto), sub: `${periodKpis.qtd_os_fechadas} OS fechadas`, bg: 'from-green-50 to-emerald-50', border: 'border-green-100', sub_color: 'text-green-600' },
-                { label: 'EBITDA', value: formatCurrency(periodKpis.ebitda), sub: `Margem: ${(periodKpis.ebitda_margem || 0).toFixed(1)}%`, bg: 'from-blue-50 to-cyan-50', border: 'border-blue-100', sub_color: 'text-blue-600' },
-                { label: 'Margem Líquida', value: `${(periodKpis.margem_liquida_pct || 0).toFixed(1)}%`, sub: `Ticket médio: ${formatCurrency(periodKpis.ticket_medio)}`, bg: 'from-orange-50 to-amber-50', border: 'border-orange-100', sub_color: 'text-orange-600' },
-                { label: 'Clientes Atendidos', value: String(periodKpis.qtd_clientes_atendidos), sub: 'Volume de atendimento', bg: 'from-slate-50 to-gray-50', border: 'border-gray-200', sub_color: 'text-gray-600' }
-              ].map(card => (
-                <div key={card.label} className={`bg-gradient-to-br ${card.bg} rounded-xl p-4 border ${card.border}`}>
-                  <p className="text-xs text-gray-500 mb-1">{card.label}</p>
-                  <p className="text-xl font-bold text-gray-900">{card.value}</p>
-                  <p className={`text-xs ${card.sub_color} mt-1`}>{card.sub}</p>
+                { label: 'Faturamento Bruto', value: formatCurrency(p.faturamento_bruto), sub: `${p.qtd_os_fechadas} OS fechadas`, bg: 'from-emerald-50 to-green-50', border: 'border-emerald-100', sc: 'text-emerald-600' },
+                { label: 'EBITDA', value: formatCurrency(p.ebitda), sub: `Margem: ${formatPercent(p.ebitda_margem, false)}`, bg: 'from-blue-50 to-cyan-50', border: 'border-blue-100', sc: 'text-blue-600' },
+                { label: 'Margem Líquida', value: formatPercent(p.margem_liquida_pct, false), sub: `Ticket médio: ${formatCurrency(p.ticket_medio)}`, bg: 'from-orange-50 to-amber-50', border: 'border-orange-100', sc: 'text-orange-600' },
+                { label: 'Clientes Atendidos', value: String(p.qtd_clientes_atendidos), sub: 'No período selecionado', bg: 'from-slate-50 to-gray-50', border: 'border-gray-200', sc: 'text-gray-600' }
+              ].map(c => (
+                <div key={c.label} className={`bg-gradient-to-br ${c.bg} rounded-xl p-4 border ${c.border}`}>
+                  <p className="text-xs text-gray-500 mb-1">{c.label}</p>
+                  <p className="text-xl font-bold text-gray-900">{c.value}</p>
+                  <p className={`text-xs ${c.sc} mt-1`}>{c.sub}</p>
                 </div>
               ))}
             </div>
 
             <div className="border-t border-gray-100 pt-5">
               <h3 className="text-sm font-semibold text-gray-700 mb-4">Composição dos Custos</h3>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
                 {[
-                  { label: 'Impostos', value: periodKpis.total_impostos, color: 'text-red-600', sub: `${(periodKpis.aliquota_impostos || 0).toFixed(1)}% s/ fat.` },
-                  { label: 'Materiais', value: periodKpis.custo_materiais, color: 'text-orange-600', sub: periodKpis.faturamento_bruto > 0 ? `${((periodKpis.custo_materiais / periodKpis.faturamento_bruto) * 100).toFixed(1)}% s/ fat.` : '0.0%' },
-                  { label: 'Mão de Obra', value: periodKpis.custo_mao_obra, color: 'text-blue-600', sub: periodKpis.faturamento_bruto > 0 ? `${((periodKpis.custo_mao_obra / periodKpis.faturamento_bruto) * 100).toFixed(1)}% s/ fat.` : '0.0%' },
-                  { label: 'Pessoal (RH)', value: periodKpis.custo_total_pessoal, color: 'text-slate-600', sub: 'Salários + encargos' },
-                  { label: 'Desp. Fixas', value: periodKpis.total_despesas_fixas, color: 'text-gray-600', sub: 'Contas e contratos' }
+                  { label: 'Impostos', value: p.total_impostos, color: 'text-red-600', sub: `${formatPercent(p.aliquota_impostos, false)} s/ fat.` },
+                  { label: 'Materiais', value: p.custo_materiais, color: 'text-orange-600', sub: p.faturamento_bruto > 0 ? `${((p.custo_materiais / p.faturamento_bruto) * 100).toFixed(1)}% s/ fat.` : '—' },
+                  { label: 'Mão de Obra', value: p.custo_mao_obra, color: 'text-blue-600', sub: p.faturamento_bruto > 0 ? `${((p.custo_mao_obra / p.faturamento_bruto) * 100).toFixed(1)}% s/ fat.` : '—' },
+                  { label: 'Pessoal (RH)', value: p.custo_total_pessoal, color: 'text-slate-600', sub: 'Salários + encargos' },
+                  { label: 'Desp. Fixas', value: p.total_despesas_fixas, color: 'text-gray-600', sub: 'Contas e contratos' }
                 ].map(item => (
-                  <div key={item.label} className="text-center">
+                  <div key={item.label} className="text-center bg-gray-50 rounded-xl py-3 px-2">
                     <p className="text-xs text-gray-500 mb-1">{item.label}</p>
                     <p className={`text-base font-bold ${item.color}`}>{formatCurrency(item.value)}</p>
                     <p className="text-xs text-gray-400">{item.sub}</p>
@@ -667,19 +664,19 @@ const CFODashboard = () => {
                 ))}
               </div>
 
-              {periodKpis.faturamento_bruto > 0 && (
-                <div className="mt-5">
-                  <div className="flex h-6 rounded-full overflow-hidden text-xs">
+              {p.faturamento_bruto > 0 && (
+                <>
+                  <div className="flex h-7 rounded-full overflow-hidden text-xs">
                     {[
-                      { pct: (periodKpis.total_impostos / periodKpis.faturamento_bruto) * 100, color: 'bg-red-400', label: 'Impostos' },
-                      { pct: (periodKpis.custo_materiais / periodKpis.faturamento_bruto) * 100, color: 'bg-orange-400', label: 'Materiais' },
-                      { pct: (periodKpis.custo_mao_obra / periodKpis.faturamento_bruto) * 100, color: 'bg-blue-400', label: 'MO' },
-                      { pct: (periodKpis.custo_total_pessoal / periodKpis.faturamento_bruto) * 100, color: 'bg-slate-400', label: 'Pessoal' },
-                      { pct: (periodKpis.total_despesas_fixas / periodKpis.faturamento_bruto) * 100, color: 'bg-gray-400', label: 'Fixas' },
-                      { pct: Math.max((periodKpis.lucro_liquido / periodKpis.faturamento_bruto) * 100, 0), color: 'bg-green-400', label: 'Lucro' },
+                      { pct: (p.total_impostos / p.faturamento_bruto) * 100, color: 'bg-red-400', label: 'Impostos' },
+                      { pct: (p.custo_materiais / p.faturamento_bruto) * 100, color: 'bg-orange-400', label: 'Materiais' },
+                      { pct: (p.custo_mao_obra / p.faturamento_bruto) * 100, color: 'bg-blue-400', label: 'MO' },
+                      { pct: (p.custo_total_pessoal / p.faturamento_bruto) * 100, color: 'bg-slate-400', label: 'Pessoal' },
+                      { pct: (p.total_despesas_fixas / p.faturamento_bruto) * 100, color: 'bg-gray-400', label: 'Fixas' },
+                      { pct: Math.max((p.lucro_liquido / p.faturamento_bruto) * 100, 0), color: 'bg-emerald-400', label: 'Lucro' },
                     ].map((seg, i) => seg.pct > 0 && (
                       <div key={i} title={`${seg.label}: ${seg.pct.toFixed(1)}%`}
-                        className={`${seg.color} flex items-center justify-center text-white font-medium transition-all`}
+                        className={`${seg.color} flex items-center justify-center text-white font-medium`}
                         style={{ width: `${Math.min(seg.pct, 100)}%` }}>
                         {seg.pct > 5 && `${seg.pct.toFixed(0)}%`}
                       </div>
@@ -692,7 +689,7 @@ const CFODashboard = () => {
                       { color: 'bg-blue-400', label: 'Mão de Obra' },
                       { color: 'bg-slate-400', label: 'Pessoal RH' },
                       { color: 'bg-gray-400', label: 'Desp. Fixas' },
-                      { color: 'bg-green-400', label: 'Lucro Líquido' },
+                      { color: 'bg-emerald-400', label: 'Lucro Líquido' },
                     ].map((leg, i) => (
                       <div key={i} className="flex items-center gap-1">
                         <div className={`w-3 h-3 rounded-sm ${leg.color}`} />
@@ -700,41 +697,36 @@ const CFODashboard = () => {
                       </div>
                     ))}
                   </div>
-                </div>
+                </>
               )}
             </div>
           </motion.div>
         )}
 
-        {/* Alertas Financeiros */}
+        {/* ─── ALERTAS FINANCEIROS ─── */}
         {alerts.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center">
-                  <Bell className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Alertas Financeiros</h2>
-                  <p className="text-sm text-gray-600">{alerts.length} alertas ativos</p>
-                </div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center">
+                <Bell className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Alertas Financeiros</h2>
+                <p className="text-sm text-gray-500">{alerts.length} alertas ativos</p>
               </div>
             </div>
             <div className="space-y-3">
-              {alerts.map((alert) => (
+              {alerts.map(alert => (
                 <div key={alert.id} className={`flex items-start gap-3 p-4 rounded-xl border ${getSeverityColor(alert.severity)}`}>
                   {getSeverityIcon(alert.severity)}
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-semibold">{alert.title}</h4>
-                      <span className="text-xs opacity-70">{formatDateSafe(alert.created_at)}</span>
+                      <h4 className="font-semibold text-sm">{alert.title}</h4>
+                      <span className="text-xs opacity-60">{formatDateSafe(alert.created_at)}</span>
                     </div>
                     <p className="text-sm opacity-90">{alert.description}</p>
-                    <div className="mt-2 flex items-center gap-4 text-xs">
+                    <div className="mt-2 flex items-center gap-4 text-xs opacity-80">
                       <span>Atual: {formatCurrency(alert.current_value)}</span>
                       <span>Limite: {formatCurrency(alert.threshold_value)}</span>
                     </div>
@@ -745,13 +737,10 @@ const CFODashboard = () => {
           </motion.div>
         )}
 
-        {/* Alertas de Margem */}
+        {/* ─── ALERTAS DE MARGEM ─── */}
         {marginAlerts.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-orange-200"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-orange-200">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center">
@@ -759,7 +748,7 @@ const CFODashboard = () => {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Alertas de Custo x Margem</h2>
-                  <p className="text-sm text-gray-600">Cotacoes processadas pela IA detectaram impactos</p>
+                  <p className="text-sm text-gray-500">Cotações processadas pela IA</p>
                 </div>
               </div>
               <span className="px-3 py-1 bg-orange-100 text-orange-700 text-sm font-bold rounded-full">
@@ -783,7 +772,7 @@ const CFODashboard = () => {
                     <p className="text-xs opacity-90">{alert.description}</p>
                     {alert.suggested_price > 0 && (
                       <p className="text-xs font-semibold mt-1">
-                        Preco sugerido: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(alert.suggested_price)}
+                        Preço sugerido: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(alert.suggested_price)}
                       </p>
                     )}
                   </div>
@@ -801,38 +790,35 @@ const CFODashboard = () => {
           </motion.div>
         )}
 
-        {/* Análise de Margens + Saúde Financeira */}
+        {/* ─── ANÁLISE DE MARGENS + RADAR ─── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-          >
-            <div className="flex items-center justify-between mb-6">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div className="flex items-center justify-between mb-5">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Análise de Margens</h2>
-                <p className="text-sm text-gray-600">Indicadores de rentabilidade</p>
+                <p className="text-sm text-gray-500">Período: {dateRange.label}</p>
               </div>
-              <BarChart3 className="h-6 w-6 text-gray-400" />
+              <BarChart3 className="h-6 w-6 text-gray-300" />
             </div>
-            <div className="space-y-4">
-              {financialHealthMetrics.map((metric) => (
+            <div className="space-y-5">
+              {marginMetrics.map(metric => (
                 <div key={metric.label}>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span className="text-sm font-medium text-gray-700">{metric.label}</span>
                     <span className="text-sm font-bold" style={{ color: metric.color }}>
-                      {formatPercent(metric.value)}
+                      {formatPercent(metric.value, false)}
                     </span>
                   </div>
                   <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="absolute h-full transition-all duration-500 rounded-full"
-                      style={{ width: `${Math.min((metric.value / metric.target) * 100, 100)}%`, backgroundColor: metric.color }} />
-                    <div className="absolute h-full border-r-2 border-gray-400"
-                      style={{ left: `${(metric.target / 100) * 100}%` }} />
+                    <div className="absolute h-full transition-all duration-700 rounded-full"
+                      style={{ width: `${Math.min(Math.max((metric.value / metric.target) * 100, 0), 100)}%`, backgroundColor: metric.color }} />
+                    <div className="absolute h-full border-r-2 border-gray-400 border-dashed"
+                      style={{ left: `${Math.min((metric.target / 100) * 100, 99)}%` }} />
                   </div>
                   <div className="flex items-center justify-between mt-1">
-                    <span className="text-xs text-gray-500">Meta: {metric.target}%</span>
-                    <span className={`text-xs font-medium ${metric.value >= metric.target ? 'text-green-600' : 'text-orange-600'}`}>
+                    <span className="text-xs text-gray-400">Meta: {metric.target}%</span>
+                    <span className={`text-xs font-medium ${metric.value >= metric.target ? 'text-emerald-600' : 'text-orange-500'}`}>
                       {metric.value >= metric.target ? 'Acima da meta' : 'Abaixo da meta'}
                     </span>
                   </div>
@@ -841,27 +827,24 @@ const CFODashboard = () => {
             </div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-          >
-            <div className="flex items-center justify-between mb-6">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div className="flex items-center justify-between mb-5">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Saúde Financeira</h2>
-                <p className="text-sm text-gray-600">Indicadores comparativos</p>
+                <p className="text-sm text-gray-500">Atual vs Meta</p>
               </div>
-              <Shield className="h-6 w-6 text-gray-400" />
+              <Shield className="h-6 w-6 text-gray-300" />
             </div>
-            <div className="h-80">
+            <div className="h-72">
               <Radar
                 data={{
-                  labels: financialHealthMetrics.map(m => m.label),
+                  labels: marginMetrics.map(m => m.label),
                   datasets: [
                     {
                       label: 'Atual',
-                      data: financialHealthMetrics.map(m => m.value),
-                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                      data: marginMetrics.map(m => m.value),
+                      backgroundColor: 'rgba(59, 130, 246, 0.15)',
                       borderColor: 'rgb(59, 130, 246)',
                       borderWidth: 2,
                       pointBackgroundColor: 'rgb(59, 130, 246)',
@@ -869,8 +852,8 @@ const CFODashboard = () => {
                     },
                     {
                       label: 'Meta',
-                      data: financialHealthMetrics.map(m => m.target),
-                      backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                      data: marginMetrics.map(m => m.target),
+                      backgroundColor: 'rgba(34, 197, 94, 0.15)',
                       borderColor: 'rgb(34, 197, 94)',
                       borderWidth: 2,
                       pointBackgroundColor: 'rgb(34, 197, 94)',
@@ -888,29 +871,24 @@ const CFODashboard = () => {
           </motion.div>
         </div>
 
-        {/* Inteligência de Clientes */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-slate-800 rounded-xl flex items-center justify-center">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Inteligência de Clientes</h2>
-                <p className="text-sm text-gray-600">Top 10 clientes por receita</p>
-              </div>
+        {/* ─── INTELIGÊNCIA DE CLIENTES ─── */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-slate-800 rounded-xl flex items-center justify-center">
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Inteligência de Clientes</h2>
+              <p className="text-sm text-gray-500">Top 10 clientes por receita total</p>
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  {['Cliente', 'Tipo', 'Classificação', 'Receita', 'Pedidos', 'Ticket Médio', 'Score', 'Risco'].map(h => (
-                    <th key={h} className={`py-3 px-4 text-sm font-semibold text-gray-700 ${['Receita', 'Pedidos', 'Ticket Médio'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  {['#', 'Cliente', 'Tipo', 'ABC', 'Receita', 'Pedidos', 'Ticket Médio', 'Score', 'Risco'].map(h => (
+                    <th key={h} className={`py-3 px-3 text-xs font-semibold text-gray-600 uppercase tracking-wide ${['Receita', 'Pedidos', 'Ticket Médio'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -918,35 +896,33 @@ const CFODashboard = () => {
                 {topCustomers.map((customer, index) => {
                   const riskLevel = getRiskLevel(customer.risk_score)
                   return (
-                    <tr key={customer.customer_id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                            {index + 1}
-                          </div>
-                          <span className="text-sm font-medium text-gray-900">{customer.customer_name}</span>
+                    <tr key={customer.customer_id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3">
+                        <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">
+                          {index + 1}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">{customer.customer_type}</td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border ${getABCColor(customer.abc_classification)}`}>
+                      <td className="py-3 px-3 text-sm font-medium text-gray-900">{customer.customer_name}</td>
+                      <td className="py-3 px-3 text-xs text-gray-500">{customer.customer_type}</td>
+                      <td className="py-3 px-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${getABCColor(customer.abc_classification)}`}>
                           {customer.abc_classification}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right text-sm font-bold text-green-600">{formatCurrency(customer.total_revenue)}</td>
-                      <td className="py-3 px-4 text-right text-sm text-gray-900">{customer.total_orders}</td>
-                      <td className="py-3 px-4 text-right text-sm text-gray-900">{formatCurrency(customer.avg_order_value)}</td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-3 text-right text-sm font-bold text-emerald-600">{formatCurrency(customer.total_revenue)}</td>
+                      <td className="py-3 px-3 text-right text-sm text-gray-700">{customer.total_orders}</td>
+                      <td className="py-3 px-3 text-right text-sm text-gray-700">{formatCurrency(customer.avg_order_value)}</td>
+                      <td className="py-3 px-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-green-500 to-blue-600"
+                          <div className="w-14 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-emerald-500 to-blue-500"
                               style={{ width: `${(customer.credit_score / 1000) * 100}%` }} />
                           </div>
                           <span className="text-xs font-medium text-gray-600">{customer.credit_score}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4">
-                        <span className={`text-xs font-medium ${riskLevel.color}`}>{riskLevel.label}</span>
+                      <td className="py-3 px-3">
+                        <span className={`text-xs font-semibold ${riskLevel.color}`}>{riskLevel.label}</span>
                       </td>
                     </tr>
                   )
@@ -956,24 +932,24 @@ const CFODashboard = () => {
           </div>
         </motion.div>
 
-        {/* Métricas Operacionais */}
+        {/* ─── MÉTRICAS OPERACIONAIS (dados globais) ─── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl p-6 shadow-lg text-white">
+            className="bg-gradient-to-br from-emerald-600 to-green-700 rounded-2xl p-6 shadow-lg text-white">
             <div className="flex items-center justify-between mb-4">
               <Package className="h-8 w-8 text-green-200" />
-              <span className="text-sm font-medium text-green-100">Estoque</span>
+              <span className="text-xs font-medium text-green-100 bg-white/10 px-2 py-1 rounded-full">Estoque atual</span>
             </div>
-            <h3 className="text-3xl font-bold mb-2">{formatCurrency(kpis?.total_inventory_value || 0)}</h3>
-            <p className="text-green-100 text-sm mb-4">Valor Total</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+            <h3 className="text-3xl font-bold mb-1">{formatCurrency(globalKpis?.total_inventory_value || 0)}</h3>
+            <p className="text-green-100 text-sm mb-4">Valor em estoque</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/10 rounded-xl p-3">
                 <p className="text-xs text-green-100 mb-1">Lucro Potencial</p>
-                <p className="text-lg font-bold">{formatCurrency(kpis?.potential_profit || 0)}</p>
+                <p className="text-lg font-bold">{formatCurrency(globalKpis?.potential_profit || 0)}</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+              <div className="bg-white/10 rounded-xl p-3">
                 <p className="text-xs text-green-100 mb-1">Giro</p>
-                <p className="text-lg font-bold">{(kpis?.inventory_turnover || 0).toFixed(1)}x</p>
+                <p className="text-lg font-bold">{(globalKpis?.inventory_turnover || 0).toFixed(1)}x</p>
               </div>
             </div>
           </motion.div>
@@ -982,18 +958,18 @@ const CFODashboard = () => {
             className="bg-gradient-to-br from-blue-600 to-cyan-700 rounded-2xl p-6 shadow-lg text-white">
             <div className="flex items-center justify-between mb-4">
               <Users className="h-8 w-8 text-blue-200" />
-              <span className="text-sm font-medium text-blue-100">Clientes</span>
+              <span className="text-xs font-medium text-blue-100 bg-white/10 px-2 py-1 rounded-full">Base total</span>
             </div>
-            <h3 className="text-3xl font-bold mb-2">{kpis?.total_customers || 0}</h3>
-            <p className="text-blue-100 text-sm mb-4">Total de Clientes</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+            <h3 className="text-3xl font-bold mb-1">{globalKpis?.total_customers || 0}</h3>
+            <p className="text-blue-100 text-sm mb-4">Clientes cadastrados</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/10 rounded-xl p-3">
                 <p className="text-xs text-blue-100 mb-1">Pessoa Jurídica</p>
-                <p className="text-lg font-bold">{kpis?.total_customers_pj || 0}</p>
+                <p className="text-lg font-bold">{globalKpis?.total_customers_pj || 0}</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+              <div className="bg-white/10 rounded-xl p-3">
                 <p className="text-xs text-blue-100 mb-1">Pessoa Física</p>
-                <p className="text-lg font-bold">{kpis?.total_customers_pf || 0}</p>
+                <p className="text-lg font-bold">{globalKpis?.total_customers_pf || 0}</p>
               </div>
             </div>
           </motion.div>
@@ -1002,28 +978,28 @@ const CFODashboard = () => {
             className="bg-gradient-to-br from-slate-600 to-slate-800 rounded-2xl p-6 shadow-lg text-white">
             <div className="flex items-center justify-between mb-4">
               <FileText className="h-8 w-8 text-slate-300" />
-              <span className="text-sm font-medium text-slate-300">Ordens de Serviço</span>
+              <span className="text-xs font-medium text-slate-300 bg-white/10 px-2 py-1 rounded-full">Período</span>
             </div>
-            <h3 className="text-3xl font-bold mb-2">{kpis?.total_completed_orders || 0}</h3>
-            <p className="text-slate-300 text-sm mb-4">Concluídas</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+            <h3 className="text-3xl font-bold mb-1">{p?.qtd_os_fechadas || 0}</h3>
+            <p className="text-slate-300 text-sm mb-4">OS fechadas no período</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/10 rounded-xl p-3">
                 <p className="text-xs text-slate-300 mb-1">Ticket Médio</p>
-                <p className="text-lg font-bold">{formatCurrency(kpis?.avg_order_value || 0)}</p>
+                <p className="text-lg font-bold">{formatCurrency(p?.ticket_medio || 0)}</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+              <div className="bg-white/10 rounded-xl p-3">
                 <p className="text-xs text-slate-300 mb-1">Em Progresso</p>
-                <p className="text-lg font-bold">{kpis?.orders_in_progress || 0}</p>
+                <p className="text-lg font-bold">{globalKpis?.orders_in_progress || 0}</p>
               </div>
             </div>
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <MarginAlertPanel />
           <OSProfitabilityWidget />
         </div>
-        <div className="mt-6">
+        <div>
           <PMOCSchedulePanel />
         </div>
       </div>
