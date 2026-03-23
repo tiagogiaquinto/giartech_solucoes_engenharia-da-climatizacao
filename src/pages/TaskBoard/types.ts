@@ -28,7 +28,10 @@ export interface Task {
   priority: Priority
   assignee_id?: string
   assignee_name?: string
+  assignee_email?: string
   assignee_avatar?: string
+  assigned_by_name?: string
+  assigned_at?: string
   due_date?: string
   category?: string
   tags: string[]

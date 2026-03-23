@@ -1,18 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bot, X, ChevronRight, Bell, AlertTriangle, DollarSign, Clock } from 'lucide-react'
+import { Bot, X, ChevronRight, Bell, AlertTriangle, DollarSign, Clock, MessageSquare, Users } from 'lucide-react'
 import { Task } from './types'
 import { supabase } from '../../lib/supabase'
 
 interface Insight {
   id: string
-  type: 'blocked' | 'overdue' | 'billing' | 'summary'
+  type: 'blocked' | 'overdue' | 'billing' | 'workload' | 'approaching_deadline'
   severity: 'critical' | 'warning' | 'info'
   message: string
   taskId?: string
   taskTitle?: string
   osNumber?: string
   action?: string
+  actionLabel?: string
+  assigneeName?: string
+  assigneeWhatsapp?: string
 }
 
 interface UnbilledOS {
@@ -28,8 +31,7 @@ function buildTaskInsights(tasks: Task[]): Insight[] {
 
   const blockedOld = tasks.filter(t => {
     if (t.column_id !== 'blocked' || !t.blocked_since) return false
-    const hours = (Date.now() - new Date(t.blocked_since).getTime()) / 3600000
-    return hours >= 48
+    return (Date.now() - new Date(t.blocked_since).getTime()) / 3600000 >= 48
   })
 
   blockedOld.forEach(t => {
@@ -39,57 +41,83 @@ function buildTaskInsights(tasks: Task[]): Insight[] {
         id: `blocked_${t.id}`,
         type: 'blocked',
         severity: 'warning',
-        message: `A tarefa "${t.title}" está bloqueada há ${days} dia${days > 1 ? 's' : ''}. Quer que eu notifique o responsável${t.assignee_name ? ` (${t.assignee_name})` : ''}?`,
+        message: `A tarefa "${t.title}" esta bloqueada ha ${days} dia${days > 1 ? 's' : ''}. Quer que eu notifique o responsavel${t.assignee_name ? ` (${t.assignee_name})` : ''}?`,
         taskId: t.id,
         taskTitle: t.title,
         action: 'notificar',
+        actionLabel: 'Notificar Responsavel',
+        assigneeName: t.assignee_name,
       })
     }
   })
 
-  const today = new Date().toDateString()
-  const overdueToday = tasks.filter(t => {
+  const now = Date.now()
+  const twoHours = 2 * 3600000
+  const approachingDeadline = tasks.filter(t => {
     if (!t.due_date || t.column_id === 'done') return false
-    return new Date(t.due_date + 'T12:00:00').toDateString() === today
+    const deadline = new Date(t.due_date + 'T23:59:59').getTime()
+    const diff = deadline - now
+    return diff > 0 && diff <= twoHours
   })
 
-  if (overdueToday.length > 0) {
-    const urgentFirst = [...overdueToday].sort((a, b) => {
-      const order = { urgent: 0, high: 1, normal: 2, low: 3 }
-      return order[a.priority] - order[b.priority]
-    })
+  approachingDeadline.forEach(t => {
+    const mins = Math.floor((new Date(t.due_date! + 'T23:59:59').getTime() - now) / 60000)
+    const timeLabel = mins < 60 ? `${mins} minutos` : `${Math.floor(mins / 60)}h${mins % 60 > 0 ? ` ${mins % 60}min` : ''}`
     insights.push({
-      id: 'overdue_today',
-      type: 'overdue',
+      id: `deadline_${t.id}`,
+      type: 'approaching_deadline',
       severity: 'warning',
-      message: `Você tem ${overdueToday.length} tarefa${overdueToday.length > 1 ? 's' : ''} vencendo hoje. Recomendo focar na de maior prioridade: "${urgentFirst[0].title}".`,
-      taskId: urgentFirst[0].id,
-      taskTitle: urgentFirst[0].title,
-      action: 'abrir',
+      message: `A tarefa "${t.title}"${t.assignee_name ? ` (atribuida a ${t.assignee_name})` : ''} vence em ${timeLabel} e ainda nao foi iniciada. Quer que eu envie um lembrete no WhatsApp?`,
+      taskId: t.id,
+      taskTitle: t.title,
+      action: 'whatsapp',
+      actionLabel: 'Enviar Lembrete WhatsApp',
+      assigneeName: t.assignee_name,
     })
-  }
+  })
 
-  return insights
+  return insights.slice(0, 4)
 }
 
-const SEVERITY_STYLES: Record<Insight['severity'], { bg: string; border: string; dot: string; iconBg: string }> = {
+function buildWorkloadInsights(tasks: Task[]): Insight[] {
+  const loadMap: Record<string, number> = {}
+  tasks.filter(t => t.column_id !== 'done' && t.assignee_name).forEach(t => {
+    loadMap[t.assignee_name!] = (loadMap[t.assignee_name!] || 0) + 1
+  })
+
+  const entries = Object.entries(loadMap).sort((a, b) => b[1] - a[1])
+  if (entries.length < 2) return []
+
+  const [topName, topCount] = entries[0]
+  const [bottomName, bottomCount] = entries[entries.length - 1]
+
+  if (topCount - bottomCount < 4) return []
+
+  return [{
+    id: 'workload_imbalance',
+    type: 'workload',
+    severity: 'info',
+    message: `Diretor, ${topName} esta com ${topCount} tarefas pendentes, enquanto ${bottomName} tem apenas ${bottomCount}. Recomendo redistribuir as funcoes para equilibrar a carga.`,
+    action: 'view_team',
+    actionLabel: 'Ver Equipe',
+  }]
+}
+
+const SEVERITY_STYLES: Record<Insight['severity'], { bg: string; border: string; iconBg: string }> = {
   critical: {
     bg: 'bg-gradient-to-r from-red-50 to-orange-50',
     border: 'border-red-300',
-    dot: 'bg-red-500',
     iconBg: 'bg-gradient-to-br from-red-500 to-red-700',
   },
   warning: {
     bg: 'bg-gradient-to-r from-blue-50 to-slate-50',
     border: 'border-blue-200',
-    dot: 'bg-blue-500',
     iconBg: 'bg-gradient-to-br from-blue-500 to-blue-700',
   },
   info: {
-    bg: 'bg-gradient-to-r from-slate-50 to-gray-50',
-    border: 'border-gray-200',
-    dot: 'bg-gray-400',
-    iconBg: 'bg-gradient-to-br from-gray-500 to-gray-700',
+    bg: 'bg-gradient-to-r from-teal-50 to-slate-50',
+    border: 'border-teal-200',
+    iconBg: 'bg-gradient-to-br from-teal-500 to-teal-700',
   },
 }
 
@@ -97,20 +125,24 @@ interface Props {
   tasks: Task[]
   onOpenTask: (id: string) => void
   onUpdateTask: (id: string, payload: Partial<Task>) => void
+  onViewTeam?: () => void
 }
 
-export function ThomazTaskManager({ tasks, onOpenTask, onUpdateTask }: Props) {
+export function ThomazTaskManager({ tasks, onOpenTask, onUpdateTask, onViewTeam }: Props) {
   const [taskInsights, setTaskInsights] = useState<Insight[]>([])
   const [billingInsights, setBillingInsights] = useState<Insight[]>([])
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [notifying, setNotifying] = useState<string | null>(null)
+  const [whatsappModal, setWhatsappModal] = useState<Insight | null>(null)
   const [criticalOpen, setCriticalOpen] = useState(false)
   const [criticalInsight, setCriticalInsight] = useState<Insight | null>(null)
 
+  const workloadInsights = useMemo(() => buildWorkloadInsights(tasks), [tasks])
+
   useEffect(() => {
-    const fresh = buildTaskInsights(tasks).filter(i => !dismissed.has(i.id))
+    const fresh = [...buildTaskInsights(tasks), ...workloadInsights].filter(i => !dismissed.has(i.id))
     setTaskInsights(fresh)
-  }, [tasks, dismissed])
+  }, [tasks, dismissed, workloadInsights])
 
   useEffect(() => {
     const fetchUnbilled = async () => {
@@ -137,9 +169,10 @@ export function ThomazTaskManager({ tasks, onOpenTask, onUpdateTask }: Props) {
             id: `billing_${os.id}`,
             type: 'billing' as const,
             severity: 'critical' as const,
-            message: `A OS ${os.order_number} (${os.client_name}) foi finalizada há ${timeLabel} e o faturamento ainda não foi iniciado${valueLabel}. O atraso no envio do boleto pode afetar o fluxo de caixa.`,
+            message: `A OS ${os.order_number} (${os.client_name}) foi finalizada ha ${timeLabel} e o faturamento ainda nao foi iniciado${valueLabel}. O atraso no envio do boleto pode afetar o fluxo de caixa.`,
             osNumber: os.order_number,
             action: 'faturar',
+            actionLabel: 'Iniciar Faturamento',
           }
         })
 
@@ -172,7 +205,7 @@ export function ThomazTaskManager({ tasks, onOpenTask, onUpdateTask }: Props) {
       .insert({
         task_id: insight.taskId,
         author_name: 'Thomaz AI',
-        body: 'Olá! Identifiquei que esta tarefa está bloqueada há mais de 48 horas. Por favor, atualize o status ou adicione um comentário explicando o bloqueio para que possamos agir.',
+        body: `Ola! Identifiquei que esta tarefa esta bloqueada ha mais de 48 horas. Por favor, atualize o status ou adicione um comentario explicando o bloqueio.`,
         is_thomaz: true,
       })
 
@@ -188,6 +221,19 @@ export function ThomazTaskManager({ tasks, onOpenTask, onUpdateTask }: Props) {
       dismiss(insight.id)
     }, 1200)
   }, [dismiss, onUpdateTask])
+
+  const handleWhatsApp = useCallback((insight: Insight) => {
+    setWhatsappModal(insight)
+  }, [])
+
+  const sendWhatsApp = useCallback((insight: Insight) => {
+    const text = encodeURIComponent(
+      `Ola! O Diretor Tiago enviou um lembrete: a tarefa "${insight.taskTitle}" vence hoje. Por favor, priorize esta atividade. Obrigado!`
+    )
+    window.open(`https://wa.me/?text=${text}`, '_blank')
+    setWhatsappModal(null)
+    dismiss(insight.id)
+  }, [dismiss])
 
   const allInsights = [...billingInsights, ...taskInsights].filter(i => !dismissed.has(i.id))
   const inlineInsights = allInsights.filter(i => i.severity !== 'critical')
@@ -217,14 +263,11 @@ export function ThomazTaskManager({ tasks, onOpenTask, onUpdateTask }: Props) {
                     <Bot className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-white">Thomaz AI — Alerta Critico</p>
+                    <p className="text-sm font-bold text-white">Thomaz AI - Alerta Critico</p>
                     <p className="text-xs text-red-100">Acao imediata recomendada</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setCriticalOpen(false)}
-                  className="text-white/70 hover:text-white transition"
-                >
+                <button onClick={() => setCriticalOpen(false)} className="text-white/70 hover:text-white transition">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -265,6 +308,66 @@ export function ThomazTaskManager({ tasks, onOpenTask, onUpdateTask }: Props) {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {whatsappModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/30 z-[980]"
+              onClick={() => setWhatsappModal(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[981] w-[420px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+            >
+              <div className="bg-gradient-to-r from-green-500 to-teal-500 px-5 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                    <MessageSquare className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">Thomaz AI - Lembrete WhatsApp</p>
+                    <p className="text-xs text-green-100">Secretario Executivo</p>
+                  </div>
+                </div>
+                <button onClick={() => setWhatsappModal(null)} className="text-white/70 hover:text-white">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-5">
+                <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                  Vou enviar a seguinte mensagem para {whatsappModal.assigneeName || 'o responsavel'}:
+                </p>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-4 text-sm text-gray-700 italic">
+                  "Ola! O Diretor Tiago enviou um lembrete: a tarefa "{whatsappModal.taskTitle}" vence hoje. Por favor, priorize esta atividade. Obrigado!"
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => sendWhatsApp(whatsappModal)}
+                    className="flex-1 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white rounded-xl py-2.5 transition flex items-center justify-center gap-2"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Enviar no WhatsApp
+                  </button>
+                  <button
+                    onClick={() => { setWhatsappModal(null); dismiss(whatsappModal.id) }}
+                    className="px-4 text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {inlineInsights.length > 0 && (
         <div className="mb-4 space-y-2">
           <AnimatePresence>
@@ -281,15 +384,17 @@ export function ThomazTaskManager({ tasks, onOpenTask, onUpdateTask }: Props) {
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 shadow ${s.iconBg}`}>
                     {insight.type === 'billing'
                       ? <DollarSign className="h-4 w-4 text-white" />
-                      : insight.type === 'overdue'
-                        ? <Clock className="h-4 w-4 text-white" />
-                        : <Bot className="h-4 w-4 text-white" />
+                      : insight.type === 'workload'
+                        ? <Users className="h-4 w-4 text-white" />
+                        : insight.type === 'approaching_deadline'
+                          ? <Clock className="h-4 w-4 text-white" />
+                          : <Bot className="h-4 w-4 text-white" />
                     }
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-700 leading-snug">{insight.message}</p>
                     {insight.action && (
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex flex-wrap gap-2 mt-2">
                         {insight.action === 'notificar' && (
                           <button
                             onClick={() => handleNotify(insight)}
@@ -297,16 +402,34 @@ export function ThomazTaskManager({ tasks, onOpenTask, onUpdateTask }: Props) {
                             className="flex items-center gap-1 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-1.5 transition disabled:opacity-60"
                           >
                             <Bell className="h-3 w-3" />
-                            {notifying === insight.taskId ? 'Notificando...' : 'Notificar Responsável'}
+                            {notifying === insight.taskId ? 'Notificando...' : (insight.actionLabel || 'Notificar')}
                           </button>
                         )}
-                        {insight.taskId && (
+                        {insight.action === 'whatsapp' && (
+                          <button
+                            onClick={() => handleWhatsApp(insight)}
+                            className="flex items-center gap-1 text-xs font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg px-3 py-1.5 transition"
+                          >
+                            <MessageSquare className="h-3 w-3" />
+                            {insight.actionLabel || 'Enviar WhatsApp'}
+                          </button>
+                        )}
+                        {insight.action === 'view_team' && onViewTeam && (
+                          <button
+                            onClick={() => { onViewTeam(); dismiss(insight.id) }}
+                            className="flex items-center gap-1 text-xs font-semibold bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-3 py-1.5 transition"
+                          >
+                            <Users className="h-3 w-3" />
+                            {insight.actionLabel || 'Ver Equipe'}
+                          </button>
+                        )}
+                        {insight.taskId && insight.action !== 'view_team' && (
                           <button
                             onClick={() => { onOpenTask(insight.taskId!); dismiss(insight.id) }}
                             className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-white border border-blue-200 rounded-lg px-3 py-1.5 transition"
                           >
                             <ChevronRight className="h-3 w-3" />
-                            {insight.action === 'abrir' ? 'Abrir Tarefa' : 'Ver Tarefa'}
+                            Ver Tarefa
                           </button>
                         )}
                         <button

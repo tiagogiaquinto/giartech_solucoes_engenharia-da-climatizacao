@@ -2,13 +2,41 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, CheckSquare, Square, Plus, Send, Trash2, Calendar,
-  Tag, User, Flag, MessageSquare, Bot
+  Tag, User, Flag, MessageSquare, Bot, History, Clock
 } from 'lucide-react'
 import { Task, PRIORITY_CONFIG, ColumnId, COLUMNS } from './types'
 import { useTaskDetail } from './useTaskBoard'
+import { AssigneeSelector, UserProfile } from './AssigneeSelector'
+import { supabase } from '../../lib/supabase'
 
 function formatDatetime(d: string) {
   return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+async function recordAssignment(
+  taskId: string,
+  taskTitle: string,
+  user: UserProfile,
+  assignedByName: string
+) {
+  await supabase.from('task_assignment_history').insert({
+    task_id: taskId,
+    task_title: taskTitle,
+    assigned_to_id: user.id,
+    assigned_to_name: user.full_name || user.email,
+    assigned_to_email: user.email,
+    assigned_by_name: assignedByName,
+  })
+
+  await supabase.from('task_notifications').insert({
+    recipient_user_id: user.id,
+    recipient_email: user.email,
+    task_id: taskId,
+    task_title: taskTitle,
+    assigned_by_name: assignedByName,
+    message: `${assignedByName} atribuiu a tarefa "${taskTitle}" a voce.`,
+    read: false,
+  })
 }
 
 interface Props {
@@ -16,14 +44,16 @@ interface Props {
   onClose: () => void
   onUpdate: (id: string, payload: Partial<Task>) => void
   onDelete: (id: string) => void
+  currentUserName?: string
 }
 
-export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete }: Props) {
+export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete, currentUserName = 'Diretor' }: Props) {
   const { task, subtasks, comments, toggleSubtask, addSubtask, deleteSubtask, addComment, setTask } = useTaskDetail(taskId)
   const [newSubtask, setNewSubtask] = useState('')
   const [commentText, setCommentText] = useState('')
   const [editTitle, setEditTitle] = useState(false)
   const [titleVal, setTitleVal] = useState('')
+  const [assigning, setAssigning] = useState(false)
 
   if (!taskId) return null
 
@@ -40,7 +70,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete }: Props)
   const handleComment = async () => {
     const trimmed = commentText.trim()
     if (!trimmed) return
-    await addComment(trimmed, 'Você')
+    await addComment(trimmed, currentUserName)
     setCommentText('')
   }
 
@@ -58,10 +88,31 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete }: Props)
     setTask(prev => prev ? { ...prev, column_id: col } : prev)
   }
 
-  const handlePriorityChange = (p: string) => {
+  const handleAssigneeChange = async (user: UserProfile | null) => {
     if (!task) return
-    onUpdate(task.id, { priority: p as any })
-    setTask(prev => prev ? { ...prev, priority: p as any } : prev)
+    setAssigning(true)
+
+    const payload: Partial<Task> = {
+      assignee_id: user?.id,
+      assignee_name: user ? (user.full_name || user.email) : undefined,
+      assignee_email: user?.email,
+      assigned_by_name: currentUserName,
+      assigned_at: user ? new Date().toISOString() : undefined,
+    }
+
+    onUpdate(task.id, payload)
+    setTask(prev => prev ? { ...prev, ...payload } : prev)
+
+    if (user) {
+      await recordAssignment(task.id, task.title, user, currentUserName)
+      await addComment(
+        `Tarefa atribuida a ${user.full_name || user.email} por ${currentUserName}.`,
+        'Sistema',
+        true
+      )
+    }
+
+    setAssigning(false)
   }
 
   return (
@@ -80,9 +131,9 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete }: Props)
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 340, damping: 32 }}
-            className="fixed top-0 right-0 h-full w-[520px] max-w-full bg-white shadow-2xl z-[901] flex flex-col overflow-hidden"
+            className="fixed top-0 right-0 h-full w-[540px] max-w-full bg-white shadow-2xl z-[901] flex flex-col overflow-hidden"
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
               {editTitle ? (
                 <input
                   autoFocus
@@ -137,7 +188,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete }: Props)
                   </label>
                   <select
                     value={task?.priority || 'normal'}
-                    onChange={e => handlePriorityChange(e.target.value)}
+                    onChange={e => task && onUpdate(task.id, { priority: e.target.value as any })}
                     className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                     {Object.entries(PRIORITY_CONFIG).map(([k, v]) => (
@@ -145,18 +196,32 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete }: Props)
                     ))}
                   </select>
                 </div>
-                <div>
+
+                <div className="col-span-2">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
-                    <User className="h-3 w-3" /> Responsável
+                    <User className="h-3 w-3" /> Responsavel
+                    {assigning && <span className="text-blue-500 text-[10px] ml-1">Atribuindo...</span>}
                   </label>
-                  <input
-                    defaultValue={task?.assignee_name || ''}
-                    onBlur={e => task && onUpdate(task.id, { assignee_name: e.target.value })}
-                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    placeholder="Nome do responsável"
+                  <AssigneeSelector
+                    value={
+                      (task?.assignee_id || task?.assignee_name)
+                        ? { id: task?.assignee_id, name: task?.assignee_name || '' }
+                        : null
+                    }
+                    onChange={handleAssigneeChange}
                   />
+                  {task?.assigned_by_name && task?.assigned_at && (
+                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-gray-400">
+                      <History className="h-3 w-3" />
+                      <span>
+                        Atribuido por <span className="font-medium text-gray-600">{task.assigned_by_name}</span>{' '}
+                        em {new Date(task.assigned_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <div>
+
+                <div className="col-span-2">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
                     <Calendar className="h-3 w-3" /> Prazo
                   </label>
@@ -167,11 +232,23 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete }: Props)
                     className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300"
                   />
                 </div>
+
+                <div className="col-span-2">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                    <Tag className="h-3 w-3" /> Categoria
+                  </label>
+                  <input
+                    defaultValue={task?.category || ''}
+                    onBlur={e => task && onUpdate(task.id, { category: e.target.value || undefined })}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    placeholder="Ex: Financeiro, Comercial..."
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
-                  <Tag className="h-3 w-3" /> Descrição
+                  <Tag className="h-3 w-3" /> Descricao
                 </label>
                 <textarea
                   key={task?.id}
@@ -179,7 +256,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete }: Props)
                   onBlur={e => task && onUpdate(task.id, { description: e.target.value })}
                   rows={3}
                   className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  placeholder="Descrição da tarefa..."
+                  placeholder="Descricao da tarefa..."
                 />
               </div>
 
@@ -249,12 +326,12 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete }: Props)
                   </span>
                 </div>
 
-                <div className="space-y-3 mb-3 max-h-48 overflow-y-auto pr-1">
+                <div className="space-y-3 mb-3 max-h-52 overflow-y-auto pr-1">
                   {comments.length === 0 && (
                     <p className="text-xs text-gray-400 italic text-center py-4">Nenhuma mensagem ainda...</p>
                   )}
                   {comments.map(c => (
-                    <div key={c.id} className={`flex gap-2.5 ${c.is_thomaz ? 'items-start' : ''}`}>
+                    <div key={c.id} className="flex gap-2.5">
                       <div className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-xs font-bold text-white ${c.is_thomaz ? 'bg-gradient-to-br from-blue-500 to-blue-700' : 'bg-gradient-to-br from-gray-400 to-gray-600'}`}>
                         {c.is_thomaz ? <Bot className="h-3.5 w-3.5" /> : (c.author_name?.[0] || '?').toUpperCase()}
                       </div>
@@ -277,7 +354,7 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete }: Props)
                     onChange={e => setCommentText(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleComment()}
                     className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    placeholder="Escreva um comentário..."
+                    placeholder="Escreva um comentario..."
                   />
                   <button
                     onClick={handleComment}
@@ -291,7 +368,10 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete }: Props)
               {prio && (
                 <div className="pt-2 border-t border-gray-100">
                   <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>Criado em: {task?.created_at ? new Date(task.created_at).toLocaleDateString('pt-BR') : '—'}</span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Criado em: {task?.created_at ? new Date(task.created_at).toLocaleDateString('pt-BR') : '-'}
+                    </span>
                     <span className={`px-2 py-0.5 rounded-full font-medium border ${prio.bg} ${prio.text} ${prio.border}`}>
                       {prio.label}
                     </span>

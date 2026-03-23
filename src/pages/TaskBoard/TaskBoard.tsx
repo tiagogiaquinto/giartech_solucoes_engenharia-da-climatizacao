@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useRef } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -21,6 +21,8 @@ import { useTaskBoard } from './useTaskBoard'
 import { TaskCard, TaskCardOverlay } from './TaskCard'
 import { TaskDetailDrawer } from './TaskDetailDrawer'
 import { ThomazTaskManager } from './ThomazTaskManager'
+import { TeamWorkloadPanel } from './TeamWorkloadPanel'
+import { AssignmentToast } from './AssignmentToast'
 
 type FilterType = 'all' | 'mine' | 'financial' | 'urgent'
 
@@ -89,6 +91,8 @@ export default function TaskBoard() {
   const [addingToColumn, setAddingToColumn] = useState<ColumnId | null>(null)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [overColumn, setOverColumn] = useState<ColumnId | null>(null)
+  const [selectedMember, setSelectedMember] = useState<string | null>(null)
+  const workloadPanelRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -108,8 +112,9 @@ export default function TaskBoard() {
     if (activeFilter === 'mine') result = result.filter(t => !!t.assignee_name)
     if (activeFilter === 'financial') result = result.filter(t => (t.category || '').toLowerCase().includes('financ'))
     if (activeFilter === 'urgent') result = result.filter(t => t.priority === 'urgent')
+    if (selectedMember) result = result.filter(t => t.assignee_name === selectedMember)
     return result
-  }, [activeFilter, searchQuery])
+  }, [activeFilter, searchQuery, selectedMember])
 
   const columnTasks = useMemo(() => {
     const map: Record<ColumnId, Task[]> = { todo: [], in_progress: [], review: [], blocked: [], done: [] }
@@ -219,6 +224,12 @@ export default function TaskBoard() {
                 />
               </div>
 
+              <TeamWorkloadPanel
+                tasks={tasks}
+                selectedMember={selectedMember}
+                onSelectMember={setSelectedMember}
+              />
+
               <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
                 {FILTER_CONFIG.map(f => {
                   const Icon = f.icon
@@ -241,10 +252,26 @@ export default function TaskBoard() {
             </div>
           </div>
 
+          {selectedMember && (
+            <div className="mb-3 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
+              <User className="h-3.5 w-3.5 text-blue-600" />
+              <span className="text-sm text-blue-700 font-medium">
+                Mostrando tarefas de: <span className="font-bold">{selectedMember}</span>
+              </span>
+              <button
+                onClick={() => setSelectedMember(null)}
+                className="ml-auto text-blue-400 hover:text-blue-600 transition"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
           <ThomazTaskManager
             tasks={tasks}
             onOpenTask={setSelectedTaskId}
             onUpdateTask={updateTask}
+            onViewTeam={() => {}}
           />
         </div>
 
@@ -343,6 +370,8 @@ export default function TaskBoard() {
         onUpdate={updateTask}
         onDelete={handleDelete}
       />
+
+      <AssignmentToast />
     </DndContext>
   )
 }
