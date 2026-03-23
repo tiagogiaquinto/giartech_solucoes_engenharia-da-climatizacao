@@ -136,6 +136,9 @@ import Materials from './pages/Materials'
 import WhatsAppCRM from './pages/WhatsAppCRM'
 import StaffManagement from './pages/StaffManagement'
 import CadastroClientesParceiros from './pages/CadastroClientesParceiros'
+import { NotificationHubProvider } from './contexts/NotificationHubContext'
+import { GiartechNotificationHub } from './components/GiartechNotificationHub'
+import { useThomazInterrupt } from './hooks/useThomazInterrupt'
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
   const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
@@ -385,6 +388,9 @@ function App() {
   return (
     <AuthProvider>
       <UserProvider>
+        <NotificationHubProvider>
+        <ThomazInterruptActivator />
+        <GiartechNotificationHub />
         <UpdateBanner />
         <Routes location={location}>
             <Route path="/login" element={<LoginPage />} />
@@ -1226,9 +1232,15 @@ function App() {
       {/* Offline Indicator */}
       <OfflineIndicator />
       {isMobile() && <MobileBottomNav />}
+      </NotificationHubProvider>
       </UserProvider>
     </AuthProvider>
   )
+}
+
+function ThomazInterruptActivator() {
+  useThomazInterrupt()
+  return null
 }
 
 export default App
