@@ -21,6 +21,7 @@ import { useTaskBoard } from './useTaskBoard'
 import { TaskCard, TaskCardOverlay } from './TaskCard'
 import { TaskDetailDrawer } from './TaskDetailDrawer'
 import { ThomazTaskManager } from './ThomazTaskManager'
+import { ThomazTaskChat } from './ThomazTaskChat'
 import { TeamWorkloadPanel } from './TeamWorkloadPanel'
 import { AssignmentToast } from './AssignmentToast'
 import { ListView } from './ListView'
@@ -421,6 +422,13 @@ export default function TaskBoard() {
       />
 
       <AssignmentToast />
+
+      <ThomazTaskChat
+        tasks={tasks}
+        onCreateTask={createTask}
+        onUpdateTask={updateTask}
+        onOpenTask={setSelectedTaskId}
+      />
     </DndContext>
   )
 }
