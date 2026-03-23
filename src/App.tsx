@@ -139,6 +139,7 @@ import CadastroClientesParceiros from './pages/CadastroClientesParceiros'
 import { NotificationHubProvider } from './contexts/NotificationHubContext'
 import { GiartechNotificationHub } from './components/GiartechNotificationHub'
 import { useThomazInterrupt } from './hooks/useThomazInterrupt'
+import TaskBoard from './pages/TaskBoard/TaskBoard'
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
   const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
@@ -681,10 +682,18 @@ function App() {
           <Route path="/projects" element={
             <ProtectedRoute>
               <WebLayout>
-                <Projects 
+                <Projects
                   onPremiumFeature={handlePremiumFeature}
                   onEnterpriseFeature={handleEnterpriseFeature}
                 />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/task-board" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <TaskBoard />
               </WebLayout>
             </ProtectedRoute>
           } />

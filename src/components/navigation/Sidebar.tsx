@@ -42,7 +42,8 @@ import {
   BarChart2,
   Smartphone,
   Box,
-  Wind
+  Wind,
+  LayoutGrid
 } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { supabase } from '../../lib/supabase'
@@ -88,6 +89,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis', moduleCode: 'catalogo' },
   { id: 'inventory', path: '/inventory', icon: Package, label: 'Estoque', description: 'Controle de materiais', moduleCode: 'estoque' },
   { id: 'equipments', path: '/equipments', icon: Wind, label: 'Equipamentos HVAC', description: 'Climatização, refrigeração — manutenção e garantia', moduleCode: 'estoque' },
+  { id: 'task-board', path: '/task-board', icon: LayoutGrid, label: 'Task Board', description: 'Quadro Kanban de tarefas administrativas', moduleCode: 'projetos' },
 
   { id: 'thomaz', path: '/thomaz', icon: Brain, label: 'Thomaz AI', description: 'Consultor Empresarial', moduleCode: 'thomaz' },
   { id: 'thomaz-metrics', path: '/thomaz-metrics', icon: Brain, label: 'Métricas Thomaz', description: 'Performance da IA', moduleCode: 'thomaz' },
