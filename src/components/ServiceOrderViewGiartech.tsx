@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Download, Printer, Share2, FileText, Calendar, MapPin, Mail, Phone, Globe } from 'lucide-react'
+import { X, Download, Printer, Share2, FileText, Calendar, MapPin, Mail, Phone, Globe, User, Star, Briefcase } from 'lucide-react'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { getCompanyInfo } from '../utils/companyData'
 import { ServiceItemComplete } from '../utils/serviceOrderDataMapper'
@@ -52,6 +52,25 @@ interface ServiceOrderData {
   }
   contract_clauses?: any[]
   additional_info?: string
+  installation_addresses?: Array<{
+    label?: string
+    logradouro?: string
+    numero?: string
+    complemento?: string
+    bairro?: string
+    cidade?: string
+    estado?: string
+    cep?: string
+    referencia?: string
+    is_primary?: boolean
+  }>
+  installation_contacts?: Array<{
+    nome?: string
+    telefone?: string
+    email?: string
+    cargo?: string
+    is_primary?: boolean
+  }>
 }
 
 interface Props {
@@ -249,6 +268,62 @@ export default function ServiceOrderViewGiartech({ isOpen, onClose, data }: Prop
                   )}
                 </div>
               </div>
+
+              {((data.installation_addresses && data.installation_addresses.length > 0) ||
+                (data.installation_contacts && data.installation_contacts.length > 0)) && (
+                <div className="px-8 py-6 border-b border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {data.installation_addresses && data.installation_addresses.length > 0 && (
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-blue-600" />
+                          Endereços de Instalação
+                        </h3>
+                        <div className="space-y-3">
+                          {data.installation_addresses.map((addr, i) => (
+                            <div key={i} className="p-3 bg-blue-50 rounded-lg border border-blue-100 text-sm">
+                              <div className="flex items-center gap-1 mb-1">
+                                {addr.is_primary && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
+                                {addr.label && <span className="font-semibold text-blue-700 text-xs uppercase tracking-wide">{addr.label}</span>}
+                              </div>
+                              <p className="text-gray-800">
+                                {[addr.logradouro, addr.numero, addr.complemento].filter(Boolean).join(', ')}
+                                {addr.bairro && ` — ${addr.bairro}`}
+                              </p>
+                              {(addr.cidade || addr.estado) && (
+                                <p className="text-gray-600">{[addr.cidade, addr.estado].filter(Boolean).join(' / ')}{addr.cep && ` — CEP ${addr.cep}`}</p>
+                              )}
+                              {addr.referencia && <p className="text-xs text-gray-500 mt-0.5">Ref: {addr.referencia}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {data.installation_contacts && data.installation_contacts.length > 0 && (
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                          <User className="h-4 w-4 text-green-600" />
+                          Contatos no Local
+                        </h3>
+                        <div className="space-y-3">
+                          {data.installation_contacts.map((c, i) => (
+                            <div key={i} className="p-3 bg-green-50 rounded-lg border border-green-100 text-sm space-y-0.5">
+                              <div className="flex items-center gap-1">
+                                {c.is_primary && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
+                                <span className="font-medium text-gray-800">{c.nome}</span>
+                                {c.cargo && <span className="text-xs text-gray-500">— {c.cargo}</span>}
+                              </div>
+                              {c.telefone && <p className="text-gray-600 flex items-center gap-1"><Phone className="h-3 w-3" />{c.telefone}</p>}
+                              {c.email && <p className="text-gray-600 flex items-center gap-1"><Mail className="h-3 w-3" />{c.email}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {data.basic_info && (
                 <div className="px-8 py-6 bg-blue-50 border-b border-gray-200">

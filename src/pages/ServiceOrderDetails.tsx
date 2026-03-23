@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, FileText, Package, Users, DollarSign, Clock, CheckCircle, AlertCircle, FileEdit as Edit, Trash2, Download, Eye, MessageCircle, Share2 } from 'lucide-react'
+import { ArrowLeft, FileText, Package, Users, DollarSign, Clock, CheckCircle, AlertCircle, FileEdit as Edit, Trash2, Download, Eye, MessageCircle, Share2, MapPin, Phone, Mail, Star, User } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
 import { formatDateSafe } from '../utils/format'
 import { OSFiscalHealth } from '../components/OSFiscalHealth'
@@ -19,6 +19,8 @@ const ServiceOrderDetails = () => {
   const [materials, setMaterials] = useState<any[]>([])
   const [team, setTeam] = useState<any[]>([])
   const [documents, setDocuments] = useState<any[]>([])
+  const [osAddresses, setOsAddresses] = useState<any[]>([])
+  const [osContacts, setOsContacts] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState('overview')
   const [error, setError] = useState<string | null>(null)
 
@@ -80,6 +82,13 @@ const ServiceOrderDetails = () => {
       setMaterials(materialsRes.data || [])
       setTeam(teamRes.data || [])
       setDocuments(documentsRes.data || [])
+
+      const [{ data: addrs }, { data: conts }] = await Promise.all([
+        supabase.from('service_order_addresses').select('*').eq('service_order_id', id!).order('is_primary', { ascending: false }),
+        supabase.from('service_order_contacts').select('*').eq('service_order_id', id!).order('is_primary', { ascending: false }),
+      ])
+      setOsAddresses(addrs || [])
+      setOsContacts(conts || [])
 
     } catch (err) {
       console.error('Error loading order:', err)
@@ -347,7 +356,7 @@ const ServiceOrderDetails = () => {
           {/* Tab Content */}
           <div className="p-6">
             {activeTab === 'overview' && (
-              <OverviewTab order={order} customer={customer} />
+              <OverviewTab order={order} customer={customer} osAddresses={osAddresses} osContacts={osContacts} />
             )}
 
             {activeTab === 'items' && (
@@ -380,15 +389,15 @@ const ServiceOrderDetails = () => {
   )
 }
 
-const OverviewTab = ({ order, customer }: any) => (
+const OverviewTab = ({ order, customer, osAddresses, osContacts }: any) => (
   <div className="space-y-6">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
         <h3 className="text-lg font-semibold mb-4">Informações do Cliente</h3>
         <div className="space-y-2">
-          <p><span className="font-medium">Nome:</span> {customer?.name}</p>
+          <p><span className="font-medium">Nome:</span> {customer?.nome_razao || customer?.name}</p>
           <p><span className="font-medium">Email:</span> {customer?.email}</p>
-          <p><span className="font-medium">Telefone:</span> {customer?.phone}</p>
+          <p><span className="font-medium">Telefone:</span> {customer?.telefone || customer?.phone}</p>
         </div>
       </div>
 
@@ -401,6 +410,54 @@ const OverviewTab = ({ order, customer }: any) => (
         </div>
       </div>
     </div>
+
+    {(osAddresses?.length > 0 || osContacts?.length > 0) && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {osAddresses?.length > 0 && (
+          <div>
+            <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-blue-500" />
+              Endereços de Instalação
+            </h3>
+            <div className="space-y-2">
+              {osAddresses.map((addr: any, i: number) => (
+                <div key={addr.id || i} className="p-3 bg-blue-50 rounded-lg border border-blue-100 text-sm">
+                  <div className="flex items-center gap-1 mb-1">
+                    {addr.is_primary && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
+                    {addr.label && <span className="font-semibold text-blue-700 text-xs uppercase">{addr.label}</span>}
+                  </div>
+                  <p className="text-gray-800">{[addr.logradouro, addr.numero, addr.complemento].filter(Boolean).join(', ')}{addr.bairro && ` — ${addr.bairro}`}</p>
+                  {(addr.cidade || addr.estado) && <p className="text-gray-600">{[addr.cidade, addr.estado].filter(Boolean).join(' / ')}{addr.cep && ` — CEP ${addr.cep}`}</p>}
+                  {addr.referencia && <p className="text-xs text-gray-500 mt-0.5">Ref: {addr.referencia}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {osContacts?.length > 0 && (
+          <div>
+            <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+              <User className="h-4 w-4 text-green-500" />
+              Contatos no Local
+            </h3>
+            <div className="space-y-2">
+              {osContacts.map((c: any, i: number) => (
+                <div key={c.id || i} className="p-3 bg-green-50 rounded-lg border border-green-100 text-sm space-y-0.5">
+                  <div className="flex items-center gap-1">
+                    {c.is_primary && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
+                    <span className="font-medium text-gray-800">{c.nome}</span>
+                    {c.cargo && <span className="text-xs text-gray-500">— {c.cargo}</span>}
+                  </div>
+                  {c.telefone && <p className="text-gray-600 flex items-center gap-1"><Phone className="h-3 w-3" />{c.telefone}</p>}
+                  {c.email && <p className="text-gray-600 flex items-center gap-1"><Mail className="h-3 w-3" />{c.email}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )}
 
     {order.description && (
       <div>

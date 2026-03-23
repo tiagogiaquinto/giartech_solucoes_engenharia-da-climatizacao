@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, AlertCircle, Eye } from 'lucide-react'
+import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, AlertCircle, Eye, MapPin, Phone, Mail, Briefcase, Star } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { mapServiceItems } from '../utils/serviceOrderDataMapper'
@@ -39,6 +39,8 @@ const ServiceOrderView = () => {
   const [companySettings, setCompanySettings] = useState<any>(null)
   const [showServiceInfoModal, setShowServiceInfoModal] = useState(false)
   const [selectedServiceItem, setSelectedServiceItem] = useState<any>(null)
+  const [osAddresses, setOsAddresses] = useState<any[]>([])
+  const [osContacts, setOsContacts] = useState<any[]>([])
 
   useEffect(() => {
     if (id) {
@@ -192,6 +194,13 @@ const ServiceOrderView = () => {
           .maybeSingle()
 
         setCompanySettings(settingsData)
+
+        const [{ data: addrs }, { data: conts }] = await Promise.all([
+          supabase.from('service_order_addresses').select('*').eq('service_order_id', id!).order('is_primary', { ascending: false }),
+          supabase.from('service_order_contacts').select('*').eq('service_order_id', id!).order('is_primary', { ascending: false }),
+        ])
+        setOsAddresses(addrs || [])
+        setOsContacts(conts || [])
       }
     } catch (error) {
       console.error('Error loading order:', error)
@@ -363,7 +372,9 @@ Garantia de (EQUIPAMENTOS NOVOS) que podem ser de 5 a 10 anos, só são válidas
 Garantias extendidas pela nossa empresa, são concedidas em caso de compra das máquinas conosco, as mesmas deixam de ter validade legal de 3 meses e podem ter até 12 meses de acordo com o tipo e capacidade do sistema, mediante a manutenção dos equipamentos realizadas conosco nos prazos estipulados pelo fabricante...`
       },
       contract_clauses: order.contract_clauses ? JSON.parse(order.contract_clauses) : [],
-      additional_info: order.additional_info || 'Trabalhamos para que seus projetos, se tornem realidade.. Obrigado pela confiança'
+      additional_info: order.additional_info || 'Trabalhamos para que seus projetos, se tornem realidade.. Obrigado pela confiança',
+      installation_addresses: osAddresses.length > 0 ? osAddresses : undefined,
+      installation_contacts: osContacts.length > 0 ? osContacts : undefined,
     }
   }
 
@@ -553,6 +564,70 @@ Garantias extendidas pela nossa empresa, são concedidas em caso de compra das m
               )}
             </div>
           </motion.div>
+
+          {(osAddresses.length > 0 || osContacts.length > 0) && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.06 }}
+              className="bg-white rounded-xl p-6 shadow-sm border"
+            >
+              {osAddresses.length > 0 && (
+                <div className="mb-5">
+                  <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-blue-500" />
+                    Endereços de Instalação
+                  </h2>
+                  <div className="space-y-3">
+                    {osAddresses.map((addr: any, i: number) => (
+                      <div key={addr.id || i} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <MapPin className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            {addr.is_primary && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
+                            {addr.label && <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">{addr.label}</span>}
+                          </div>
+                          <p className="text-sm text-gray-800">
+                            {[addr.logradouro, addr.numero, addr.complemento].filter(Boolean).join(', ')}
+                            {addr.bairro && ` — ${addr.bairro}`}
+                          </p>
+                          {(addr.cidade || addr.estado) && (
+                            <p className="text-sm text-gray-600">{[addr.cidade, addr.estado].filter(Boolean).join(' / ')}{addr.cep && ` — CEP ${addr.cep}`}</p>
+                          )}
+                          {addr.referencia && <p className="text-xs text-gray-500 mt-0.5">Ref: {addr.referencia}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {osContacts.length > 0 && (
+                <div>
+                  <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+                    <User className="h-4 w-4 text-green-500" />
+                    Contatos no Local
+                  </h2>
+                  <div className="space-y-3">
+                    {osContacts.map((c: any, i: number) => (
+                      <div key={c.id || i} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+                        <User className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            {c.is_primary && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
+                            <span className="text-sm font-medium text-gray-800">{c.nome}</span>
+                            {c.cargo && <span className="text-xs text-gray-500">— {c.cargo}</span>}
+                          </div>
+                          {c.telefone && <p className="text-sm text-gray-600 flex items-center gap-1"><Phone className="h-3 w-3" />{c.telefone}</p>}
+                          {c.email && <p className="text-sm text-gray-600 flex items-center gap-1"><Mail className="h-3 w-3" />{c.email}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}

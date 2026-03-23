@@ -241,8 +241,67 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
   const addressFull = [data.address, data.address_complement, data.city, data.state].filter(Boolean).join(', ')
   if (addressFull) {
-    drawInfoBox(doc, 'Endereço', addressFull, MARGIN, y, CONTENT_WIDTH)
+    drawInfoBox(doc, 'Endereço Cadastrado', addressFull, MARGIN, y, CONTENT_WIDTH)
     y += 18
+  }
+
+  const hasInstallAddrs = Array.isArray(data.installation_addresses) && data.installation_addresses.length > 0
+  const hasInstallContacts = Array.isArray(data.installation_contacts) && data.installation_contacts.length > 0
+
+  if (hasInstallAddrs || hasInstallContacts) {
+    y += 2
+    if (y > pageH - 60) {
+      doc.addPage()
+      y = drawPageHeader(doc, orderNum, doc.getNumberOfPages(), 1, 44)
+    }
+    y = drawSectionHeader(doc, 'Local de Instalação / Execução', y)
+
+    if (hasInstallAddrs) {
+      for (const addr of data.installation_addresses!) {
+        const labelStr = addr.label ? `[${addr.label}] ` : ''
+        const parts = [addr.logradouro, addr.numero, addr.complemento].filter(Boolean).join(', ')
+        const cityState = [addr.cidade, addr.estado].filter(Boolean).join(' / ')
+        const cepStr = addr.cep ? `CEP ${addr.cep}` : ''
+        const refStr = addr.referencia ? `Ref: ${addr.referencia}` : ''
+        const isPrimary = addr.is_primary ? ' (Principal)' : ''
+        const line1 = `${labelStr}${parts}${addr.bairro ? ' — ' + addr.bairro : ''}${isPrimary}`
+        const line2 = [cityState, cepStr].filter(Boolean).join(' — ')
+        const full = [line1, line2, refStr].filter(Boolean).join('\n')
+        drawInfoBox(doc, 'Endereço de Instalação', full, MARGIN, y, CONTENT_WIDTH)
+        y += addr.referencia ? 26 : 20
+        if (y > pageH - 50) {
+          doc.addPage()
+          y = drawPageHeader(doc, orderNum, doc.getNumberOfPages(), 1, 44)
+        }
+      }
+    }
+
+    if (hasInstallContacts) {
+      const [br, bg, bb] = B.colors.secondary
+      doc.setFillColor(br, bg, bb)
+      const tableBody = data.installation_contacts!.map(c => [
+        (c.is_primary ? '★ ' : '') + (c.nome || '—'),
+        c.cargo || '—',
+        c.telefone || '—',
+        c.email || '—',
+      ])
+      autoTable(doc, {
+        startY: y,
+        margin: { left: MARGIN, right: MARGIN },
+        head: [['Nome', 'Cargo', 'Telefone', 'E-mail']],
+        body: tableBody,
+        headStyles: {
+          fillColor: [34, 197, 94],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 8
+        },
+        bodyStyles: { fontSize: 8, textColor: B.colors.text },
+        alternateRowStyles: { fillColor: B.colors.backgroundLight },
+        theme: 'grid'
+      })
+      y = (doc as any).lastAutoTable.finalY + 4
+    }
   }
 
   const hasItems = data.items && data.items.length > 0
