@@ -25,279 +25,336 @@ interface ChatResponse {
   tone: string
 }
 
-// REGRA 2: Instruções de Explicação
 const RULE_2_INSTRUCTIONS = `
-⚠️ REGRA Nº 2 - EXPLICAÇÃO SOB DEMANDA (OBRIGATÓRIA):
+REGRA 2 - EXPLICACAO SOB DEMANDA (OBRIGATORIA):
 
-Você SÓ explica quando EXPLICITAMENTE autorizado.
+Voce SO explica quando EXPLICITAMENTE autorizado.
 
-🎯 COMPORTAMENTO PADRÃO (modo EXECUTIVO):
-- Frase curta (1-3 linhas no máximo)
-- Diagnóstico direto
-- Orientação objetiva
-- SEM justificar decisão
+COMPORTAMENTO PADRAO (modo EXECUTIVO):
+- Frase curta (1-3 linhas no maximo)
+- Diagnostico direto
+- Orientacao objetiva
+- SEM justificar decisao
 - SEM didatismo
-- SEM "IA educada"
-- SEM explicações não solicitadas
+- SEM explicacoes nao solicitadas
 
-💡 MODO EXPLICATIVO (APENAS se autorizado):
-- Fornecer base técnica
-- Detalhar cálculos
-- Mostrar composição
+MODO EXPLICATIVO (APENAS se autorizado):
+- Fornecer base tecnica
+- Detalhar calculos
+- Mostrar composicao
 - Explicar fundamentos
-- Apresentar memória de cálculo
+- Apresentar memoria de calculo
 
-IMPORTANTE: O sistema já detectou o modo apropriado para esta conversa.
+IMPORTANTE: O sistema ja detectou o modo apropriado para esta conversa.
 Siga RIGOROSAMENTE o modo informado abaixo.
 `
 
-// System Prompts por Modo (com Regra 2 integrada)
 const MODE_PROMPTS = {
-  CFO: `Você é o Thomaz em MODO CFO - Chief Financial Officer experiente.
+  CFO: `Voce e o Thomaz em MODO CFO - Chief Financial Officer experiente.
 
 ${RULE_2_INSTRUCTIONS}
 
-**SUA PERSONALIDADE:**
-- Analítico e pragmático
-- Fala direto, sem enrolação
+SUA PERSONALIDADE:
+- Analitico e pragmatico
+- Fala direto, sem enrolacao
 - Honesto sobre riscos
-- Focado em números e projeções
+- Focado em numeros e projecoes
 - Forward-thinking (sempre pensando no futuro)
 
-**SEU ESTILO DE FALA (modo EXECUTIVO):**
+SEU ESTILO DE FALA (modo EXECUTIVO):
 - "Financeiramente falando..."
-- "Os números mostram que..."
-- "O risco aqui é..."
-- "Se você continuar nesse ritmo..."
+- "Os numeros mostram que..."
+- "O risco aqui e..."
+- "Se voce continuar nesse ritmo..."
 - "Deixa eu ser direto:"
 
-**SUAS CAPACIDADES:**
-- Análise de KPIs financeiros
-- Projeção de fluxo de caixa 30/60/90 dias
-- Análise de margem e lucratividade
-- Detecção de riscos financeiros
-- Recomendações de investimento vs retorno
+SUAS CAPACIDADES:
+- Analise de KPIs financeiros
+- Projecao de fluxo de caixa 30/60/90 dias
+- Analise de margem e lucratividade
+- Deteccao de riscos financeiros
+- Recomendacoes de investimento vs retorno
+- Analise de contas a pagar e receber
+- Avaliacao de saude financeira da empresa
 
-**REGRAS:**
+REGRAS:
 1. SEMPRE use dados reais fornecidos
-2. NUNCA invente números
+2. NUNCA invente numeros
 3. Seja DIRETO sobre problemas
-4. Ofereça SOLUÇÕES práticas
-5. RESPEITE o modo de explicação detectado`,
+4. Ofereça SOLUCOES praticas
+5. RESPEITE o modo de explicacao detectado
+6. Quando mencionar valores, use o formato R$ X.XXX,XX`,
 
-  ENGINEER: `Você é o Thomaz em MODO ENGENHEIRO - Engenheiro de Climatização experiente.
+  ENGINEER: `Voce e o Thomaz em MODO ENGENHEIRO - Engenheiro de Climatizacao experiente.
 
 ${RULE_2_INSTRUCTIONS}
 
-**SUA PERSONALIDADE:**
-- Prático e experiente
-- Conecta técnica com custo
-- Alerta sobre erros comuns que já viu
-- Traduz complexidade técnica para gestão
+SUA PERSONALIDADE:
+- Pratico e experiente
+- Conecta tecnica com custo
+- Alerta sobre erros comuns que ja viu
+- Traduz complexidade tecnica para gestao
 - Solution-oriented
 
-**SEU ESTILO DE FALA (modo EXECUTIVO):**
-- "Tecnicamente é viável, mas..."
-- "Na prática, o que acontece é..."
+SEU ESTILO DE FALA (modo EXECUTIVO):
+- "Tecnicamente e viavel, mas..."
+- "Na pratica, o que acontece e..."
 - "Isso vai te custar mais em..."
-- "Já vi isso dar errado quando..."
-- "O ideal seria..., mas se o orçamento está apertado..."
+- "Ja vi isso dar errado quando..."
+- "O ideal seria..., mas se o orcamento esta apertado..."
 
-**SUAS CAPACIDADES:**
-- Análise técnica de equipamentos (VRF, split, cassete, etc.)
-- Dimensionamento de carga térmica
-- Avaliação de custo vs benefício técnico
-- Recomendação de soluções práticas
-- PMOC e manutenção preventiva
-- Diagnóstico de falhas
+SUAS CAPACIDADES:
+- Analise tecnica de equipamentos (VRF, split, cassete, etc.)
+- Dimensionamento de carga termica
+- Avaliacao de custo vs beneficio tecnico
+- Recomendacao de solucoes praticas
+- PMOC e manutencao preventiva
+- Diagnostico de falhas
+- Gestao de estoque de materiais e pecas
+- Controle de ordens de servico
 
-**REGRAS:**
-1. SEMPRE considere o custo junto com a técnica
+REGRAS:
+1. SEMPRE considere o custo junto com a tecnica
 2. ALERTE sobre erros comuns
-3. TRADUZA técnica para linguagem de gestão
-4. Seja PRÁTICO, não apenas teórico
-5. RESPEITE o modo de explicação detectado`,
+3. TRADUZA tecnica para linguagem de gestao
+4. Seja PRATICO, nao apenas teorico
+5. RESPEITE o modo de explicacao detectado`,
 
-  STRATEGIC: `Você é o Thomaz em MODO ESTRATÉGICO - Conselheiro e Mentor empresarial.
+  STRATEGIC: `Voce e o Thomaz em MODO ESTRATEGICO - Conselheiro e Mentor empresarial.
 
 ${RULE_2_INSTRUCTIONS}
 
-**SUA PERSONALIDADE:**
+SUA PERSONALIDADE:
 - Reflexivo e provocativo
-- Faz perguntas que levam à resposta
+- Faz perguntas que levam a resposta
 - Organiza o pensamento do outro
-- Paciente e estratégico
-- Não dá resposta rasa
+- Paciente e estrategico
+- Nao da resposta rasa
 
-**SEU ESTILO DE FALA (modo EXECUTIVO):**
+SEU ESTILO DE FALA (modo EXECUTIVO):
 - "Antes disso, deixa eu te perguntar..."
-- "Você já parou pra pensar que..."
-- "O que realmente está te travando é..."
-- "Se a gente olhar de outro ângulo..."
+- "Voce ja parou pra pensar que..."
+- "O que realmente esta te travando e..."
+- "Se a gente olhar de outro angulo..."
 - "Vamos organizar isso:"
 
-**SUAS CAPACIDADES:**
-- Organização de pensamento
-- Priorização de decisões
-- Análise de trade-offs
-- Identificação de gargalos
-- Planejamento estratégico
+SUAS CAPACIDADES:
+- Organizacao de pensamento
+- Priorizacao de decisoes
+- Analise de trade-offs
+- Identificacao de gargalos
+- Planejamento estrategico
 - Mentoria em crescimento
+- Analise de clientes e oportunidades de CRM
+- Avaliacao de desempenho da equipe
 
-**ABORDAGEM SOCRÁTICA:**
+ABORDAGEM SOCRATICA:
 1. PERGUNTE antes de responder
 2. ORGANIZE o pensamento em etapas
-3. IDENTIFIQUE a causa raiz, não sintomas
-4. ANALISE trade-offs de cada opção
-5. PRIORIZE ações por impacto
+3. IDENTIFIQUE a causa raiz, nao sintomas
+4. ANALISE trade-offs de cada opcao
+5. PRIORIZE acoes por impacto
 
-**REGRAS:**
+REGRAS:
 1. EVITE respostas rasas
-2. FAÇA perguntas provocativas
+2. FACA perguntas provocativas
 3. ORGANIZE pensamento em estruturas claras
-4. IDENTIFIQUE o problema REAL por trás da pergunta
-5. RESPEITE o modo de explicação detectado`
+4. IDENTIFIQUE o problema REAL por tras da pergunta
+5. RESPEITE o modo de explicacao detectado`
 }
 
-async function getCFOData(supabase: any) {
-  const { data: healthData } = await supabase
-    .from('v_thomaz_financial_health_score')
-    .select('*')
-    .limit(1)
-    .single()
-
-  const { data: cashData } = await supabase
-    .from('v_thomaz_cash_projection_30d')
-    .select('*')
-    .limit(5)
-
-  const { data: alertsData } = await supabase
-    .from('thomaz_alerts')
-    .select('*')
-    .neq('status', 'resolvido')
-    .order('severity', { ascending: false })
-    .limit(5)
-
-  return {
-    health_score: healthData,
-    cash_projection: cashData,
-    alerts: alertsData
-  }
-}
-
-async function getEngineerData(supabase: any) {
-  const { data: services } = await supabase
-    .from('service_catalog')
-    .select('*')
-    .limit(10)
-
-  const { data: materials } = await supabase
-    .from('inventory_items')
-    .select('*')
-    .or('quantity.lt.min_quantity,quantity.eq.0')
-    .limit(10)
-
-  const { data: recentOS } = await supabase
-    .from('service_orders')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(5)
-
-  return {
-    services,
-    critical_materials: materials,
-    recent_orders: recentOS
-  }
-}
-
-async function getStrategicData(supabase: any) {
-  const { data: biData } = await supabase
-    .from('v_thomaz_business_intelligence')
-    .select('*')
-    .limit(1)
-    .single()
-
-  const { data: performanceData } = await supabase
-    .from('v_thomaz_performance_dashboard')
-    .select('*')
-    .limit(1)
-    .single()
-
-  return {
-    business_intelligence: biData,
-    performance: performanceData
-  }
-}
-
-function buildModeContext(mode: string, data: any): string {
-  if (mode === 'CFO') {
-    const health = data.health_score
-    let context = "**DADOS FINANCEIROS ATUAIS:**\n\n"
-
-    if (health) {
-      context += `📊 Health Score: ${health.overall_score?.toFixed(1) || 0}/100\n`
-      context += `- Lucratividade: ${health.profitability_score?.toFixed(1) || 0}/30\n`
-      context += `- Crescimento: ${health.growth_score?.toFixed(1) || 0}/25\n`
-      context += `- Liquidez: ${health.liquidity_score?.toFixed(1) || 0}/25\n`
-      context += `- Eficiência: ${health.efficiency_score?.toFixed(1) || 0}/20\n\n`
+async function getFullCompanyContext(supabase: any): Promise<any> {
+  try {
+    const { data, error } = await supabase.rpc('thomaz_get_full_company_context')
+    if (error) {
+      console.error('Error fetching full company context:', error)
+      return null
     }
+    return data
+  } catch (err) {
+    console.error('Exception fetching full company context:', err)
+    return null
+  }
+}
 
-    if (data.alerts && data.alerts.length > 0) {
-      context += `⚠️ ALERTAS ATIVOS:\n`
-      data.alerts.forEach((alert: any) => {
-        context += `- [${alert.severity}] ${alert.title}\n`
-      })
+function formatCurrency(value: number | null | undefined): string {
+  if (value === null || value === undefined) return 'R$ 0,00'
+  return `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function buildFullContext(mode: string, companyData: any): string {
+  if (!companyData) {
+    return "**CONTEXTO:** Dados da empresa indisponiveis no momento.\n"
+  }
+
+  const snapshot = companyData.snapshot || {}
+  const osAberto = companyData.os_em_aberto || []
+  const agenda = companyData.agenda || []
+  const financeiroPendente = companyData.financeiro_pendente || []
+  const estoqueAlertas = companyData.estoque_alertas || []
+  const crmPipeline = companyData.crm_pipeline || []
+  const topClientes = companyData.top_clientes || []
+  const funcionarios = companyData.funcionarios || []
+  const fornecedores = companyData.fornecedores || []
+  const comprasAbertas = companyData.compras_abertas || []
+  const contasBancarias = companyData.contas_bancarias || []
+
+  let context = `**DADOS COMPLETOS DA EMPRESA - ${new Date().toLocaleDateString('pt-BR')}**\n\n`
+
+  // ===== VISAO GERAL =====
+  context += `## VISAO GERAL DO NEGOCIO\n`
+  context += `- Total de Clientes: ${snapshot.total_customers || 0}\n`
+  context += `- OS em Aberto: ${snapshot.os_in_progress || 0}\n`
+  context += `- Receita do Mes: ${formatCurrency(snapshot.revenue_current_month)}\n`
+  context += `- Despesas do Mes: ${formatCurrency(snapshot.expenses_current_month)}\n`
+  context += `- Margem do Mes: ${snapshot.margin_current_month?.toFixed(1) || 0}%\n`
+  context += `- Contas a Receber: ${formatCurrency(snapshot.accounts_receivable)}\n`
+  context += `- Contas a Pagar: ${formatCurrency(snapshot.accounts_payable)}\n`
+  context += `- Itens com Estoque Critico: ${snapshot.critical_stock_items || 0}\n`
+  context += `- Funcionarios Ativos: ${snapshot.active_employees || 0}\n`
+  context += `- Oportunidades CRM Ativas: ${snapshot.crm_opportunities_active || 0}\n\n`
+
+  // ===== ORDENS DE SERVICO =====
+  if (osAberto.length > 0) {
+    context += `## ORDENS DE SERVICO EM ABERTO (${osAberto.length})\n`
+    osAberto.slice(0, 8).forEach((os: any) => {
+      const diasAberta = os.dias_em_aberto || 0
+      const alerta = diasAberta > 7 ? ' [ATENCAO: mais de 7 dias]' : ''
+      context += `- OS ${os.order_number || 'S/N'}: ${os.client_name || 'Cliente'} | ${os.status} | ${os.service_type || ''} | Valor: ${formatCurrency(os.total_value)} | ${diasAberta}d aberta${alerta}\n`
+    })
+    if (osAberto.length > 8) {
+      context += `  ... e mais ${osAberto.length - 8} OS em aberto\n`
+    }
+    context += `\n`
+  }
+
+  // ===== AGENDA =====
+  if (agenda.length > 0) {
+    context += `## AGENDA - HOJE E PROXIMOS 7 DIAS (${agenda.length} eventos)\n`
+    agenda.slice(0, 6).forEach((ev: any) => {
+      const data = ev.start_date ? new Date(ev.start_date).toLocaleDateString('pt-BR') : ''
+      context += `- ${data}: ${ev.title} | Tipo: ${ev.event_type || ''} | Status: ${ev.status || ''}`
+      if (ev.customer_name) context += ` | Cliente: ${ev.customer_name}`
+      if (ev.location) context += ` | Local: ${ev.location}`
       context += `\n`
-    }
+    })
+    if (agenda.length > 6) context += `  ... e mais ${agenda.length - 6} eventos\n`
+    context += `\n`
+  }
 
-    if (data.cash_projection && data.cash_projection.length > 0) {
-      context += `💰 PROJEÇÃO DE CAIXA (próximos dias):\n`
-      data.cash_projection.slice(0, 3).forEach((proj: any) => {
-        context += `- ${proj.data}: R$ ${proj.saldo_projetado?.toFixed(2) || 0}\n`
+  // ===== FINANCEIRO PENDENTE =====
+  if (financeiroPendente.length > 0) {
+    const receberPendente = financeiroPendente.filter((f: any) => f.tipo === 'receita')
+    const pagarPendente = financeiroPendente.filter((f: any) => f.tipo === 'despesa')
+    const vencidos = financeiroPendente.filter((f: any) => f.esta_vencido)
+
+    context += `## FINANCEIRO PENDENTE\n`
+    context += `- Total a Receber: ${receberPendente.length} lancamentos\n`
+    context += `- Total a Pagar: ${pagarPendente.length} lancamentos\n`
+    if (vencidos.length > 0) {
+      context += `- VENCIDOS: ${vencidos.length} lancamentos em atraso\n`
+      vencidos.slice(0, 3).forEach((v: any) => {
+        context += `  * ${v.descricao}: ${formatCurrency(v.valor)} | Venceu em: ${v.data_vencimento ? new Date(v.data_vencimento).toLocaleDateString('pt-BR') : 'N/A'} | ${v.dias_atraso || 0} dias atrasado\n`
       })
     }
 
-    return context
-  }
-
-  if (mode === 'ENGINEER') {
-    let context = "**DADOS TÉCNICOS:**\n\n"
-
-    if (data.critical_materials && data.critical_materials.length > 0) {
-      context += `🔧 MATERIAIS CRÍTICOS:\n`
-      data.critical_materials.forEach((item: any) => {
-        context += `- ${item.name}: ${item.quantity} unidades (min: ${item.min_quantity})\n`
-      })
-      context += `\n`
-    }
-
-    if (data.services && data.services.length > 0) {
-      context += `📋 SERVIÇOS DISPONÍVEIS: ${data.services.length} serviços cadastrados\n`
-    }
-
-    if (data.recent_orders && data.recent_orders.length > 0) {
-      context += `\n📝 ÚLTIMAS OS:\n`
-      data.recent_orders.slice(0, 3).forEach((os: any) => {
-        context += `- OS ${os.order_number}: ${os.status}\n`
+    const proximos = financeiroPendente.filter((f: any) => !f.esta_vencido).slice(0, 3)
+    if (proximos.length > 0) {
+      context += `- Proximos vencimentos:\n`
+      proximos.forEach((p: any) => {
+        context += `  * ${p.descricao}: ${formatCurrency(p.valor)} | Vence: ${p.data_vencimento ? new Date(p.data_vencimento).toLocaleDateString('pt-BR') : 'N/A'} | ${p.tipo}\n`
       })
     }
-
-    return context
+    context += `\n`
   }
 
-  if (mode === 'STRATEGIC') {
-    let context = "**VISÃO DO NEGÓCIO:**\n\n"
+  // ===== ESTOQUE =====
+  if (estoqueAlertas.length > 0) {
+    context += `## ESTOQUE - ITENS QUE PRECISAM DE ATENCAO (${estoqueAlertas.length})\n`
+    const semEstoque = estoqueAlertas.filter((i: any) => i.status_estoque === 'sem_estoque')
+    const critico = estoqueAlertas.filter((i: any) => i.status_estoque === 'critico')
+    const baixo = estoqueAlertas.filter((i: any) => i.status_estoque === 'baixo')
 
-    if (data.business_intelligence) {
-      const bi = data.business_intelligence
-      context += `📈 Performance Geral: ${bi.performance_level || 'N/A'}\n`
-      context += `💡 Principais Insights disponíveis\n`
+    if (semEstoque.length > 0) {
+      context += `- SEM ESTOQUE (${semEstoque.length}):\n`
+      semEstoque.slice(0, 3).forEach((i: any) => {
+        context += `  * ${i.name} (${i.code || 'sem codigo'}) | Min: ${i.min_quantity} | Custo unit: ${formatCurrency(i.unit_cost)}\n`
+      })
     }
-
-    return context
+    if (critico.length > 0) {
+      context += `- CRITICO (${critico.length}):\n`
+      critico.slice(0, 3).forEach((i: any) => {
+        context += `  * ${i.name} | Atual: ${i.quantity} | Min: ${i.min_quantity}\n`
+      })
+    }
+    if (baixo.length > 0) {
+      context += `- BAIXO (${baixo.length} itens)\n`
+    }
+    context += `\n`
   }
 
-  return "**CONTEXTO:** Pronto para conversar sobre seu negócio.\n"
+  // ===== CRM =====
+  if (crmPipeline.length > 0) {
+    const totalValorCRM = crmPipeline.reduce((sum: number, op: any) => sum + (op.valor || 0), 0)
+    const totalPonderado = crmPipeline.reduce((sum: number, op: any) => sum + (op.valor_ponderado || 0), 0)
+    context += `## CRM - PIPELINE DE OPORTUNIDADES (${crmPipeline.length} ativas)\n`
+    context += `- Valor Total em Pipeline: ${formatCurrency(totalValorCRM)}\n`
+    context += `- Valor Ponderado (por probabilidade): ${formatCurrency(totalPonderado)}\n`
+    crmPipeline.slice(0, 5).forEach((op: any) => {
+      context += `- ${op.titulo}: ${formatCurrency(op.valor)} | Lead Score: ${op.lead_score || 0} | Status: ${op.status}\n`
+    })
+    if (crmPipeline.length > 5) context += `  ... e mais ${crmPipeline.length - 5} oportunidades\n`
+    context += `\n`
+  }
+
+  // ===== TOP CLIENTES =====
+  if (topClientes.length > 0) {
+    context += `## TOP CLIENTES\n`
+    topClientes.slice(0, 5).forEach((c: any, idx: number) => {
+      context += `${idx + 1}. ${c.nome_razao || 'N/A'} | OS: ${c.total_os || 0} | Receita Total: ${formatCurrency(c.receita_total)} | Ultima OS: ${c.ultima_os ? new Date(c.ultima_os).toLocaleDateString('pt-BR') : 'N/A'}\n`
+    })
+    context += `\n`
+  }
+
+  // ===== FUNCIONARIOS =====
+  if (funcionarios.length > 0) {
+    context += `## EQUIPE (${funcionarios.length} funcionarios ativos)\n`
+    funcionarios.slice(0, 6).forEach((f: any) => {
+      context += `- ${f.name} | ${f.role || f.department || 'N/A'} | OS atribuidas: ${f.os_atribuidas || 0} | OS concluidas: ${f.os_concluidas || 0}\n`
+    })
+    if (funcionarios.length > 6) context += `  ... e mais ${funcionarios.length - 6} funcionarios\n`
+    context += `\n`
+  }
+
+  // ===== CONTAS BANCARIAS =====
+  if (contasBancarias.length > 0) {
+    const saldoTotal = contasBancarias.reduce((sum: number, c: any) => sum + (c.balance || 0), 0)
+    context += `## CONTAS BANCARIAS\n`
+    context += `- Saldo Total: ${formatCurrency(saldoTotal)}\n`
+    contasBancarias.forEach((c: any) => {
+      context += `- ${c.account_name} (${c.bank_name || 'N/A'}): ${formatCurrency(c.balance)}${c.is_default ? ' [PRINCIPAL]' : ''}\n`
+    })
+    context += `\n`
+  }
+
+  // ===== FORNECEDORES / COMPRAS =====
+  if (comprasAbertas.length > 0) {
+    context += `## COMPRAS EM ABERTO (${comprasAbertas.length})\n`
+    comprasAbertas.slice(0, 4).forEach((c: any) => {
+      context += `- ${c.order_number || 'S/N'}: ${c.supplier_name || 'N/A'} | ${formatCurrency(c.final_amount)} | Status: ${c.status}\n`
+    })
+    context += `\n`
+  }
+
+  if (fornecedores.length > 0) {
+    context += `## FORNECEDORES (${fornecedores.length} ativos)\n`
+    fornecedores.slice(0, 4).forEach((f: any) => {
+      context += `- ${f.name} | Total compras: ${formatCurrency(f.total_compras)} | Ultima compra: ${f.ultima_compra ? new Date(f.ultima_compra).toLocaleDateString('pt-BR') : 'N/A'}\n`
+    })
+    context += `\n`
+  }
+
+  return context
 }
 
 async function callAIProvider(
@@ -316,13 +373,13 @@ async function callAIProvider(
   const systemPrompt = MODE_PROMPTS[mode as keyof typeof MODE_PROMPTS] || MODE_PROMPTS.STRATEGIC
 
   const explanationInstruction = explanationMode === 'EXPLICATIVO'
-    ? '\n\n🔓 MODO EXPLICATIVO ATIVADO: Usuário solicitou explicação. Forneça detalhes técnicos, cálculos e fundamentos.'
-    : '\n\n🔒 MODO EXECUTIVO ATIVO: Responda em 1-3 linhas. Seja direto. SEM explicações não solicitadas.'
+    ? '\n\nMODO EXPLICATIVO ATIVADO: Usuario solicitou explicacao. Forneca detalhes tecnicos, calculos e fundamentos. Pode ser mais extenso.'
+    : '\n\nMODO EXECUTIVO ATIVO: Responda em 1-3 linhas. Seja direto. SEM explicacoes nao solicitadas.'
 
   const messages = [
     { role: "system", content: systemPrompt + explanationInstruction },
     { role: "user", content: modeContext },
-    { role: "user", content: `**PERGUNTA:** ${userMessage}` }
+    { role: "user", content: `**PERGUNTA DO USUARIO:** ${userMessage}` }
   ]
 
   if (providerType === 'openrouter') {
@@ -338,7 +395,7 @@ async function callAIProvider(
         model: model,
         messages: messages,
         temperature: config.temperature || 0.7,
-        max_tokens: explanationMode === 'EXPLICATIVO' ? 3000 : 500
+        max_tokens: explanationMode === 'EXPLICATIVO' ? 3000 : 600
       })
     })
 
@@ -359,7 +416,7 @@ async function callAIProvider(
       },
       body: JSON.stringify({
         model: model,
-        max_tokens: explanationMode === 'EXPLICATIVO' ? 3000 : 500,
+        max_tokens: explanationMode === 'EXPLICATIVO' ? 3000 : 600,
         temperature: config.temperature || 0.7,
         system: systemPrompt + explanationInstruction + "\n\n" + modeContext,
         messages: [{ role: "user", content: userMessage }]
@@ -384,7 +441,7 @@ async function callAIProvider(
         model: model,
         messages: messages,
         temperature: config.temperature || 0.7,
-        max_tokens: explanationMode === 'EXPLICATIVO' ? 3000 : 500
+        max_tokens: explanationMode === 'EXPLICATIVO' ? 3000 : 600
       })
     })
 
@@ -411,7 +468,7 @@ Deno.serve(async (req: Request) => {
 
     const { message, sessionId, userId }: ChatRequest = await req.json()
 
-    console.log('🤖 Thomaz Chat: Processing message:', message)
+    console.log('Thomaz Chat: Processing message:', message)
 
     // PASSO 1: Detectar modo cognitivo (CFO/ENGINEER/STRATEGIC)
     const { data: modeDetection } = await supabase
@@ -424,9 +481,9 @@ Deno.serve(async (req: Request) => {
     const detectedIntent = modeDetection?.intent || 'general'
     const confidence = modeDetection?.confidence || 0.5
 
-    console.log(`🎯 Modo cognitivo: ${detectedMode} (${(confidence * 100).toFixed(0)}%)`)
+    console.log(`Modo cognitivo: ${detectedMode} (${(confidence * 100).toFixed(0)}%)`)
 
-    // PASSO 2: Detectar modo de explicação (EXECUTIVO/EXPLICATIVO)
+    // PASSO 2: Detectar modo de explicacao (EXECUTIVO/EXPLICATIVO)
     const { data: explanationDetection } = await supabase
       .rpc('thomaz_should_explain', {
         user_message: message
@@ -435,30 +492,25 @@ Deno.serve(async (req: Request) => {
     const explanationMode = explanationDetection?.mode || 'EXECUTIVO'
     const shouldExplain = explanationDetection?.should_explain || false
 
-    console.log(`💡 Modo explicação: ${explanationMode}`)
+    console.log(`Modo explicacao: ${explanationMode}`)
 
     // PASSO 3: Obter personalidade do modo
     const { data: modeData } = await supabase
       .from('thomaz_cognitive_modes')
       .select('*')
       .eq('mode_code', detectedMode)
-      .single()
+      .maybeSingle()
 
     const modeName = modeData?.mode_name || detectedMode
 
-    // PASSO 4: Buscar dados relevantes ao modo
-    let businessData: any = {}
+    // PASSO 4: Buscar TODOS os dados da empresa em uma unica chamada
+    console.log('Buscando contexto completo da empresa...')
+    const companyData = await getFullCompanyContext(supabase)
 
-    if (detectedMode === 'CFO') {
-      businessData = await getCFOData(supabase)
-    } else if (detectedMode === 'ENGINEER') {
-      businessData = await getEngineerData(supabase)
-    } else if (detectedMode === 'STRATEGIC') {
-      businessData = await getStrategicData(supabase)
-    }
+    // PASSO 5: Montar contexto rico com todos os dados
+    const modeContext = buildFullContext(detectedMode, companyData)
 
-    // PASSO 5: Montar contexto específico do modo
-    const modeContext = buildModeContext(detectedMode, businessData)
+    console.log(`Contexto gerado: ${modeContext.length} caracteres`)
 
     // PASSO 6: Obter provider de IA
     const { data: provider } = await supabase.rpc('get_active_ai_provider')
@@ -467,27 +519,27 @@ Deno.serve(async (req: Request) => {
 
     // PASSO 7: Gerar resposta
     if (!provider || !provider.api_key) {
-      console.log('⚠️  Modo fallback (sem API key)')
+      console.log('Modo fallback (sem API key)')
 
-      if (explanationMode === 'EXECUTIVO') {
-        if (detectedMode === 'CFO') {
-          aiResponse = `Financeiramente, você precisa configurar API key para análise completa.\n\n${modeContext}`
-        } else if (detectedMode === 'ENGINEER') {
-          aiResponse = `Tecnicamente viável, mas precisa API key para recomendação detalhada.\n\n${modeContext}`
-        } else {
-          aiResponse = `Configure API key em Configurações para conversas estratégicas completas.`
-        }
+      const snapshot = companyData?.snapshot || {}
+      const osAberto = companyData?.os_em_aberto?.length || 0
+      const vencidos = companyData?.financeiro_pendente?.filter((f: any) => f.esta_vencido)?.length || 0
+
+      if (detectedMode === 'CFO') {
+        aiResponse = `Resumo financeiro: Receita do mes ${formatCurrency(snapshot.revenue_current_month)}, margem ${snapshot.margin_current_month?.toFixed(1) || 0}%. ${vencidos > 0 ? `${vencidos} lancamentos vencidos precisam de atencao.` : 'Sem pendencias vencidas.'} Configure API key para analise completa.`
+      } else if (detectedMode === 'ENGINEER') {
+        aiResponse = `Resumo operacional: ${osAberto} OS em aberto, ${snapshot.critical_stock_items || 0} itens com estoque critico. Configure API key para analise tecnica completa.`
       } else {
-        aiResponse = `🔓 Modo explicativo detectado, mas precisa de API key configurada para explicações detalhadas.\n\nDados disponíveis:\n${modeContext}`
+        aiResponse = `Visao geral: ${snapshot.total_customers || 0} clientes, ${osAberto} OS em aberto, receita do mes ${formatCurrency(snapshot.revenue_current_month)}. Configure API key para conversas estrategicas completas.`
       }
 
     } else {
       aiResponse = await callAIProvider(provider, message, detectedMode, explanationMode, modeContext)
     }
 
-    console.log('✅ Response generated:', { mode: detectedMode, explanationMode })
+    console.log('Resposta gerada com sucesso')
 
-    // PASSO 8: Registrar interação
+    // PASSO 8: Registrar interacao
     await supabase.from('thomaz_interactions').insert({
       user_id: userId,
       session_id: sessionId,
@@ -498,7 +550,9 @@ Deno.serve(async (req: Request) => {
       confidence_score: confidence,
       metadata: {
         explanation_mode: explanationMode,
-        should_explain: shouldExplain
+        should_explain: shouldExplain,
+        context_size: modeContext.length,
+        data_sections: Object.keys(companyData || {}).length
       }
     })
 
@@ -522,12 +576,12 @@ Deno.serve(async (req: Request) => {
     )
 
   } catch (error: any) {
-    console.error('❌ Error in Thomaz Chat:', error)
+    console.error('Error in Thomaz Chat:', error)
     return new Response(
       JSON.stringify({
         response: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.',
         mode: 'STRATEGIC',
-        modeName: 'Estratégico',
+        modeName: 'Estrategico',
         intent: 'error',
         explanationMode: 'EXECUTIVO',
         confidence: 0,
