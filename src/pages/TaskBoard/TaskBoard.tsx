@@ -212,7 +212,7 @@ export default function TaskBoard() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold text-gray-900">Task Board</h1>
+                  <h1 className="text-xl font-bold text-gray-900">Central de Tarefas</h1>
                   {totalUrgent > 0 && (
                     <span className="text-xs font-bold bg-red-100 text-red-700 border border-red-300 rounded-full px-2 py-0.5 flex items-center gap-1">
                       <AlertTriangle className="h-2.5 w-2.5" />
