@@ -15,7 +15,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, X, LayoutGrid, Filter, User, AlertTriangle, Zap, Search } from 'lucide-react'
+import { Plus, X, LayoutGrid, Filter, User, AlertTriangle, Zap, Search, List, CalendarDays, BarChart2 } from 'lucide-react'
 import { Task, COLUMNS, ColumnId, PRIORITY_CONFIG, Priority } from './types'
 import { useTaskBoard } from './useTaskBoard'
 import { TaskCard, TaskCardOverlay } from './TaskCard'
@@ -23,8 +23,19 @@ import { TaskDetailDrawer } from './TaskDetailDrawer'
 import { ThomazTaskManager } from './ThomazTaskManager'
 import { TeamWorkloadPanel } from './TeamWorkloadPanel'
 import { AssignmentToast } from './AssignmentToast'
+import { ListView } from './ListView'
+import { CalendarView } from './CalendarView'
+import { GanttView } from './GanttView'
 
 type FilterType = 'all' | 'mine' | 'financial' | 'urgent'
+type ViewMode = 'kanban' | 'list' | 'calendar' | 'gantt'
+
+const VIEW_MODES: { id: ViewMode; label: string; icon: React.ElementType }[] = [
+  { id: 'kanban',   label: 'Kanban',     icon: LayoutGrid },
+  { id: 'list',     label: 'Lista',      icon: List },
+  { id: 'calendar', label: 'Calendário', icon: CalendarDays },
+  { id: 'gantt',    label: 'Gantt',      icon: BarChart2 },
+]
 
 const FILTER_CONFIG: { id: FilterType; label: string; icon: React.ElementType }[] = [
   { id: 'all',       label: 'Todas',         icon: Zap },
@@ -85,6 +96,7 @@ function NewTaskForm({ onSave, onCancel }: NewTaskFormProps) {
 
 export default function TaskBoard() {
   const { tasks, loading, moveTask, createTask, updateTask, deleteTask } = useTaskBoard()
+  const [viewMode, setViewMode] = useState<ViewMode>('kanban')
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -224,31 +236,56 @@ export default function TaskBoard() {
                 />
               </div>
 
-              <TeamWorkloadPanel
-                tasks={tasks}
-                selectedMember={selectedMember}
-                onSelectMember={setSelectedMember}
-              />
-
               <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
-                {FILTER_CONFIG.map(f => {
-                  const Icon = f.icon
+                {VIEW_MODES.map(v => {
+                  const Icon = v.icon
                   return (
                     <button
-                      key={f.id}
-                      onClick={() => setActiveFilter(f.id)}
+                      key={v.id}
+                      onClick={() => setViewMode(v.id)}
+                      title={v.label}
                       className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
-                        activeFilter === f.id
+                        viewMode === v.id
                           ? 'bg-blue-600 text-white shadow'
                           : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
                       }`}
                     >
                       <Icon className="h-3 w-3" />
-                      {f.label}
+                      <span className="hidden md:inline">{v.label}</span>
                     </button>
                   )
                 })}
               </div>
+
+              {viewMode === 'kanban' && (
+                <TeamWorkloadPanel
+                  tasks={tasks}
+                  selectedMember={selectedMember}
+                  onSelectMember={setSelectedMember}
+                />
+              )}
+
+              {viewMode === 'kanban' && (
+                <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
+                  {FILTER_CONFIG.map(f => {
+                    const Icon = f.icon
+                    return (
+                      <button
+                        key={f.id}
+                        onClick={() => setActiveFilter(f.id)}
+                        className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
+                          activeFilter === f.id
+                            ? 'bg-blue-600 text-white shadow'
+                            : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                        }`}
+                      >
+                        <Icon className="h-3 w-3" />
+                        {f.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -275,6 +312,17 @@ export default function TaskBoard() {
           />
         </div>
 
+        {viewMode === 'list' && (
+          <ListView tasks={applyFilters(tasks)} onOpenTask={setSelectedTaskId} />
+        )}
+        {viewMode === 'calendar' && (
+          <CalendarView tasks={applyFilters(tasks)} onOpenTask={setSelectedTaskId} />
+        )}
+        {viewMode === 'gantt' && (
+          <GanttView tasks={applyFilters(tasks)} onOpenTask={setSelectedTaskId} />
+        )}
+
+        {viewMode === 'kanban' && (
         <div className="px-6 pb-6 overflow-x-auto">
           <div className="flex gap-4 min-w-max items-start">
             {COLUMNS.map(col => {
@@ -358,6 +406,7 @@ export default function TaskBoard() {
             })}
           </div>
         </div>
+        )}
       </div>
 
       <DragOverlay>

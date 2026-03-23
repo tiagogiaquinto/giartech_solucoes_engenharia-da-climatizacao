@@ -7,14 +7,14 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Search, FileText, Users, Package, DollarSign, CircleUser as UserCircle, Plus, Command, X, Loader2 } from 'lucide-react'
+import { Search, FileText, Users, Package, DollarSign, CircleUser as UserCircle, Plus, Command, X, Loader2, LayoutGrid, UserCheck } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { formatDateSafe } from '../utils/format'
 
 interface SearchResult {
   id: string
-  type: 'os' | 'cliente' | 'funcionario' | 'material' | 'financeiro' | 'action'
+  type: 'os' | 'cliente' | 'funcionario' | 'material' | 'financeiro' | 'tarefa' | 'membro' | 'action'
   title: string
   subtitle?: string
   url: string
@@ -169,6 +169,48 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
         })
       })
 
+      // 6. Buscar Tarefas (Kanban)
+      const { data: tarefas } = await supabase
+        .from('project_tasks')
+        .select('id, title, column_id, priority, assignee_name')
+        .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`)
+        .limit(3)
+
+      const colLabels: Record<string, string> = {
+        todo: 'Para Fazer', in_progress: 'Em Andamento', review: 'Em Revisão',
+        blocked: 'Bloqueado', done: 'Concluído'
+      }
+      tarefas?.forEach(t => {
+        searchResults.push({
+          id: `task_${t.id}`,
+          type: 'tarefa',
+          title: t.title,
+          subtitle: `${colLabels[t.column_id] || t.column_id}${t.assignee_name ? ` · ${t.assignee_name}` : ''}`,
+          url: '/task-board',
+          icon: <LayoutGrid className="w-5 h-5 text-blue-500" />,
+          badge: t.priority === 'urgent' ? 'Urgente' : undefined,
+        })
+      })
+
+      // 7. Buscar Membros da Equipe (user_profiles)
+      const { data: membros } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email, role')
+        .or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+        .limit(3)
+
+      membros?.forEach(m => {
+        searchResults.push({
+          id: `member_${m.id}`,
+          type: 'membro',
+          title: m.full_name || m.email || 'Sem nome',
+          subtitle: m.email || '',
+          url: '/people',
+          icon: <UserCheck className="w-5 h-5 text-teal-600" />,
+          badge: m.role || undefined,
+        })
+      })
+
       setResults(searchResults.length > 0 ? searchResults : [
         {
           id: 'no-results',
@@ -261,7 +303,7 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar OSs, clientes, funcionários, materiais..."
+            placeholder="Buscar OSs, clientes, tarefas, membros, materiais..."
             className="flex-1 text-lg bg-transparent border-none outline-none"
             autoFocus
           />

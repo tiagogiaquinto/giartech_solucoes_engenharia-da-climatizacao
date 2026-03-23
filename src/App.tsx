@@ -140,6 +140,7 @@ import { NotificationHubProvider } from './contexts/NotificationHubContext'
 import { GiartechNotificationHub } from './components/GiartechNotificationHub'
 import { useThomazInterrupt } from './hooks/useThomazInterrupt'
 import TaskBoard from './pages/TaskBoard/TaskBoard'
+import { ThomazOrchestrator } from './components/ThomazOrchestrator'
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
   const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
@@ -392,6 +393,7 @@ function App() {
         <NotificationHubProvider>
         <ThomazInterruptActivator />
         <GiartechNotificationHub />
+        <ThomazOrchestrator />
         <UpdateBanner />
         <Routes location={location}>
             <Route path="/login" element={<LoginPage />} />

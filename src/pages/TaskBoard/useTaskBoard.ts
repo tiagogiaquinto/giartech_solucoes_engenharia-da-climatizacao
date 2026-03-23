@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Task, ColumnId, Subtask, Comment } from './types'
+import { syncTaskToAgenda } from '../../services/giartechEngine'
 
 export function useTaskBoard() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -78,7 +79,11 @@ export function useTaskBoard() {
   const updateTask = useCallback(async (taskId: string, payload: Partial<Task>) => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...payload } : t))
     await supabase.from('project_tasks').update(payload).eq('id', taskId)
-  }, [])
+    if (payload.due_date) {
+      const title = payload.title || tasks.find(t => t.id === taskId)?.title || ''
+      syncTaskToAgenda(taskId, title, payload.due_date, payload.assignee_id)
+    }
+  }, [tasks])
 
   const deleteTask = useCallback(async (taskId: string) => {
     setTasks(prev => prev.filter(t => t.id !== taskId))
