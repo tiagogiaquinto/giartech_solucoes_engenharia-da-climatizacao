@@ -15,9 +15,7 @@ import {
   Settings,
   MessageSquare
 } from 'lucide-react'
-import { ThomazSuperAdvancedService, ThomazConversationResult } from '../services/thomazSuperAdvancedService'
-import { ThomazReasoningEngine, ReasoningResult } from '../services/thomazReasoningEngine'
-import { DataQueryResult } from '../services/thomazDataService'
+import { ThomazSuperAdvancedService } from '../services/thomazSuperAdvancedService'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -30,7 +28,7 @@ interface Message {
   confidence?: 'high' | 'medium' | 'low'
   sources?: any[]
   isStreaming?: boolean
-  realData?: DataQueryResult
+  realData?: any
 }
 
 interface ThomazAIProps {
@@ -45,7 +43,8 @@ export function ThomazAI({ userId, userRole = 'user', companyId, userName }: Tho
   const [inputMessage, setInputMessage] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [currentThinking, setCurrentThinking] = useState<string>('')
-  const [reasoningEngine] = useState(() => new ThomazReasoningEngine())
+  const [thomazService] = useState(() => new ThomazSuperAdvancedService())
+  const [conversationId] = useState(() => `session-${Date.now()}`)
   const [showSources, setShowSources] = useState<string | null>(null)
   const [showRealData, setShowRealData] = useState<string | null>(null)
 
@@ -131,46 +130,38 @@ O que precisa hoje? Pode conversar naturalmente comigo, como faria com qualquer 
     setCurrentThinking('')
 
     try {
-      // Simular raciocínio (thinking)
       const thinkingSteps = [
         'Analisando sua solicitação...',
-        'Buscando informações relevantes...',
-        'Consultando base de conhecimento...',
+        'Buscando dados da empresa...',
+        'Consultando inteligência artificial...',
         'Processando dados em tempo real...',
         'Formulando resposta...'
       ]
 
       for (const step of thinkingSteps) {
         setCurrentThinking(step)
-        await new Promise(resolve => setTimeout(resolve, 300))
+        await new Promise(resolve => setTimeout(resolve, 350))
       }
 
-      // Processar com Reasoning Engine (com dados reais!)
-      const result: ReasoningResult = await reasoningEngine.reason({
-        userMessage: userMessage.content,
-        conversationHistory: messages.map(m => ({
-          role: m.role,
-          content: m.content
-        })),
-        userRole,
-        companyContext: { userId, companyId }
-      })
+      const result = await thomazService.processMessage(
+        userMessage.content,
+        userId,
+        conversationId
+      )
 
       setCurrentThinking('')
 
-      // Criar mensagem da resposta com dados reais
       const assistantMessage: Message = {
         id: `msg_${Date.now() + 1}`,
         role: 'assistant',
-        content: result.response.answer,
+        content: result.response || 'Não foi possível gerar uma resposta. Tente novamente.',
         timestamp: new Date(),
-        confidence: result.response.confidence > 0.8 ? 'high' : result.response.confidence > 0.6 ? 'medium' : 'low',
+        confidence: result.confidence > 0.8 ? 'high' : result.confidence > 0.6 ? 'medium' : 'low',
         sources: [],
-        thinking: result.reasoning.thoughtProcess.join(' → '),
-        realData: result.realData
+        thinking: undefined,
+        realData: undefined
       }
 
-      // Simular streaming da resposta (efeito de digitação)
       await streamMessage(assistantMessage)
 
     } catch (error) {
