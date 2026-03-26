@@ -176,12 +176,19 @@ const drawStatusBadge = (doc: jsPDF, status: string, x: number, y: number) => {
   doc.text(label, x + 4, y)
 }
 
+const WARRANTY_TEXT = 'Garantia: Os serviços executados possuem garantia de 90 (noventa) dias contra defeitos de mão de obra, conforme o Código de Defesa do Consumidor (CDC — Lei 8.078/90).'
+
 const drawPageFooter = (doc: jsPDF, pageNum: number, totalPages: number) => {
   const pageH = doc.internal.pageSize.height
   doc.setFillColor(245, 247, 250)
-  doc.rect(0, pageH - 14, PAGE_WIDTH, 14, 'F')
+  doc.rect(0, pageH - 20, PAGE_WIDTH, 20, 'F')
   doc.setFillColor(...B.colors.primary)
-  doc.rect(0, pageH - 14, PAGE_WIDTH, 0.5, 'F')
+  doc.rect(0, pageH - 20, PAGE_WIDTH, 0.5, 'F')
+
+  doc.setFont('helvetica', 'italic')
+  doc.setFontSize(6.5)
+  doc.setTextColor(...B.colors.textMuted)
+  doc.text(WARRANTY_TEXT, MARGIN, pageH - 12, { maxWidth: CONTENT_WIDTH })
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7)
@@ -500,8 +507,11 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     const sub = item.total ?? item.subtotal ?? ((item.quantity || 1) * (item.unit_price || 0))
     return acc + Number(sub)
   }, 0)
-  const computedTotal = data.total_value || data.net_value || itemsSubtotal || 0
-  const hasTotals = computedTotal > 0 || data.labor_value != null || data.materials_value != null
+
+  const discount = data.discount ?? 0
+  const rawTotal = data.total_value && data.total_value > 0 ? data.total_value : itemsSubtotal
+  const grandTotal = data.net_value && data.net_value > 0 ? data.net_value : (rawTotal - discount)
+  const hasTotals = grandTotal > 0 || (data.labor_value != null && data.labor_value > 0) || (data.materials_value != null && data.materials_value > 0)
 
   if (hasTotals) {
     if (y > pageH - 70) {
@@ -511,14 +521,16 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     y += 2
     y = drawSectionHeader(doc, 'Resumo Financeiro', y)
 
-    const boxW = CONTENT_WIDTH * 0.45
+    const boxW = CONTENT_WIDTH * 0.44
     const boxX = MARGIN + CONTENT_WIDTH - boxW
 
     const rows: [string, string][] = []
     if (data.labor_value != null && data.labor_value > 0) rows.push(['Mão de Obra', formatCurrency(data.labor_value)])
     if (data.materials_value != null && data.materials_value > 0) rows.push(['Materiais', formatCurrency(data.materials_value)])
-    if (!data.labor_value && !data.materials_value && itemsSubtotal > 0) rows.push(['Subtotal', formatCurrency(itemsSubtotal)])
-    if (data.discount != null && data.discount > 0) rows.push(['Desconto', `- ${formatCurrency(data.discount)}`])
+    if ((!data.labor_value || data.labor_value === 0) && (!data.materials_value || data.materials_value === 0) && itemsSubtotal > 0) {
+      rows.push(['Subtotal dos Itens', formatCurrency(itemsSubtotal)])
+    }
+    if (discount > 0) rows.push(['Desconto', `- ${formatCurrency(discount)}`])
 
     let fy = y
     const rowH = 7.5
@@ -539,8 +551,6 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
       fy += rowH
     })
 
-    const discount = data.discount ?? 0
-    const totalVal = data.net_value ?? (computedTotal > 0 ? computedTotal - discount : 0)
     const [pr, pg, pb] = B.colors.primary
     doc.setFillColor(pr, pg, pb)
     doc.roundedRect(boxX, fy, boxW, 12, 0, 0, 'F')
@@ -549,60 +559,64 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     doc.setFontSize(11)
     doc.setTextColor(255, 255, 255)
     doc.text('TOTAL', boxX + 6, fy + 8)
-    doc.text(formatCurrency(totalVal), boxX + boxW - 6, fy + 8, { align: 'right' })
+    doc.text(formatCurrency(grandTotal), boxX + boxW - 6, fy + 8, { align: 'right' })
 
     y += boxH + 5
-
-    const hasPayment = data.payment_method || data.payment_conditions
-    if (hasPayment) {
-      const pmW = CONTENT_WIDTH * 0.52
-      const pmX = MARGIN
-      const pmYStart = y - boxH + 2
-      const pmLabels: { label: string; value: string }[] = []
-
-      const pmLabel = data.payment_method === 'pix' ? 'PIX'
-        : data.payment_method === 'boleto' ? 'Boleto Bancário'
-        : data.payment_method === 'credito' ? 'Cartão de Crédito'
-        : data.payment_method === 'debito' ? 'Cartão de Débito'
-        : data.payment_method === 'dinheiro' ? 'Dinheiro'
-        : data.payment_method || ''
-
-      if (pmLabel) pmLabels.push({ label: 'Forma de Pagamento', value: pmLabel })
-
-      const inst = Number(data.payment_installments || 1)
-      if (inst > 1) {
-        pmLabels.push({ label: 'Condição', value: `${inst}x parcelas` })
-      } else if (data.payment_conditions) {
-        pmLabels.push({ label: 'Condição', value: data.payment_conditions })
-      }
-
-      if (data.pix_key && data.payment_method === 'pix') {
-        pmLabels.push({ label: 'Chave PIX', value: data.pix_key })
-      }
-
-      const pmH = Math.max(20, pmLabels.length * 8 + 8)
-      doc.setFillColor(235, 248, 240)
-      doc.roundedRect(pmX, pmYStart, pmW, pmH, 1, 1, 'F')
-      doc.setDrawColor(34, 197, 94)
-      doc.setLineWidth(0.3)
-      doc.roundedRect(pmX, pmYStart, pmW, pmH, 1, 1, 'S')
-
-      let pmY = pmYStart + 6
-      pmLabels.forEach(({ label, value }) => {
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(7)
-        doc.setTextColor(...B.colors.textLight)
-        doc.text(label.toUpperCase(), pmX + 4, pmY)
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(9)
-        doc.setTextColor(...B.colors.text)
-        doc.text(value, pmX + 4, pmY + 5, { maxWidth: pmW - 8 })
-        pmY += 8.5
-      })
-    }
   }
 
-  if (y > pageH - 60) {
+  const hasPayment = data.payment_method || data.payment_conditions
+  if (hasPayment) {
+    if (y > pageH - 50) {
+      doc.addPage()
+      y = drawPageHeader(doc, orderNum, doc.getNumberOfPages(), 1, 44)
+    }
+    y += 2
+    y = drawSectionHeader(doc, 'Condições de Pagamento', y)
+
+    const pmLabels: { label: string; value: string }[] = []
+
+    const pmLabel = data.payment_method === 'pix' ? 'PIX'
+      : data.payment_method === 'boleto' ? 'Boleto Bancário'
+      : data.payment_method === 'credito' ? 'Cartão de Crédito'
+      : data.payment_method === 'debito' ? 'Cartão de Débito'
+      : data.payment_method === 'dinheiro' ? 'Dinheiro'
+      : data.payment_method || ''
+
+    if (pmLabel) pmLabels.push({ label: 'Forma de Pagamento', value: pmLabel })
+
+    const inst = Number(data.payment_installments || 1)
+    if (inst > 1) {
+      pmLabels.push({ label: 'Condição', value: `${inst}x parcelas` })
+    } else if (data.payment_conditions) {
+      pmLabels.push({ label: 'Condição', value: data.payment_conditions })
+    }
+
+    if (data.pix_key && data.payment_method === 'pix') {
+      pmLabels.push({ label: 'Chave PIX', value: data.pix_key })
+    }
+
+    const pmColW = (CONTENT_WIDTH - 4) / Math.max(pmLabels.length, 1)
+    let pmX = MARGIN
+    pmLabels.forEach(({ label, value }) => {
+      doc.setFillColor(235, 248, 240)
+      doc.roundedRect(pmX, y, pmColW - 2, 18, 1, 1, 'F')
+      doc.setDrawColor(34, 197, 94)
+      doc.setLineWidth(0.3)
+      doc.roundedRect(pmX, y, pmColW - 2, 18, 1, 1, 'S')
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(7)
+      doc.setTextColor(...B.colors.textLight)
+      doc.text(label.toUpperCase(), pmX + 4, y + 5)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9.5)
+      doc.setTextColor(...B.colors.text)
+      doc.text(value, pmX + 4, y + 13, { maxWidth: pmColW - 8 })
+      pmX += pmColW
+    })
+    y += 22
+  }
+
+  if (y > pageH - 65) {
     doc.addPage()
     y = drawPageHeader(doc, orderNum, doc.getNumberOfPages(), 1, 44)
   }
