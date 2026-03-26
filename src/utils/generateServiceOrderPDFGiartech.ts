@@ -20,6 +20,8 @@ interface ServiceOrderData {
   priority?: string
   contract_type?: string
   payment_method?: string
+  payment_installments?: number
+  payment_conditions?: string
   pix_key?: string
   total_value?: number
   labor_value?: number
@@ -536,24 +538,52 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
 
     y += boxH + 5
 
-    if (data.payment_method) {
-      const pmW = CONTENT_WIDTH * 0.5
-      doc.setFillColor(235, 248, 240)
-      doc.roundedRect(MARGIN, y - boxH + 2, pmW, 20, 1, 1, 'F')
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(7)
-      doc.setTextColor(...B.colors.textLight)
-      doc.text('FORMA DE PAGAMENTO', MARGIN + 4, y - boxH + 8)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.setTextColor(...B.colors.text)
-      const pm = data.payment_method === 'pix' ? 'PIX' : data.payment_method === 'boleto' ? 'Boleto' : data.payment_method === 'credito' ? 'Cartão de Crédito' : data.payment_method === 'debito' ? 'Cartão de Débito' : data.payment_method === 'dinheiro' ? 'Dinheiro' : data.payment_method
-      doc.text(pm, MARGIN + 4, y - boxH + 16)
+    const hasPayment = data.payment_method || data.payment_conditions
+    if (hasPayment) {
+      const pmW = CONTENT_WIDTH * 0.52
+      const pmX = MARGIN
+      const pmYStart = y - boxH + 2
+      const pmLabels: { label: string; value: string }[] = []
+
+      const pmLabel = data.payment_method === 'pix' ? 'PIX'
+        : data.payment_method === 'boleto' ? 'Boleto Bancário'
+        : data.payment_method === 'credito' ? 'Cartão de Crédito'
+        : data.payment_method === 'debito' ? 'Cartão de Débito'
+        : data.payment_method === 'dinheiro' ? 'Dinheiro'
+        : data.payment_method || ''
+
+      if (pmLabel) pmLabels.push({ label: 'Forma de Pagamento', value: pmLabel })
+
+      const inst = Number(data.payment_installments || 1)
+      if (inst > 1) {
+        pmLabels.push({ label: 'Condição', value: `${inst}x parcelas` })
+      } else if (data.payment_conditions) {
+        pmLabels.push({ label: 'Condição', value: data.payment_conditions })
+      }
+
       if (data.pix_key && data.payment_method === 'pix') {
+        pmLabels.push({ label: 'Chave PIX', value: data.pix_key })
+      }
+
+      const pmH = Math.max(20, pmLabels.length * 8 + 8)
+      doc.setFillColor(235, 248, 240)
+      doc.roundedRect(pmX, pmYStart, pmW, pmH, 1, 1, 'F')
+      doc.setDrawColor(34, 197, 94)
+      doc.setLineWidth(0.3)
+      doc.roundedRect(pmX, pmYStart, pmW, pmH, 1, 1, 'S')
+
+      let pmY = pmYStart + 6
+      pmLabels.forEach(({ label, value }) => {
+        doc.setFont('helvetica', 'bold')
         doc.setFontSize(7)
         doc.setTextColor(...B.colors.textLight)
-        doc.text(`Chave: ${data.pix_key}`, MARGIN + 4, y - boxH + 21)
-      }
+        doc.text(label.toUpperCase(), pmX + 4, pmY)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(...B.colors.text)
+        doc.text(value, pmX + 4, pmY + 5, { maxWidth: pmW - 8 })
+        pmY += 8.5
+      })
     }
   }
 

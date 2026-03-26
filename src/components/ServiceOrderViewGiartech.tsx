@@ -101,8 +101,13 @@ export default function ServiceOrderViewGiartech({ isOpen, onClose, data }: Prop
     }
   }
 
-  const handlePrint = () => {
-    window.print()
+  const handlePrint = async () => {
+    try {
+      await generateServiceOrderPDFGiartech(data)
+    } catch (error) {
+      console.error('Erro ao gerar PDF para impressão:', error)
+      window.print()
+    }
   }
 
   const handleShare = async () => {
