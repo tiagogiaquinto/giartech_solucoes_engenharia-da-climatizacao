@@ -57,6 +57,16 @@ export function ThomazAI({ userId, userRole = 'user', companyId, userName }: Tho
   }, [])
 
   useEffect(() => {
+    const pending = sessionStorage.getItem('thomaz_initial_question')
+    if (pending) {
+      sessionStorage.removeItem('thomaz_initial_question')
+      setTimeout(() => {
+        setInputMessage(pending)
+      }, 800)
+    }
+  }, [])
+
+  useEffect(() => {
     scrollToBottom()
   }, [messages, currentThinking])
 
