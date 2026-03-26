@@ -269,6 +269,51 @@ const BottomDrawerFinalizacaoOS = ({ order, onClose, onFinished }: BottomDrawerF
                 report_generated_at: completedAt
               })
               .eq('id', order.id)
+
+            // Enviar email automático ao cliente com o relatório assinado
+            try {
+              const { data: osData } = await supabase
+                .from('service_orders')
+                .select('client_email, client_name')
+                .eq('id', order.id)
+                .maybeSingle()
+
+              const emailDestino = osData?.client_email
+              if (emailDestino) {
+                const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+                const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+                await fetch(`${supabaseUrl}/functions/v1/send-smtp-email`, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${anonKey}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    to: emailDestino,
+                    subject: `Relatório de Visita Técnica — OS #${order.order_number}`,
+                    html: `
+                      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+                        <div style="background:#0b3d62;padding:24px;border-radius:8px 8px 0 0">
+                          <h1 style="color:#fff;margin:0;font-size:20px">Relatório de Visita Técnica</h1>
+                          <p style="color:#9ec8e8;margin:4px 0 0">OS #${order.order_number}</p>
+                        </div>
+                        <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-radius:0 0 8px 8px">
+                          <p style="color:#374151">Olá, <strong>${osData?.client_name || order.client_name || 'Cliente'}</strong>!</p>
+                          <p style="color:#374151">O serviço técnico foi <strong style="color:#16a34a">concluído e assinado</strong>. Segue o relatório de visita com as assinaturas digitais.</p>
+                          <div style="text-align:center;margin:24px 0">
+                            <a href="${urlData.publicUrl}" style="background:#0b3d62;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">
+                              Baixar Relatório Assinado (PDF)
+                            </a>
+                          </div>
+                          <p style="color:#6b7280;font-size:13px">Este documento foi gerado automaticamente com carimbo de data/hora e assinaturas digitais do técnico e do responsável pelo recebimento.</p>
+                        </div>
+                      </div>`,
+                  }),
+                })
+              }
+            } catch {
+              /* envio de email é best-effort */
+            }
           }
         }
 

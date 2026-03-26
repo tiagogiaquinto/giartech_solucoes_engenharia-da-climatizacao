@@ -365,6 +365,23 @@ const ServiceOrderCreate = () => {
     }
   }
 
+  const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+    try {
+      const encoded = encodeURIComponent(address + ', Brasil')
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`,
+        { headers: { 'Accept-Language': 'pt-BR', 'User-Agent': 'Giartech/1.0' } }
+      )
+      const data = await res.json()
+      if (data && data.length > 0) {
+        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+      }
+    } catch {
+      // geocodificação é best-effort
+    }
+    return null
+  }
+
   const loadCustomerDetails = async (customerId: string) => {
     try {
       const [customerRes, addressRes] = await Promise.all([
@@ -373,9 +390,26 @@ const ServiceOrderCreate = () => {
       ])
 
       if (customerRes.data) {
+        let geoCoords: { lat: number; lng: number } | null = null
+
+        if (addressRes.data) {
+          const addressStr = [
+            addressRes.data.street,
+            addressRes.data.number,
+            addressRes.data.neighborhood,
+            addressRes.data.city,
+            addressRes.data.state,
+          ].filter(Boolean).join(', ')
+
+          if (addressStr) {
+            geoCoords = await geocodeAddress(addressStr)
+          }
+        }
+
         const customerData = {
           ...customerRes.data,
-          address: addressRes.data
+          address: addressRes.data,
+          _geo: geoCoords,
         }
         setSelectedCustomer(customerData)
 
@@ -714,7 +748,9 @@ const ServiceOrderCreate = () => {
         discount_amount: totals.desconto,
         final_total: totals.total,
         portal_account_id: portalAccountId || null,
-        partner_account_id: partnerAccountId || null
+        partner_account_id: partnerAccountId || null,
+        client_lat: (selectedCustomer as any)?._geo?.lat ?? null,
+        client_lng: (selectedCustomer as any)?._geo?.lng ?? null,
       }
 
       let order: any
