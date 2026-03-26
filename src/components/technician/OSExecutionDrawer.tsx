@@ -360,10 +360,48 @@ export default function OSExecutionDrawer({ order, onClose, onFinished }: OSExec
   const finalizeOS = async () => {
     if (!allDone || !order || finishing) return
     setFinishing(true)
+
+    const completedAt = new Date().toISOString()
+
     await supabase
       .from('service_orders')
-      .update({ status: 'completed', progress_percent: 100 })
+      .update({ status: 'completed', progress_percent: 100, completed_at: completedAt })
       .eq('id', order.id)
+
+    const { data: fullOrder } = await supabase
+      .from('service_orders')
+      .select('total_value, net_value, final_price, order_number, client_name, client_id')
+      .eq('id', order.id)
+      .maybeSingle()
+
+    const orderValue = Number(fullOrder?.total_value || fullOrder?.net_value || fullOrder?.final_price || 0)
+
+    if (orderValue > 0) {
+      const dueDate = new Date()
+      dueDate.setDate(dueDate.getDate() + 5)
+      await supabase.from('finance_entries').insert({
+        descricao: `OS #${order.order_number} — ${order.client_name || 'Cliente'}`,
+        valor: orderValue,
+        tipo: 'receita',
+        status: 'a_receber',
+        data: completedAt.split('T')[0],
+        data_vencimento: dueDate.toISOString().split('T')[0],
+        customer_id: fullOrder?.client_id || null,
+        recorrente: false,
+        is_recurring: false,
+      })
+    }
+
+    const dueTaskDate = new Date()
+    dueTaskDate.setDate(dueTaskDate.getDate() + 1)
+    await supabase.from('tasks').insert({
+      title: `Faturar OS #${order.order_number} — ${order.client_name || 'Cliente'}`,
+      description: `Serviço concluído. Verificar nota fiscal${orderValue > 0 ? ` e confirmar recebimento de R$ ${orderValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}.`,
+      status: 'todo',
+      priority: 'high',
+      due_date: dueTaskDate.toISOString().split('T')[0],
+    }).then(() => {})
+
     setFinishing(false)
     onFinished()
   }

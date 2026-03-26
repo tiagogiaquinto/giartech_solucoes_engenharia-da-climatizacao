@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
-import { Search, Bell, User, Menu, X, Crown } from 'lucide-react'
+import { Search, User, Crown } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { NotificationCenter } from '../NotificationCenter'
@@ -45,6 +45,11 @@ const Header = () => {
     setMobileMenuOpen(!mobileMenuOpen)
   }
 
+  const openCommandPalette = () => {
+    const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true })
+    window.dispatchEvent(event)
+  }
+
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white shadow-sm ml-64">
       <div className="h-16 px-4 flex items-center justify-between">
@@ -54,14 +59,16 @@ const Header = () => {
         </h1>
         
         <div className="flex items-center space-x-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Buscar..."
-              className="w-64 pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+          <button
+            onClick={openCommandPalette}
+            className="flex items-center gap-2 w-64 pl-3 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 hover:border-gray-300 transition-colors text-left group"
+          >
+            <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
+            <span className="flex-1 text-gray-400 text-sm">Buscar em tudo...</span>
+            <kbd className="hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px] font-mono text-gray-400 shadow-sm group-hover:border-gray-300">
+              Ctrl K
+            </kbd>
+          </button>
           
           <NotificationCenter />
 

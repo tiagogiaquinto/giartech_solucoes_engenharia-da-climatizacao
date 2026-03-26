@@ -181,6 +181,44 @@ const ServiceOrderDetails = () => {
     window.open(waUrl, '_blank')
   }
 
+  const handleMarkCompleted = async () => {
+    if (!order || !window.confirm('Confirmar conclusão desta OS e gerar lançamento financeiro?')) return
+    const completedAt = new Date().toISOString()
+    await supabase
+      .from('service_orders')
+      .update({ status: 'completed', completed_at: completedAt })
+      .eq('id', id!)
+
+    const orderValue = Number(order.total_value || order.net_value || order.final_price || 0)
+    if (orderValue > 0) {
+      const dueDate = new Date()
+      dueDate.setDate(dueDate.getDate() + 5)
+      await supabase.from('finance_entries').insert({
+        descricao: `OS #${order.order_number} — ${customer?.nome_razao || customer?.name || order.client_name || 'Cliente'}`,
+        valor: orderValue,
+        tipo: 'receita',
+        status: 'a_receber',
+        data: completedAt.split('T')[0],
+        data_vencimento: dueDate.toISOString().split('T')[0],
+        customer_id: order.client_id || null,
+        recorrente: false,
+        is_recurring: false,
+      })
+    }
+
+    const dueTaskDate = new Date()
+    dueTaskDate.setDate(dueTaskDate.getDate() + 1)
+    supabase.from('tasks').insert({
+      title: `Faturar OS #${order.order_number} — ${customer?.nome_razao || customer?.name || order.client_name || 'Cliente'}`,
+      description: `Serviço concluído. Verificar nota fiscal${orderValue > 0 ? ` e confirmar recebimento de R$ ${orderValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}.`,
+      status: 'todo',
+      priority: 'high',
+      due_date: dueTaskDate.toISOString().split('T')[0],
+    }).then(() => {})
+
+    await loadOrderData()
+  }
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
@@ -283,6 +321,16 @@ const ServiceOrderDetails = () => {
                   {order?.report_pdf_url && (
                     <span className="ml-1 w-2 h-2 rounded-full bg-green-300 inline-block" title="PDF disponível" />
                   )}
+                </button>
+              )}
+
+              {(order?.status === 'in_progress' || order?.status === 'pending') && (
+                <button
+                  onClick={handleMarkCompleted}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  Concluir OS
                 </button>
               )}
 
