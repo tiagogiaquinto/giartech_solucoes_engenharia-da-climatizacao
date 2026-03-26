@@ -317,35 +317,42 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
       doc.addPage()
       y = drawPageHeader(doc, orderNum, doc.getNumberOfPages(), 1, 44)
     }
-    y = drawSectionHeader(doc, 'Serviços', y)
+    y = drawSectionHeader(doc, 'Serviços / Itens da Ordem', y)
 
     autoTable(doc, {
       startY: y,
       margin: { left: MARGIN, right: MARGIN },
-      head: [['Serviço / Atividade', 'Qtd', 'Unidade', 'Valor Unit.', 'Total']],
-      body: (data.items || []).map(item => [
+      head: [['Item', 'Descrição', 'Qtd', 'Vl. Unit.', 'Subtotal']],
+      body: (data.items || []).map((item, idx) => [
+        String(idx + 1).padStart(2, '0'),
         item.name || item.description || '—',
         String(item.quantity || 1),
-        item.unit || 'un',
         formatCurrency(item.unit_price),
-        formatCurrency(item.total || (item.quantity || 1) * (item.unit_price || 0))
+        formatCurrency(item.total ?? (item.quantity || 1) * (item.unit_price || 0))
       ]),
       headStyles: {
         fillColor: B.colors.primary,
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 8
+        fontSize: 8,
+        halign: 'center'
       },
-      bodyStyles: { fontSize: 8, textColor: B.colors.text },
+      bodyStyles: { fontSize: 8.5, textColor: B.colors.text },
       alternateRowStyles: { fillColor: B.colors.backgroundLight },
       columnStyles: {
-        0: { cellWidth: 'auto' },
-        1: { cellWidth: 16, halign: 'center' },
-        2: { cellWidth: 20, halign: 'center' },
-        3: { cellWidth: 28, halign: 'right' },
-        4: { cellWidth: 28, halign: 'right' }
+        0: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 14, halign: 'center' },
+        3: { cellWidth: 30, halign: 'right' },
+        4: { cellWidth: 30, halign: 'right', fontStyle: 'bold' }
       },
-      theme: 'grid'
+      theme: 'grid',
+      didParseCell: (hookData) => {
+        if (hookData.section === 'head') {
+          hookData.cell.styles.halign = hookData.column.index === 1 ? 'left' : 'center'
+          if (hookData.column.index >= 3) hookData.cell.styles.halign = 'right'
+        }
+      }
     })
     y = (doc as any).lastAutoTable.finalY + 4
   }
@@ -489,7 +496,13 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     }
   }
 
-  const hasTotals = data.total_value != null || data.labor_value != null || data.materials_value != null
+  const itemsSubtotal = (data.items || []).reduce((acc: number, item: any) => {
+    const sub = item.total ?? item.subtotal ?? ((item.quantity || 1) * (item.unit_price || 0))
+    return acc + Number(sub)
+  }, 0)
+  const computedTotal = data.total_value || data.net_value || itemsSubtotal || 0
+  const hasTotals = computedTotal > 0 || data.labor_value != null || data.materials_value != null
+
   if (hasTotals) {
     if (y > pageH - 70) {
       doc.addPage()
@@ -502,8 +515,9 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     const boxX = MARGIN + CONTENT_WIDTH - boxW
 
     const rows: [string, string][] = []
-    if (data.labor_value != null) rows.push(['Mão de Obra', formatCurrency(data.labor_value)])
-    if (data.materials_value != null) rows.push(['Materiais', formatCurrency(data.materials_value)])
+    if (data.labor_value != null && data.labor_value > 0) rows.push(['Mão de Obra', formatCurrency(data.labor_value)])
+    if (data.materials_value != null && data.materials_value > 0) rows.push(['Materiais', formatCurrency(data.materials_value)])
+    if (!data.labor_value && !data.materials_value && itemsSubtotal > 0) rows.push(['Subtotal', formatCurrency(itemsSubtotal)])
     if (data.discount != null && data.discount > 0) rows.push(['Desconto', `- ${formatCurrency(data.discount)}`])
 
     let fy = y
@@ -525,7 +539,8 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
       fy += rowH
     })
 
-    const totalVal = data.net_value ?? data.total_value ?? 0
+    const discount = data.discount ?? 0
+    const totalVal = data.net_value ?? (computedTotal > 0 ? computedTotal - discount : 0)
     const [pr, pg, pb] = B.colors.primary
     doc.setFillColor(pr, pg, pb)
     doc.roundedRect(boxX, fy, boxW, 12, 0, 0, 'F')
