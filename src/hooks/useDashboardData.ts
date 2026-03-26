@@ -100,6 +100,32 @@ export interface OSCostBreakdown {
   os_sem_custo: number;
 }
 
+export interface FinancialClosingSummary {
+  total_fechamentos: number;
+  faturamento_total: number;
+  custo_total_geral: number;
+  lucro_total: number;
+  margem_media_pct: number;
+  pendentes_notificacao: number;
+  notificacoes_enviadas: number;
+  fechamentos_30d: number;
+  lucro_30d: number;
+  ultimo_fechamento: string | null;
+}
+
+export interface RecentClosing {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  closed_at: string;
+  valor_bruto: number;
+  custo_total: number;
+  margem_liquida: number;
+  percentual_margem: number;
+  whatsapp_message: string;
+  notification_status: string;
+}
+
 export interface DashboardData {
   kpis: BusinessKPIs | null;
   metrics: DashboardMetrics | null;
@@ -107,6 +133,8 @@ export interface DashboardData {
   recentTransactions: RecentTransaction[];
   activeOrders: ActiveServiceOrder[];
   osCostBreakdown: OSCostBreakdown | null;
+  financialClosingSummary: FinancialClosingSummary | null;
+  recentClosings: RecentClosing[];
   loading: boolean;
   error: string | null;
 }
@@ -119,6 +147,8 @@ export const useDashboardData = () => {
     recentTransactions: [],
     activeOrders: [],
     osCostBreakdown: null,
+    financialClosingSummary: null,
+    recentClosings: [],
     loading: true,
     error: null,
   });
@@ -174,6 +204,18 @@ export const useDashboardData = () => {
         os_sem_custo: osFinancialData.filter(r => Number(r.custo_total) === 0).length,
       } : null as any;
 
+      // Buscar resumo de fechamentos financeiros
+      const { data: closingSummaryData } = await supabase
+        .from('v_financial_closings_summary')
+        .select('*')
+        .maybeSingle();
+
+      // Buscar últimos fechamentos
+      const { data: recentClosingsData } = await supabase
+        .from('v_financial_closings_recent')
+        .select('id, order_number, customer_name, closed_at, valor_bruto, custo_total, margem_liquida, percentual_margem, whatsapp_message, notification_status')
+        .limit(5);
+
       // Converter KPIs para métricas e financeiro (compatibilidade)
       const metrics: DashboardMetrics = {
         total_service_orders: (kpisData?.total_completed_orders || 0) + (kpisData?.orders_in_progress || 0),
@@ -211,6 +253,8 @@ export const useDashboardData = () => {
         recentTransactions: transactionsData || [],
         activeOrders: ordersData || [],
         osCostBreakdown: osCostBreakdown || null,
+        financialClosingSummary: closingSummaryData || null,
+        recentClosings: (recentClosingsData || []) as RecentClosing[],
         loading: false,
         error: null,
       });

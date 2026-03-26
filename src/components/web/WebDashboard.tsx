@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { TrendingUp, Users, FolderOpen, Clock, Plus, CheckCircle, AlertCircle, X, Save, Mail, Phone, Calendar, FileText, Send, DollarSign, ArrowUp, ArrowDown, ChevronRight, RefreshCw, Package, PieChart, Info } from 'lucide-react'
+import { TrendingUp, Users, FolderOpen, Clock, Plus, CheckCircle, AlertCircle, X, Save, Mail, Phone, Calendar, FileText, Send, DollarSign, ArrowUp, ArrowDown, ChevronRight, RefreshCw, Package, PieChart, Info, Flag, MessageCircle } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { Link } from 'react-router-dom'
 import { useDashboardData } from '../../hooks/useDashboardData'
@@ -14,7 +14,7 @@ interface WebDashboardProps {
 
 const WebDashboard: React.FC<WebDashboardProps> = ({ onPremiumFeature }) => {
   const { user, isPremium } = useUser()
-  const { metrics, financial, recentTransactions, activeOrders, osCostBreakdown, loading, error, refresh, profit, profitMargin } = useDashboardData()
+  const { metrics, financial, recentTransactions, activeOrders, osCostBreakdown, financialClosingSummary, recentClosings, loading, error, refresh, profit, profitMargin } = useDashboardData()
   const [tasks, setTasks] = useState([
     { id: 1, title: 'Revisar código do projeto mobile', completed: false, priority: 'high' },
     { id: 2, title: 'Reunião com cliente às 14h', completed: true, priority: 'medium' },
@@ -423,6 +423,102 @@ const WebDashboard: React.FC<WebDashboardProps> = ({ onPremiumFeature }) => {
           </div>
         )}
       </motion.div>
+
+      {/* Financial Closings Panel */}
+      {financialClosingSummary && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.48 }}
+          className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-emerald-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Fechamentos Financeiros Automáticos</h2>
+              {financialClosingSummary.pendentes_notificacao > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs bg-orange-100 text-orange-700 rounded-full font-medium">
+                  {financialClosingSummary.pendentes_notificacao} pendente{financialClosingSummary.pendentes_notificacao > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <Link to="/cfo-dashboard" className="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+              Dashboard CFO <ChevronRight className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
+
+          {/* KPIs de Fechamento */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-emerald-50 rounded-xl p-4 text-center">
+              <p className="text-xs text-gray-500 mb-1">Total Fechamentos</p>
+              <p className="text-2xl font-bold text-emerald-700">{financialClosingSummary.total_fechamentos}</p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-4 text-center">
+              <p className="text-xs text-gray-500 mb-1">Lucro Acumulado</p>
+              <p className="text-2xl font-bold text-blue-700">
+                R$ {Number(financialClosingSummary.lucro_total).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </p>
+            </div>
+            <div className="bg-teal-50 rounded-xl p-4 text-center">
+              <p className="text-xs text-gray-500 mb-1">Margem Média</p>
+              <p className="text-2xl font-bold text-teal-700">
+                {Number(financialClosingSummary.margem_media_pct).toFixed(1)}%
+              </p>
+            </div>
+            <div className="bg-amber-50 rounded-xl p-4 text-center">
+              <p className="text-xs text-gray-500 mb-1">Lucro (30 dias)</p>
+              <p className="text-2xl font-bold text-amber-700">
+                R$ {Number(financialClosingSummary.lucro_30d).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </p>
+            </div>
+          </div>
+
+          {/* Últimos Fechamentos */}
+          {recentClosings.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-600 mb-3">Últimos Fechamentos</h3>
+              <div className="space-y-2">
+                {recentClosings.map(c => (
+                  <div key={c.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${Number(c.percentual_margem) >= 30 ? 'bg-emerald-500' : Number(c.percentual_margem) >= 10 ? 'bg-amber-400' : 'bg-red-400'}`} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900">OS #{c.order_number} — {c.customer_name}</p>
+                        <p className="text-xs text-gray-500">{formatDateSafe(c.closed_at)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 flex-shrink-0 ml-4">
+                      <div className="text-right hidden sm:block">
+                        <p className="text-xs text-gray-500">Faturamento</p>
+                        <p className="text-sm font-medium text-gray-800">R$ {Number(c.valor_bruto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">Lucro Líquido</p>
+                        <p className={`text-sm font-bold ${Number(c.margem_liquida) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          R$ {Number(c.margem_liquida).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      <div className={`px-2 py-1 rounded-full text-xs font-semibold ${Number(c.percentual_margem) >= 30 ? 'bg-emerald-100 text-emerald-700' : Number(c.percentual_margem) >= 10 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                        {Number(c.percentual_margem).toFixed(1)}%
+                      </div>
+                      {c.notification_status === 'queued' && (
+                        <div title="Aguardando envio WhatsApp" className="text-orange-400">
+                          <MessageCircle className="h-4 w-4" />
+                        </div>
+                      )}
+                      {c.notification_status === 'sent' && (
+                        <div title="Notificado no WhatsApp" className="text-emerald-500">
+                          <CheckCircle className="h-4 w-4" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Quick Actions */}
       <motion.div
