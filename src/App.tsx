@@ -137,9 +137,11 @@ import Materials from './pages/Materials'
 import WhatsAppCRM from './pages/WhatsAppCRM'
 import StaffManagement from './pages/StaffManagement'
 import CadastroClientesParceiros from './pages/CadastroClientesParceiros'
+import GiartechCare from './pages/care/GiartechCare'
 import { NotificationHubProvider } from './contexts/NotificationHubContext'
 import { GiartechNotificationHub } from './components/GiartechNotificationHub'
 import { useThomazInterrupt } from './hooks/useThomazInterrupt'
+import { useDailyAutomations } from './hooks/useDailyAutomations'
 import TaskBoard from './pages/TaskBoard/TaskBoard'
 import { ThomazOrchestrator } from './components/ThomazOrchestrator'
 
@@ -1175,6 +1177,9 @@ function App() {
             </ProtectedRoute>
           } />
 
+          {/* Rota pública Giartech Care — acesso via QR Code sem login */}
+          <Route path="/care/:qr_code_id" element={<GiartechCare />} />
+
           <Route path="/portal/login" element={
             <PortalProvider>
               <PortalLogin />
@@ -1260,6 +1265,7 @@ function App() {
 
 function ThomazInterruptActivator() {
   useThomazInterrupt()
+  useDailyAutomations()
   return null
 }
 
