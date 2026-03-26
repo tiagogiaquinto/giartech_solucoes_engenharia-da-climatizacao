@@ -88,12 +88,25 @@ export interface ActiveServiceOrder {
   created_at: string;
 }
 
+export interface OSCostBreakdown {
+  total_faturamento: number;
+  total_custo_materiais: number;
+  total_custo_mao_obra: number;
+  total_custo_extras: number;
+  total_impostos: number;
+  total_margem_liquida: number;
+  margem_media_pct: number;
+  os_com_custo: number;
+  os_sem_custo: number;
+}
+
 export interface DashboardData {
   kpis: BusinessKPIs | null;
   metrics: DashboardMetrics | null;
   financial: DashboardFinancial | null;
   recentTransactions: RecentTransaction[];
   activeOrders: ActiveServiceOrder[];
+  osCostBreakdown: OSCostBreakdown | null;
   loading: boolean;
   error: string | null;
 }
@@ -105,6 +118,7 @@ export const useDashboardData = () => {
     financial: null,
     recentTransactions: [],
     activeOrders: [],
+    osCostBreakdown: null,
     loading: true,
     error: null,
   });
@@ -139,6 +153,26 @@ export const useDashboardData = () => {
         .limit(10);
 
       if (ordersError) throw ordersError;
+
+      // Buscar breakdown de custo/lucro das OS concluídas
+      const { data: osFinancialData } = await supabase
+        .from('v_os_financial_summary')
+        .select('valor_bruto, valor_impostos, custo_materiais, custo_mao_obra, custo_extras, custo_total, margem_liquida, percentual_margem')
+        .in('status', ['completed', 'concluido', 'finalizado', 'concluída', 'finalizada']);
+
+      const osCostBreakdown: OSCostBreakdown = (osFinancialData && osFinancialData.length > 0) ? {
+        total_faturamento: osFinancialData.reduce((s, r) => s + Number(r.valor_bruto || 0), 0),
+        total_custo_materiais: osFinancialData.reduce((s, r) => s + Number(r.custo_materiais || 0), 0),
+        total_custo_mao_obra: osFinancialData.reduce((s, r) => s + Number(r.custo_mao_obra || 0), 0),
+        total_custo_extras: osFinancialData.reduce((s, r) => s + Number(r.custo_extras || 0), 0),
+        total_impostos: osFinancialData.reduce((s, r) => s + Number(r.valor_impostos || 0), 0),
+        total_margem_liquida: osFinancialData.reduce((s, r) => s + Number(r.margem_liquida || 0), 0),
+        margem_media_pct: osFinancialData.filter(r => Number(r.valor_bruto) > 0).length > 0
+          ? osFinancialData.filter(r => Number(r.valor_bruto) > 0).reduce((s, r) => s + Number(r.percentual_margem || 0), 0) / osFinancialData.filter(r => Number(r.valor_bruto) > 0).length
+          : 0,
+        os_com_custo: osFinancialData.filter(r => Number(r.custo_total) > 0).length,
+        os_sem_custo: osFinancialData.filter(r => Number(r.custo_total) === 0).length,
+      } : null as any;
 
       // Converter KPIs para métricas e financeiro (compatibilidade)
       const metrics: DashboardMetrics = {
@@ -176,6 +210,7 @@ export const useDashboardData = () => {
         financial,
         recentTransactions: transactionsData || [],
         activeOrders: ordersData || [],
+        osCostBreakdown: osCostBreakdown || null,
         loading: false,
         error: null,
       });

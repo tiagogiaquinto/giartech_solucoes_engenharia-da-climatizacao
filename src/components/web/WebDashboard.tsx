@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { TrendingUp, Users, FolderOpen, Clock, Plus, CheckCircle, AlertCircle, X, Save, Mail, Phone, Calendar, FileText, Send, DollarSign, ArrowUp, ArrowDown, ChevronRight, RefreshCw, Package } from 'lucide-react'
+import { TrendingUp, Users, FolderOpen, Clock, Plus, CheckCircle, AlertCircle, X, Save, Mail, Phone, Calendar, FileText, Send, DollarSign, ArrowUp, ArrowDown, ChevronRight, RefreshCw, Package, PieChart, Info } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { Link } from 'react-router-dom'
 import { useDashboardData } from '../../hooks/useDashboardData'
@@ -14,7 +14,7 @@ interface WebDashboardProps {
 
 const WebDashboard: React.FC<WebDashboardProps> = ({ onPremiumFeature }) => {
   const { user, isPremium } = useUser()
-  const { metrics, financial, recentTransactions, activeOrders, loading, error, refresh, profit, profitMargin } = useDashboardData()
+  const { metrics, financial, recentTransactions, activeOrders, osCostBreakdown, loading, error, refresh, profit, profitMargin } = useDashboardData()
   const [tasks, setTasks] = useState([
     { id: 1, title: 'Revisar código do projeto mobile', completed: false, priority: 'high' },
     { id: 2, title: 'Reunião com cliente às 14h', completed: true, priority: 'medium' },
@@ -308,6 +308,120 @@ const WebDashboard: React.FC<WebDashboardProps> = ({ onPremiumFeature }) => {
             </div>
           )}
         </div>
+      </motion.div>
+
+      {/* OS Cost Breakdown Chart */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45 }}
+        className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <PieChart className="h-5 w-5 text-blue-600" />
+            <h2 className="text-xl font-semibold text-gray-900">Composição de Custo/Lucro (OS Concluídas)</h2>
+          </div>
+          <Link to="/financial-analysis" className="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+            Análise completa <ChevronRight className="h-4 w-4 ml-1" />
+          </Link>
+        </div>
+
+        {!osCostBreakdown ? (
+          <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+            <Info className="h-10 w-10 mb-3 text-gray-300" />
+            <p className="text-sm font-medium">Nenhuma OS concluída com dados de custo ainda.</p>
+            <p className="text-xs mt-1">Adicione valores de Mão de Obra e Materiais em uma OS concluída para ver os gráficos.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Visual bar breakdown */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-600 mb-4">Distribuição do Faturamento</h3>
+              {(() => {
+                const total = osCostBreakdown.total_faturamento || 1
+                const segments = [
+                  { label: 'Lucro Líquido', value: osCostBreakdown.total_margem_liquida, color: 'bg-emerald-500', textColor: 'text-emerald-700', bg: 'bg-emerald-50' },
+                  { label: 'Impostos', value: osCostBreakdown.total_impostos, color: 'bg-red-400', textColor: 'text-red-700', bg: 'bg-red-50' },
+                  { label: 'Materiais', value: osCostBreakdown.total_custo_materiais, color: 'bg-amber-400', textColor: 'text-amber-700', bg: 'bg-amber-50' },
+                  { label: 'Mão de Obra', value: osCostBreakdown.total_custo_mao_obra, color: 'bg-blue-400', textColor: 'text-blue-700', bg: 'bg-blue-50' },
+                  { label: 'Outros Custos', value: osCostBreakdown.total_custo_extras, color: 'bg-gray-400', textColor: 'text-gray-700', bg: 'bg-gray-50' },
+                ]
+                return (
+                  <div className="space-y-3">
+                    {/* Stacked bar */}
+                    <div className="flex h-8 rounded-lg overflow-hidden gap-0.5">
+                      {segments.filter(s => s.value > 0).map((seg, i) => (
+                        <div
+                          key={i}
+                          className={`${seg.color} transition-all`}
+                          style={{ width: `${Math.max((seg.value / total) * 100, 1)}%` }}
+                          title={`${seg.label}: R$ ${seg.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                        />
+                      ))}
+                      {segments.every(s => s.value === 0) && (
+                        <div className="bg-gray-200 w-full" />
+                      )}
+                    </div>
+                    {/* Legend */}
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {segments.map((seg, i) => (
+                        <div key={i} className={`flex items-center gap-2 p-2 rounded-lg ${seg.bg}`}>
+                          <div className={`w-3 h-3 rounded-full ${seg.color} flex-shrink-0`} />
+                          <div className="min-w-0">
+                            <p className="text-xs text-gray-500 truncate">{seg.label}</p>
+                            <p className={`text-sm font-semibold ${seg.textColor}`}>
+                              {total > 0 ? `${((seg.value / total) * 100).toFixed(1)}%` : '0%'}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+
+            {/* KPI summary */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-gray-600 mb-4">Resumo das OS Concluídas</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-emerald-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500">Faturamento Total</p>
+                  <p className="text-lg font-bold text-emerald-700">
+                    R$ {osCostBreakdown.total_faturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500">Margem Média</p>
+                  <p className="text-lg font-bold text-blue-700">
+                    {osCostBreakdown.margem_media_pct.toFixed(1)}%
+                  </p>
+                </div>
+                <div className="bg-amber-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500">OS com Custo</p>
+                  <p className="text-lg font-bold text-amber-700">
+                    {osCostBreakdown.os_com_custo}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs text-gray-500">OS sem Custo</p>
+                  <p className="text-lg font-bold text-gray-600">
+                    {osCostBreakdown.os_sem_custo}
+                    {osCostBreakdown.os_sem_custo > 0 && (
+                      <span className="text-xs text-orange-500 ml-1">preencher</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              {osCostBreakdown.os_sem_custo > 0 && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-xs text-orange-700">
+                  <strong>{osCostBreakdown.os_sem_custo} OS</strong> ainda sem custo preenchido. Adicione Mão de Obra e Materiais para ver o lucro real.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Quick Actions */}
