@@ -173,14 +173,20 @@ const WebDashboard: React.FC<WebDashboardProps> = ({ onPremiumFeature }) => {
                 </p>
               </div>
 
-              <div className="bg-green-50 rounded-xl p-4">
+              <div className={`rounded-xl p-4 ${profit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-gray-700">Lucro</h3>
-                  <TrendingUp className="h-5 w-5 text-green-500" />
+                  {profit >= 0
+                    ? <TrendingUp className="h-5 w-5 text-green-500" />
+                    : <ArrowDown className="h-5 w-5 text-red-500" />
+                  }
                 </div>
-                <p className="text-2xl font-bold text-green-600">
-                  R$ {profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                <p className={`text-2xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {profit < 0 ? '-' : ''}R$ {Math.abs(profit).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
+                {profit < 0 && (
+                  <p className="text-xs text-red-500 font-medium mt-0.5">Despesas acima das receitas</p>
+                )}
               </div>
 
               <div className="bg-purple-50 rounded-xl p-4">

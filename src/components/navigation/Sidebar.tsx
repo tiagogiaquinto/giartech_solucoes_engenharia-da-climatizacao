@@ -43,7 +43,8 @@ import {
   Smartphone,
   Box,
   Wind,
-  LayoutGrid
+  LayoutGrid,
+  QrCode
 } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { supabase } from '../../lib/supabase'
@@ -79,6 +80,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores', moduleCode: 'fornecedores' },
   { id: 'compras', path: '/purchasing', icon: ShoppingCart, label: 'Compras', description: 'Pedidos e alertas de estoque', moduleCode: 'compras' },
   { id: 'service-orders', path: '/service-orders', icon: ClipboardList, label: 'Ordens de Serviço', description: 'Gestão de OS', moduleCode: 'service_orders' },
+  { id: 'qr-codes', path: '/qr-codes', icon: QrCode, label: 'QR Codes Care', description: 'Adesivagem de equipamentos e portal Giartech Care', moduleCode: 'service_orders' },
   { id: 'rotas', path: '/rotas', icon: Navigation, label: 'Rotas', description: 'Rastreamento e gestão de rotas', moduleCode: 'rotas' },
   { id: 'financeiro', path: '/financeiro', icon: DollarSign, label: 'Financeiro', description: 'Centro financeiro completo', moduleCode: 'financeiro' },
   { id: 'salarios', path: '/salary-management', icon: DollarSign, label: 'Gestão de Salários', description: 'Controle de pagamentos de salários', moduleCode: 'salarios' },

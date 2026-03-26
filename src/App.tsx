@@ -138,6 +138,7 @@ import WhatsAppCRM from './pages/WhatsAppCRM'
 import StaffManagement from './pages/StaffManagement'
 import CadastroClientesParceiros from './pages/CadastroClientesParceiros'
 import GiartechCare from './pages/care/GiartechCare'
+import QRCodeManager from './pages/QRCodeManager'
 import { NotificationHubProvider } from './contexts/NotificationHubContext'
 import { GiartechNotificationHub } from './components/GiartechNotificationHub'
 import { useThomazInterrupt } from './hooks/useThomazInterrupt'
@@ -898,6 +899,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <GamificationHub />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/qr-codes" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <QRCodeManager />
               </WebLayout>
             </ProtectedRoute>
           } />
