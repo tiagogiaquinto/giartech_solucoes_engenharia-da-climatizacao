@@ -40,6 +40,7 @@ import Calendar from './pages/Calendar'
 import Projects from './pages/Projects'
 import Profile from './pages/Profile'
 import CFODashboard from './pages/CFODashboard'
+import WeeklyReport from './pages/WeeklyReport'
 import ServiceOrdersKanban from './pages/ServiceOrdersKanban'
 import Homepage from './pages/Homepage'
 import Home from './pages/Home'
@@ -806,6 +807,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <CFODashboard />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/weekly-report" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <WeeklyReport />
               </WebLayout>
             </ProtectedRoute>
           } />

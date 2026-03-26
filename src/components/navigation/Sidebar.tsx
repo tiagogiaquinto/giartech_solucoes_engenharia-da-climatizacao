@@ -86,6 +86,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'documentos', path: '/documents', icon: FileText, label: 'Centro de Documentos', description: 'PMOC, contratos, orçamentos, garantias, laudos', moduleCode: 'documentos' },
   { id: 'contract-templates', path: '/contract-templates', icon: FileText, label: 'Templates de Contratos', description: 'Modelos de contratos, cláusulas e termos de garantia', moduleCode: 'documentos' },
   { id: 'relatorios', path: '/relatorios', icon: FileText, label: 'Relatórios', description: 'Dashboards interativos, PDFs e análises', moduleCode: 'relatorios' },
+  { id: 'weekly-report', path: '/weekly-report', icon: BarChart2, label: 'Relatório Semanal', description: 'Resumo automático semanal com insight do Thomaz AI', moduleCode: 'relatorios' },
   { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis', moduleCode: 'catalogo' },
   { id: 'inventory', path: '/inventory', icon: Package, label: 'Estoque', description: 'Controle de materiais', moduleCode: 'estoque' },
   { id: 'equipments', path: '/equipments', icon: Wind, label: 'Equipamentos HVAC', description: 'Climatização, refrigeração — manutenção e garantia', moduleCode: 'estoque' },
