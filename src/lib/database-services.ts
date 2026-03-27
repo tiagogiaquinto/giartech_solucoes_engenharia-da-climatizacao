@@ -604,11 +604,77 @@ export const deleteServiceOrder = async (id: string): Promise<void> => {
 export const getServiceOrderById = async (id: string): Promise<ServiceOrder> => {
   const { data, error } = await supabase
     .from('service_orders')
-    .select('*')
+    .select(`
+      *,
+      service_order_items(
+        id,
+        service_catalog_id,
+        descricao,
+        notes,
+        quantity,
+        quantidade,
+        unit_price,
+        preco_unitario,
+        total_price,
+        preco_total,
+        escopo_detalhado,
+        unit,
+        service_catalog:service_catalog_id(id, name, description, base_price, category)
+      ),
+      service_order_materials(
+        id,
+        material_name,
+        nome_material,
+        quantity,
+        quantidade,
+        unit_price,
+        preco_venda,
+        total_price,
+        valor_total,
+        material_unit,
+        material:material_id(name, unit)
+      ),
+      service_order_team(
+        id,
+        employee_id,
+        role,
+        employee:employee_id(id, name)
+      )
+    `)
     .eq('id', id)
     .single()
   if (error) throw error
-  return data
+  const row = data as any
+  return {
+    ...row,
+    items: (row.service_order_items || []).map((item: any) => ({
+      id: item.id,
+      service_catalog_id: item.service_catalog_id,
+      name: item.service_catalog?.name || item.descricao || item.notes || '',
+      descricao: item.descricao || item.notes || item.service_catalog?.name || '',
+      description: item.descricao || item.notes || item.service_catalog?.description || '',
+      quantity: item.quantity || item.quantidade || 1,
+      unit_price: item.unit_price || item.preco_unitario || 0,
+      total_price: item.total_price || item.preco_total || (item.quantity || 1) * (item.unit_price || item.preco_unitario || 0),
+      escopo_detalhado: item.escopo_detalhado || '',
+      unit: item.unit || 'un',
+    })),
+    materials: (row.service_order_materials || []).map((m: any) => ({
+      id: m.id,
+      name: m.material_name || m.nome_material || m.material?.name || '',
+      quantity: m.quantity || m.quantidade || 0,
+      unit: m.material_unit || m.material?.unit || 'un',
+      unit_cost: m.unit_price || m.preco_venda || 0,
+      total_cost: m.total_price || m.valor_total || 0,
+    })),
+    team: (row.service_order_team || []).map((t: any) => ({
+      id: t.id,
+      employee_id: t.employee_id,
+      nome: t.employee?.name || '',
+      name: t.employee?.name || '',
+      role: t.role || '',
+    })),
+  }
 }
 
 export interface InventoryItem {

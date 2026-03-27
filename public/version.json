@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0",
-  "buildDate": "2026-03-26T00:00:00.000Z",
-  "description": "PDF OS: Garantia 90 dias no rodapé, bloco de pagamento antes das assinaturas, total sincronizado com itens"
+  "version": "2.7.0",
+  "buildDate": "2026-03-27T00:00:00.000Z",
+  "description": "OS unificada: itens carregados do banco, PDF com tabela completa, bloco financeiro, pagamento e garantia 90 dias"
 }

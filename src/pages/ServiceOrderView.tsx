@@ -54,151 +54,29 @@ const ServiceOrderView = () => {
       const orderData = await getServiceOrderById(id!)
 
       if (orderData) {
-        setOrder(orderData)
+        setOrder(orderData as any)
 
-        // Buscar cliente com endereço completo
-        const { data: customerData } = await supabase
-          .from('customers')
-          .select(`
-            *,
-            customer_addresses(
-              logradouro,
-              numero,
-              complemento,
-              bairro,
-              cidade,
-              estado,
-              cep
-            )
-          `)
-          .eq('id', orderData.client_id)
-          .single()
-
-        setCustomer(customerData)
-
-        // Buscar itens da ordem de serviço COM TODOS OS CAMPOS
-        const { data: itemsData } = await supabase
-          .from('service_order_items')
-          .select(`
-            *,
-            service_catalog:service_catalog_id(
-              id,
-              name,
-              description,
-              base_price,
-              category,
-              estimated_duration
-            )
-          `)
-          .eq('service_order_id', id!)
-
-        // Buscar materiais de cada item
-        const { data: materialsData } = await supabase
-          .from('service_order_materials')
-          .select(`
-            *,
-            material:material_id(name, unit)
-          `)
-          .eq('service_order_id', id!)
-
-        // Buscar mão de obra (labor) de cada item
-        const { data: laborData } = await supabase
-          .from('service_order_labor')
-          .select(`
-            *,
-            employee:staff_id(id, name)
-          `)
-          .eq('service_order_id', id!)
-
-        // Buscar equipe da OS
-        const { data: teamData } = await supabase
-          .from('service_order_team')
-          .select(`
-            *,
-            employee:employee_id(id, name)
-          `)
-          .eq('service_order_id', id!)
-
-        // Atualizar order com os itens carregados
-        if (itemsData && itemsData.length > 0) {
-          const enrichedItems = itemsData.map((item: any) => {
-            // Filtrar materiais deste item
-            const itemMaterials = (materialsData || []).filter(
-              (m: any) => m.service_order_item_id === item.id
-            ).map((m: any) => ({
-              nome: m.material_name || m.nome_material || m.material?.name || 'Material',
-              quantidade: m.quantity || m.quantidade || 0,
-              unidade_medida: m.material_unit || m.material?.unit || 'un',
-              preco_unitario: m.unit_price || m.preco_venda || 0,
-              valor_total: m.total_price || m.valor_total || 0
-            }))
-
-            // Filtrar mão de obra deste item
-            const itemLabor = (laborData || []).filter(
-              (l: any) => l.service_order_item_id === item.id
-            ).map((l: any) => ({
-              nome: l.nome_funcionario || l.employee?.name || 'Funcionário',
-              tempo_minutos: l.tempo_minutos || (l.hours ? l.hours * 60 : 0) || 0,
-              custo_hora: l.custo_hora || l.hourly_rate || 0,
-              custo_total: l.custo_total || l.total_cost || 0
-            }))
-
-            return {
-              id: item.id,
-              service_catalog_id: item.service_catalog_id,
-              description: item.descricao || item.notes || item.service_catalog?.description || item.service_catalog?.name || '',
-              name: item.service_catalog?.name || item.descricao || '',
-              descricao: item.descricao || item.notes || item.service_catalog?.name || '',
-              escopo: item.escopo_detalhado || item.escopo || '',
-              escopo_detalhado: item.escopo_detalhado || item.escopo || '',
-              scope: item.escopo_detalhado || item.escopo || '',
-              quantity: item.quantity || item.quantidade || 1,
-              quantidade: item.quantidade || item.quantity || 1,
-              unit_price: item.unit_price || item.preco_unitario || 0,
-              preco_unitario: item.preco_unitario || item.unit_price || 0,
-              total_price: item.total_price || item.preco_total || 0,
-              preco_total: item.preco_total || item.total_price || 0,
-              estimated_duration: item.estimated_duration || item.tempo_estimado_minutos || 0,
-              tempo_estimado_minutos: item.tempo_estimado_minutos || item.estimated_duration || 0,
-              materiais: itemMaterials,
-              funcionarios: itemLabor
-            }
-          })
-
-          setOrder({
-            ...orderData,
-            items: enrichedItems,
-            team: (teamData || []).map((t: any) => ({
-              id: t.id,
-              employee_id: t.employee_id,
-              nome: t.employee?.name || 'Funcionário',
-              role: t.role || '',
-              assigned_at: t.assigned_at
-            }))
-          } as any)
-        }
-
-        const { data: bankData } = await supabase
-          .from('bank_accounts')
-          .select('*')
-          .eq('is_default', true)
-          .maybeSingle()
-
-        if (bankData) {
-          setBankAccounts([bankData])
-        }
-
-        const { data: settingsData } = await supabase
-          .from('company_settings')
-          .select('*')
-          .maybeSingle()
-
-        setCompanySettings(settingsData)
-
-        const [{ data: addrs }, { data: conts }] = await Promise.all([
+        const [
+          { data: customerData },
+          { data: bankData },
+          { data: settingsData },
+          { data: addrs },
+          { data: conts },
+        ] = await Promise.all([
+          supabase
+            .from('customers')
+            .select(`*, customer_addresses(logradouro, numero, complemento, bairro, cidade, estado, cep)`)
+            .eq('id', (orderData as any).client_id)
+            .maybeSingle(),
+          supabase.from('bank_accounts').select('*').eq('is_default', true).maybeSingle(),
+          supabase.from('company_settings').select('*').maybeSingle(),
           supabase.from('service_order_addresses').select('*').eq('service_order_id', id!).order('is_primary', { ascending: false }),
           supabase.from('service_order_contacts').select('*').eq('service_order_id', id!).order('is_primary', { ascending: false }),
         ])
+
+        setCustomer(customerData)
+        if (bankData) setBankAccounts([bankData])
+        setCompanySettings(settingsData)
         setOsAddresses(addrs || [])
         setOsContacts(conts || [])
       }
@@ -321,14 +199,19 @@ const ServiceOrderView = () => {
       customerAddr?.bairro
     ].filter(Boolean).join(', ')
 
-    const mappedItems = (order.items || []).map((item: any) => ({
-      name: item.name || item.descricao || item.description || '—',
-      description: item.escopo_detalhado || item.escopo || item.description || '',
-      quantity: Number(item.quantity || item.quantidade || 1),
-      unit_price: Number(item.unit_price || item.preco_unitario || 0),
-      total: Number(item.total_price || item.preco_total || (item.quantity || 1) * (item.unit_price || item.preco_unitario || 0)),
-      unit: item.unit || 'un',
-    }))
+    const mappedItems = (order.items || []).map((item: any) => {
+      const qty = Number(item.quantity || item.quantidade || 1)
+      const price = Number(item.unit_price || item.preco_unitario || 0)
+      const sub = Number(item.total_price || item.preco_total || qty * price)
+      return {
+        name: item.name || item.descricao || item.description || '—',
+        description: item.escopo_detalhado || item.escopo || item.description || '',
+        quantity: qty,
+        unit_price: price,
+        total: sub,
+        unit: item.unit || 'un',
+      }
+    })
 
     const mappedMaterials = (order.materials || []).map((m: any) => ({
       name: m.name || m.nome || m.material?.name || '—',
@@ -346,10 +229,15 @@ const ServiceOrderView = () => {
     const paymentMethodRaw = order.payment_method || order.forma_pagamento || ''
     const installments = Number(order.payment_installments || 1)
     const paymentConditions = order.payment_conditions || order.condicoes_pagamento ||
-      (installments > 1 ? `${installments}x` : '') ||
-      'Sinal de 50% e restante após a conclusão.'
+      (installments > 1 ? `${installments}x parcelas` : 'À vista')
 
     const pixKey = order.pix_key || order.payment_pix || companySettings?.pix_key || ''
+
+    const itemsSubtotal = mappedItems.reduce((acc: number, item: any) => acc + item.total, 0)
+    const discount = Number(order.discount_amount || order.desconto_valor || 0)
+    const storedTotal = Number(order.total_value || order.final_total || 0)
+    const computedTotal = itemsSubtotal > 0 ? itemsSubtotal - discount : storedTotal
+    const finalTotal = computedTotal > 0 ? computedTotal : storedTotal
 
     return {
       order_number: order.order_number || order.number || 'N/A',
@@ -379,9 +267,9 @@ const ServiceOrderView = () => {
       })),
       labor_value: Number(order.labor_value || order.valor_mao_de_obra || 0) || undefined,
       materials_value: Number(order.materials_value || order.valor_materiais || 0) || undefined,
-      discount: Number(order.discount_amount || order.desconto_valor || 0) || undefined,
-      net_value: Number(order.final_total || order.net_value || 0) || undefined,
-      total_value: Number(order.total_value || order.final_total || 0),
+      discount: discount > 0 ? discount : undefined,
+      net_value: finalTotal > 0 ? finalTotal : undefined,
+      total_value: finalTotal,
       payment_method: paymentMethodRaw,
       payment_installments: installments,
       payment_conditions: paymentConditions,
