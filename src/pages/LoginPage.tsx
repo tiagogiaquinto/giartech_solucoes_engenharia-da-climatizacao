@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Lock, Eye, EyeOff, AlertCircle, Zap } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Zap, ExternalLink } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 
 const getRedirectPath = (role: string): string => {
   switch (role) {
@@ -241,24 +241,14 @@ const LoginPage = () => {
               </form>
 
               <div className="mt-6 pt-5 border-t border-white/8">
-                <p className="text-xs text-gray-600 text-center mb-3">Tipos de acesso disponíveis</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {[
-                    { role: 'Administrador', desc: 'Painel completo',  color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
-                    { role: 'Técnico',       desc: 'App de campo',     color: 'text-green-400 bg-green-500/10 border-green-500/20' },
-                    { role: 'Cliente',       desc: 'Portal /portal',   color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' },
-                    { role: 'Parceiro',      desc: 'Portal /portal',   color: 'text-teal-400 bg-teal-500/10 border-teal-500/20' },
-                  ].map(item => (
-                    <div
-                      key={item.role}
-                      className={`text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 ${item.color}`}
-                    >
-                      <span className="font-semibold">{item.role}</span>
-                      <span className="opacity-60">·</span>
-                      <span className="opacity-70">{item.desc}</span>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-xs text-gray-500 text-center mb-3">Este acesso é exclusivo para a equipe interna.</p>
+                <Link
+                  to="/portal/login"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-sm text-gray-300 hover:text-white transition-all"
+                >
+                  <ExternalLink size={15} />
+                  <span>Cliente ou Parceiro? Acesse o <strong>Portal</strong></span>
+                </Link>
               </div>
             </div>
 

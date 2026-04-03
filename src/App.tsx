@@ -397,6 +397,7 @@ function App() {
   return (
     <AuthProvider>
       <UserProvider>
+        <PortalProvider>
         <NotificationHubProvider>
         <ThomazInterruptActivator />
         <GiartechNotificationHub />
@@ -1202,28 +1203,22 @@ function App() {
           {/* Rota pública Track & Trace — cliente acompanha OS via QR Code sem login */}
           <Route path="/track/:token" element={<OSTrackPage />} />
 
-          <Route path="/portal/login" element={
-            <PortalProvider>
-              <PortalLogin />
-            </PortalProvider>
-          } />
+          <Route path="/portal/login" element={<PortalLogin />} />
 
           <Route path="/portal/*" element={
-            <PortalProvider>
-              <PortalLayout>
-                <Routes>
-                  <Route path="dashboard" element={<PortalDashboardRouter />} />
-                  <Route path="historico" element={<CustomerPortalHistory />} />
-                  <Route path="enderecos" element={<CustomerPortalAddresses />} />
-                  <Route path="inventario" element={<CustomerPortalInventory />} />
-                  <Route path="documentos" element={<CustomerPortalDocuments />} />
-                  <Route path="solicitar" element={<CustomerServiceRequest />} />
-                  <Route path="indicacoes" element={<PartnerPortalDashboard />} />
-                  <Route path="historico-parceiro" element={<PartnerPortalHistory />} />
-                  <Route path="*" element={<PortalDashboardRouter />} />
-                </Routes>
-              </PortalLayout>
-            </PortalProvider>
+            <PortalLayout>
+              <Routes>
+                <Route path="dashboard" element={<PortalDashboardRouter />} />
+                <Route path="historico" element={<CustomerPortalHistory />} />
+                <Route path="enderecos" element={<CustomerPortalAddresses />} />
+                <Route path="inventario" element={<CustomerPortalInventory />} />
+                <Route path="documentos" element={<CustomerPortalDocuments />} />
+                <Route path="solicitar" element={<CustomerServiceRequest />} />
+                <Route path="indicacoes" element={<PartnerPortalDashboard />} />
+                <Route path="historico-parceiro" element={<PartnerPortalHistory />} />
+                <Route path="*" element={<PortalDashboardRouter />} />
+              </Routes>
+            </PortalLayout>
           } />
         </Routes>
 
@@ -1282,6 +1277,7 @@ function App() {
       <OfflineIndicator />
       {isMobile() && <MobileBottomNav />}
       </NotificationHubProvider>
+        </PortalProvider>
       </UserProvider>
     </AuthProvider>
   )

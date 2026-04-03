@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2, Eye, EyeOff, Building2, Users } from 'lucide-react'
 import { usePortal } from '../../contexts/PortalContext'
@@ -9,8 +9,22 @@ export default function PortalLogin() {
   const [showPwd, setShowPwd] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const { login } = usePortal()
+  const { login, isAuthenticated, isLoading } = usePortal()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate('/portal/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, isLoading, navigate])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <Loader2 size={32} className="animate-spin text-blue-400" />
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
