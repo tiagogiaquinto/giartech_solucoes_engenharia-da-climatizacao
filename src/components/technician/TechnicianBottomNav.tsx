@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CalendarDays, History, MessageCircle, User } from 'lucide-react'
+import { CalendarDays, ClipboardList, MessageCircle, User, Map } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
 
 const navItems = [
-  { id: 'agenda', path: '/tecnico', icon: CalendarDays, label: 'Agenda' },
-  { id: 'historico', path: '/tecnico/historico', icon: History, label: 'Histórico' },
-  { id: 'chat', path: '/tecnico/chat', icon: MessageCircle, label: 'Chat' },
-  { id: 'perfil', path: '/tecnico/perfil', icon: User, label: 'Perfil' }
+  { id: 'agenda',  path: '/tecnico',         icon: CalendarDays,  label: 'Agenda'  },
+  { id: 'ordens',  path: '/tecnico/ordens',  icon: ClipboardList, label: 'Ordens'  },
+  { id: 'roteiro', path: '/tecnico/roteiro', icon: Map,           label: 'Roteiro' },
+  { id: 'chat',    path: '/tecnico/chat',    icon: MessageCircle, label: 'Chat'    },
+  { id: 'perfil',  path: '/tecnico/perfil',  icon: User,          label: 'Perfil'  },
 ]
 
 const TechnicianBottomNav = () => {
@@ -129,7 +130,7 @@ const TechnicianBottomNav = () => {
               {active && (
                 <motion.div
                   layoutId="techBottomIndicator"
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-[3px] bg-blue-600 rounded-b-full"
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-[3px] bg-blue-600 rounded-b-full"
                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 />
               )}
