@@ -120,6 +120,8 @@ import PortalDashboardRouter from './pages/portal/PortalDashboardRouter'
 import CustomerPortalDocuments from './pages/portal/CustomerPortalDocuments'
 import CustomerPortalInventory from './pages/portal/CustomerPortalInventory'
 import CustomerServiceRequest from './pages/portal/CustomerServiceRequest'
+import CustomerPortalHistory from './pages/portal/CustomerPortalHistory'
+import CustomerPortalAddresses from './pages/portal/CustomerPortalAddresses'
 import PartnerPortalDashboard from './pages/portal/PartnerPortalDashboard'
 import PartnerPortalHistory from './pages/portal/PartnerPortalHistory'
 import { PortalProvider } from './contexts/PortalContext'
@@ -1211,11 +1213,13 @@ function App() {
               <PortalLayout>
                 <Routes>
                   <Route path="dashboard" element={<PortalDashboardRouter />} />
+                  <Route path="historico" element={<CustomerPortalHistory />} />
+                  <Route path="enderecos" element={<CustomerPortalAddresses />} />
                   <Route path="inventario" element={<CustomerPortalInventory />} />
                   <Route path="documentos" element={<CustomerPortalDocuments />} />
                   <Route path="solicitar" element={<CustomerServiceRequest />} />
                   <Route path="indicacoes" element={<PartnerPortalDashboard />} />
-                  <Route path="historico" element={<PartnerPortalHistory />} />
+                  <Route path="historico-parceiro" element={<PartnerPortalHistory />} />
                   <Route path="*" element={<PortalDashboardRouter />} />
                 </Routes>
               </PortalLayout>
