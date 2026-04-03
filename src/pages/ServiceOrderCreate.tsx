@@ -1008,7 +1008,10 @@ const ServiceOrderCreate = () => {
           conditions: formData.warranty_terms || 'Garantias referentes à sistemas de novo em tubulações antigas.'
         },
         contract_clauses: [],
-        additional_info: formData.notes || 'Trabalhamos para que seus projetos, se tornem realidade.'
+        additional_info: formData.notes || 'Trabalhamos para que seus projetos, se tornem realidade.',
+        track_token: savedOsId
+          ? (await supabase.from('service_orders').select('track_token').eq('id', savedOsId).maybeSingle()).data?.track_token || undefined
+          : undefined
       }
 
       await generateServiceOrderPDFGiartech(giartechData)
@@ -1080,7 +1083,8 @@ const ServiceOrderCreate = () => {
           conditions: 'Garantias referentes à sistemas de novo em tubulações antigas.'
         },
         contract_clauses: [],
-        additional_info: 'Trabalhamos para que seus projetos, se tornem realidade.'
+        additional_info: 'Trabalhamos para que seus projetos, se tornem realidade.',
+        track_token: (orderData as any)?.track_token || undefined
       }
 
       await generateServiceOrderPDFGiartech(giartechData)
@@ -1149,7 +1153,8 @@ const ServiceOrderCreate = () => {
           conditions: 'Garantias referentes à sistemas de novo em tubulações antigas.'
         },
         contract_clauses: [],
-        additional_info: 'Trabalhamos para que seus projetos, se tornem realidade.'
+        additional_info: 'Trabalhamos para que seus projetos, se tornem realidade.',
+        track_token: (orderData as any)?.track_token || undefined
       }
 
       await generateServiceOrderPDFGiartech(giartechData)

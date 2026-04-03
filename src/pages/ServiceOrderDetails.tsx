@@ -8,6 +8,7 @@ import { OSFiscalHealth } from '../components/OSFiscalHealth'
 import { OSPaymentFlow } from '../components/OSPaymentFlow'
 import { OSChatPanel } from '../components/OSChatPanel'
 import { generateVisitReportPDF } from '../utils/generateVisitReportPDF'
+import { OSTrackQRCodePanel } from '../components/OSTrackQRCode'
 
 const ServiceOrderDetails = () => {
   const { id } = useParams()
@@ -519,6 +520,10 @@ const OverviewTab = ({ order, customer, osAddresses, osContacts }: any) => (
         <h3 className="text-lg font-semibold mb-2">Observações</h3>
         <p className="text-gray-700 whitespace-pre-wrap">{order.notes}</p>
       </div>
+    )}
+
+    {order.track_token && (
+      <OSTrackQRCodePanel trackToken={order.track_token} orderNumber={order.order_number} />
     )}
   </div>
 )

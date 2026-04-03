@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { GIARTECH_BRAND } from '../config/brandingConfig'
+import QRCode from 'qrcode'
 
 const B = GIARTECH_BRAND
 const MARGIN = B.margins.left
@@ -65,6 +66,7 @@ interface ServiceOrderData {
   signature_data?: string
   installation_addresses?: any[]
   installation_contacts?: any[]
+  track_token?: string
   [key: string]: any
 }
 
@@ -204,18 +206,37 @@ const drawStatusBadge = (doc: jsPDF, status: string, x: number, y: number) => {
 
 const WARRANTY_90_DAYS = `GARANTIA TÉCNICA DE 90 DIAS: Os serviços executados possuem garantia de 90 (noventa) dias contra defeitos de mão de obra, conforme o Código de Defesa do Consumidor (CDC — Lei 8.078/90). A garantia cobre exclusivamente os serviços realizados pela Giartech Soluções, não se estendendo a peças/equipamentos de terceiros, danos causados por mau uso, quedas de energia, falta de manutenção preventiva ou intervenções realizadas por terceiros após a conclusão dos serviços. Equipamentos novos possuem garantia de fábrica (5 a 10 anos), válida somente com manutenção semestral comprovada por laudo técnico.`
 
-const drawPageFooter = (doc: jsPDF, pageNum: number, totalPages: number) => {
+const drawPageFooter = (doc: jsPDF, pageNum: number, totalPages: number, qrDataUrl?: string) => {
   const pageH = doc.internal.pageSize.height
+  const footerH = qrDataUrl && pageNum === 1 ? 30 : 18
+
   doc.setFillColor(245, 247, 250)
-  doc.rect(0, pageH - 18, PAGE_WIDTH, 18, 'F')
+  doc.rect(0, pageH - footerH, PAGE_WIDTH, footerH, 'F')
   doc.setFillColor(...(B.colors.primary as [number, number, number]))
-  doc.rect(0, pageH - 18, PAGE_WIDTH, 0.5, 'F')
+  doc.rect(0, pageH - footerH, PAGE_WIDTH, 0.5, 'F')
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7)
   doc.setTextColor(...(B.colors.textMuted as [number, number, number]))
   doc.text(`Giartech Soluções — Documento gerado em ${fmtDateTime()}`, MARGIN, pageH - 5)
   doc.text(`Página ${pageNum} de ${totalPages}`, PAGE_WIDTH - MARGIN, pageH - 5, { align: 'right' })
+
+  if (qrDataUrl && pageNum === 1) {
+    const qrSize = 22
+    const qrX = PAGE_WIDTH - MARGIN - qrSize
+    const qrY = pageH - footerH + 3
+    try {
+      doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize)
+    } catch { /* ignore */ }
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(6.5)
+    doc.setTextColor(...(B.colors.primary as [number, number, number]))
+    doc.text('Acompanhe sua OS', qrX + qrSize / 2, qrY - 1.5, { align: 'center' })
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(6)
+    doc.setTextColor(...(B.colors.textMuted as [number, number, number]))
+    doc.text('Escaneie o QR Code', qrX + qrSize / 2, pageH - 5, { align: 'center' })
+  }
 }
 
 const checkPageBreak = (doc: jsPDF, y: number, orderNum: string, needed = 50): number => {
@@ -640,11 +661,24 @@ export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): P
     } catch { /* ignore invalid signature image */ }
   }
 
+  let qrDataUrl: string | undefined
+  if (data.track_token) {
+    try {
+      const trackUrl = `${window.location.origin}/track/${data.track_token}`
+      qrDataUrl = await QRCode.toDataURL(trackUrl, {
+        width: 128,
+        margin: 1,
+        color: { dark: '#0F567D', light: '#F5F7FA' },
+        errorCorrectionLevel: 'M'
+      })
+    } catch { /* ignore */ }
+  }
+
   const total = doc.getNumberOfPages()
   for (let i = 1; i <= total; i++) {
     doc.setPage(i)
     drawPageHeader(doc, orderNum, i, total)
-    drawPageFooter(doc, i, total)
+    drawPageFooter(doc, i, total, qrDataUrl)
   }
 
   const safeName = (data.customer_name || 'cliente').replace(/[^a-zA-Z0-9]/g, '_')
