@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import {
   ClipboardList, CheckCircle2, Clock, AlertCircle, Calendar,
   FileSignature, RefreshCw, FileText, ChevronRight, TrendingUp,
-  Shield, ShieldAlert, ShieldOff, History, MapPin
+  Shield, ShieldAlert, ShieldOff, History, MapPin, Receipt
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
@@ -177,7 +177,7 @@ export default function CustomerPortalDashboard() {
         })}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <button
           onClick={() => navigate('/portal/historico')}
           className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all text-left group"
@@ -185,11 +185,11 @@ export default function CustomerPortalDashboard() {
           <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
             <History size={18} className="text-blue-600" />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-800">Histórico de Serviços</p>
-            <p className="text-xs text-gray-400">Manutenções e garantias</p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-800">Histórico</p>
+            <p className="text-xs text-gray-400">Serviços e garantias</p>
           </div>
-          <ChevronRight size={16} className="text-gray-300 ml-auto group-hover:text-blue-500 transition-colors" />
+          <ChevronRight size={16} className="text-gray-300 ml-auto group-hover:text-blue-500 transition-colors shrink-0" />
         </button>
         <button
           onClick={() => navigate('/portal/enderecos')}
@@ -198,11 +198,26 @@ export default function CustomerPortalDashboard() {
           <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
             <MapPin size={18} className="text-green-600" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-800">Endereços</p>
             <p className="text-xs text-gray-400">Locais de atendimento</p>
           </div>
-          <ChevronRight size={16} className="text-gray-300 ml-auto group-hover:text-green-500 transition-colors" />
+          <ChevronRight size={16} className="text-gray-300 ml-auto group-hover:text-green-500 transition-colors shrink-0" />
+        </button>
+        <button
+          onClick={() => navigate('/portal/orcamentos')}
+          className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-orange-200 transition-all text-left group col-span-2 sm:col-span-1"
+        >
+          <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
+            <Receipt size={18} className="text-orange-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-800">Orçamentos</p>
+            <p className="text-xs text-gray-400">
+              {budgetStats.pendentes > 0 ? `${budgetStats.pendentes} pendente${budgetStats.pendentes > 1 ? 's' : ''}` : 'Ver orçamentos'}
+            </p>
+          </div>
+          <ChevronRight size={16} className="text-gray-300 ml-auto group-hover:text-orange-500 transition-colors shrink-0" />
         </button>
       </div>
 
@@ -357,7 +372,7 @@ export default function CustomerPortalDashboard() {
                 {budgets.map(budget => {
                   const statusInfo = BUDGET_STATUS_MAP[budget.status] || { label: budget.status, color: 'bg-gray-100 text-gray-600' }
                   return (
-                    <div key={budget.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <button key={budget.id} onClick={() => navigate('/portal/orcamentos')} className="w-full px-6 py-4 hover:bg-gray-50 transition-colors text-left">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -391,7 +406,7 @@ export default function CustomerPortalDashboard() {
                           )}
                         </div>
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
               </div>

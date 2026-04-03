@@ -23,6 +23,7 @@ const SOUNDS = {
 function playSound(type: 'chat' | 'critical' | 'default') {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    if (ctx.state === 'suspended') return
     const notes = SOUNDS[type]
     notes.forEach(([freq, gain, when]) => {
       const osc = ctx.createOscillator()
@@ -177,7 +178,14 @@ export function GiartechNotificationHub() {
   const handleNavigate = useCallback((alert: HubAlert) => {
     markRead(alert.id)
     dismissAlert(alert.id)
-    if (alert.link) navigate(alert.link)
+    if (alert.link) {
+      try {
+        const url = new URL(alert.link)
+        navigate(url.pathname + url.search + url.hash)
+      } catch {
+        navigate(alert.link)
+      }
+    }
   }, [markRead, dismissAlert, navigate])
 
   useEffect(() => {

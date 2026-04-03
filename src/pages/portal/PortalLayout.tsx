@@ -3,7 +3,7 @@ import { NavLink, useNavigate, Navigate } from 'react-router-dom'
 import {
   LayoutDashboard, FileText, MessageSquarePlus, Building2,
   Users, LogOut, ChevronRight, BarChart2, History, Package,
-  Clock, MapPin
+  Clock, MapPin, Receipt
 } from 'lucide-react'
 import { usePortal } from '../../contexts/PortalContext'
 import { Loader2 } from 'lucide-react'
@@ -37,6 +37,7 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
     { to: '/portal/inventario', icon: Package, label: 'Inventário' },
     { to: '/portal/documentos', icon: FileText, label: 'Documentos' },
     { to: '/portal/solicitar', icon: MessageSquarePlus, label: 'Solicitar Serviço' },
+    { to: '/portal/orcamentos', icon: Receipt, label: 'Orçamentos' },
   ]
 
   const parceiroLinks = [

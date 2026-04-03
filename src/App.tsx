@@ -123,6 +123,7 @@ import CustomerPortalInventory from './pages/portal/CustomerPortalInventory'
 import CustomerServiceRequest from './pages/portal/CustomerServiceRequest'
 import CustomerPortalHistory from './pages/portal/CustomerPortalHistory'
 import CustomerPortalAddresses from './pages/portal/CustomerPortalAddresses'
+import CustomerPortalBudgets from './pages/portal/CustomerPortalBudgets'
 import PartnerPortalDashboard from './pages/portal/PartnerPortalDashboard'
 import PartnerPortalHistory from './pages/portal/PartnerPortalHistory'
 import { PortalProvider } from './contexts/PortalContext'
@@ -1223,6 +1224,7 @@ function App() {
                 <Route path="inventario" element={<CustomerPortalInventory />} />
                 <Route path="documentos" element={<CustomerPortalDocuments />} />
                 <Route path="solicitar" element={<CustomerServiceRequest />} />
+                <Route path="orcamentos" element={<CustomerPortalBudgets />} />
                 <Route path="indicacoes" element={<PartnerPortalDashboard />} />
                 <Route path="historico-parceiro" element={<PartnerPortalHistory />} />
                 <Route path="*" element={<PortalDashboardRouter />} />
