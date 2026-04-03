@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, AlertCircle, Eye, MapPin, Phone, Mail, Briefcase, Star } from 'lucide-react'
+import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, AlertCircle, Eye, MapPin, Phone, Mail, Briefcase, Star, FileDown as DocIcon } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { mapServiceItems } from '../utils/serviceOrderDataMapper'
@@ -19,6 +19,7 @@ import { ServiceInfoEditModal } from '../components/ServiceInfoEditModal'
 import { ServiceOrderDocuments } from '../components/ServiceOrderDocuments'
 import { GamificationToggle } from '../components/ServiceOrder/GamificationToggle'
 import { formatDateSafe } from '../utils/format'
+import DocumentGeneratorModal from '../components/DocumentGeneratorModal'
 
 const ServiceOrderView = () => {
   const { id } = useParams()
@@ -41,6 +42,7 @@ const ServiceOrderView = () => {
   const [selectedServiceItem, setSelectedServiceItem] = useState<any>(null)
   const [osAddresses, setOsAddresses] = useState<any[]>([])
   const [osContacts, setOsContacts] = useState<any[]>([])
+  const [showDocGenModal, setShowDocGenModal] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -352,6 +354,13 @@ const ServiceOrderView = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowDocGenModal(true)}
+            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-lg hover:from-emerald-700 hover:to-emerald-800 flex items-center gap-2 shadow-lg font-semibold"
+          >
+            <FileText className="h-4 w-4" />
+            Gerar Documento
+          </button>
           <button
             onClick={() => setShowGiartechModal(true)}
             className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center gap-2 shadow-lg"
@@ -1008,6 +1017,13 @@ const ServiceOrderView = () => {
           setShowServiceInfoModal(false)
           setSelectedServiceItem(null)
         }}
+      />
+
+      <DocumentGeneratorModal
+        isOpen={showDocGenModal}
+        onClose={() => setShowDocGenModal(false)}
+        order={order}
+        customer={customer}
       />
     </div>
   )
