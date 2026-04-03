@@ -66,7 +66,7 @@ const ServiceOrderView = () => {
           supabase
             .from('customers')
             .select(`*, customer_addresses(logradouro, numero, complemento, bairro, cidade, estado, cep)`)
-            .eq('id', (orderData as any).client_id)
+            .eq('id', (orderData as any).customer_id || (orderData as any).client_id)
             .maybeSingle(),
           supabase.from('bank_accounts').select('*').eq('is_default', true).maybeSingle(),
           supabase.from('company_settings').select('*').maybeSingle(),

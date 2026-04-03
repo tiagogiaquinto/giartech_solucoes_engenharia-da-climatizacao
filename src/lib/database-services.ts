@@ -647,6 +647,7 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder> => 
   const row = data as any
   return {
     ...row,
+    client_id: row.customer_id,
     items: (row.service_order_items || []).map((item: any) => ({
       id: item.id,
       service_catalog_id: item.service_catalog_id,
@@ -654,15 +655,20 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder> => 
       descricao: item.descricao || item.notes || item.service_catalog?.name || '',
       description: item.descricao || item.notes || item.service_catalog?.description || '',
       quantity: item.quantity || item.quantidade || 1,
+      quantidade: item.quantity || item.quantidade || 1,
       unit_price: item.unit_price || item.preco_unitario || 0,
-      total_price: item.total_price || item.preco_total || (item.quantity || 1) * (item.unit_price || item.preco_unitario || 0),
+      preco_unitario: item.unit_price || item.preco_unitario || 0,
+      total_price: item.total_price || item.preco_total || (item.quantity || item.quantidade || 1) * (item.unit_price || item.preco_unitario || 0),
+      preco_total: item.total_price || item.preco_total || (item.quantity || item.quantidade || 1) * (item.unit_price || item.preco_unitario || 0),
       escopo_detalhado: item.escopo_detalhado || '',
       unit: item.unit || 'un',
     })),
     materials: (row.service_order_materials || []).map((m: any) => ({
       id: m.id,
       name: m.material_name || m.nome_material || m.material?.name || '',
+      nome: m.material_name || m.nome_material || m.material?.name || '',
       quantity: m.quantity || m.quantidade || 0,
+      quantidade: m.quantity || m.quantidade || 0,
       unit: m.material_unit || m.material?.unit || 'un',
       unit_cost: m.unit_price || m.preco_venda || 0,
       total_cost: m.total_price || m.valor_total || 0,
@@ -673,6 +679,7 @@ export const getServiceOrderById = async (id: string): Promise<ServiceOrder> => 
       nome: t.employee?.name || '',
       name: t.employee?.name || '',
       role: t.role || '',
+      cargo: t.role || '',
     })),
   }
 }
