@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, AlertCircle, Eye, MapPin, Phone, Mail, Briefcase, Star, FileDown as DocIcon, Printer } from 'lucide-react'
+import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, AlertCircle, Eye, MapPin, Phone, Mail, Briefcase, Star, FileDown as DocIcon, Printer, CheckCircle2, Clock, ClipboardCheck, History, FolderOpen, ChevronDown } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { mapServiceItems } from '../utils/serviceOrderDataMapper'
 import { usePrintDocument } from '../hooks/usePrintDocument'
-import PrintDocumentButton from '../components/PrintDocumentButton'
 import OSPrintPreviewModal from '../components/OSPrintPreviewModal'
 import ContractViewModal from '../components/ContractViewModal'
 import ProposalViewModal from '../components/ProposalViewModal'
@@ -340,112 +339,166 @@ const ServiceOrderView = () => {
     )
   }
 
+  const statusConfig: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+    pending:     { label: 'Pendente',     color: 'text-amber-700',  bg: 'from-amber-50 to-orange-50 border-amber-200',  icon: <Clock className="h-4 w-4" /> },
+    open:        { label: 'Aberta',       color: 'text-blue-700',   bg: 'from-blue-50 to-sky-50 border-blue-200',        icon: <ClipboardCheck className="h-4 w-4" /> },
+    in_progress: { label: 'Em Andamento', color: 'text-blue-700',   bg: 'from-blue-50 to-sky-50 border-blue-200',        icon: <ClipboardCheck className="h-4 w-4" /> },
+    completed:   { label: 'Concluída',    color: 'text-emerald-700',bg: 'from-emerald-50 to-green-50 border-emerald-200',icon: <CheckCircle2 className="h-4 w-4" /> },
+    cancelled:   { label: 'Cancelada',    color: 'text-red-700',    bg: 'from-red-50 to-rose-50 border-red-200',          icon: <AlertCircle className="h-4 w-4" /> },
+    pausado:     { label: 'Pausada',      color: 'text-orange-700', bg: 'from-orange-50 to-yellow-50 border-orange-200',  icon: <Clock className="h-4 w-4" /> },
+    cotacao:     { label: 'Cotação',      color: 'text-sky-700',    bg: 'from-sky-50 to-cyan-50 border-sky-200',          icon: <FileText className="h-4 w-4" /> },
+  }
+  const st = statusConfig[order.status] || { label: order.status, color: 'text-gray-700', bg: 'from-gray-50 to-gray-100 border-gray-200', icon: <Clock className="h-4 w-4" /> }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/service-orders')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="h-6 w-6" />
-          </button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Visualizar Ordem de Serviço</h1>
-            <p className="text-gray-600 mt-1">OS #{order.order_number}</p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+      {/* ── COMMAND BAR ────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`mb-6 rounded-2xl border bg-gradient-to-r ${st.bg} shadow-sm overflow-hidden`}
+      >
+        {/* Top row: back + title + status */}
+        <div className="flex items-center justify-between px-5 py-4 gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => navigate('/service-orders')}
+              className="p-2 hover:bg-white/70 rounded-xl transition-colors shrink-0"
+              title="Voltar"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-gray-900 leading-tight">OS #{order.order_number}</h1>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${st.color} bg-white/80`}>
+                  {st.icon}
+                  {st.label}
+                </span>
+              </div>
+              <p className="text-sm text-gray-500 truncate mt-0.5">
+                {customer?.nome_razao || customer?.name || order.client_name || 'Cliente não informado'}
+                {order.service_type && <span className="mx-1.5 text-gray-300">·</span>}
+                {order.service_type && <span>{order.service_type}</span>}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
+
+          {/* Primary action: Imprimir OS */}
           <button
             onClick={() => setShowPrintModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-lg hover:from-gray-800 hover:to-black flex items-center gap-2 shadow-lg font-semibold"
+            className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-700 transition-colors shadow-md text-sm"
           >
             <Printer className="h-4 w-4" />
             Imprimir OS
           </button>
-          <button
-            onClick={() => setShowDocGenModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-lg hover:from-emerald-700 hover:to-emerald-800 flex items-center gap-2 shadow-lg font-semibold"
-          >
-            <FileText className="h-4 w-4" />
-            Gerar Documento
-          </button>
-          <button
-            onClick={() => setShowGiartechModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center gap-2 shadow-lg"
-          >
-            <Eye className="h-4 w-4" />
-            Ver Orçamento
-          </button>
-          <PrintDocumentButton
-            documentType="ordem_servico"
-            generatePDF={handleGeneratePDFNew}
-            printOptions={{
-              documentNumber: order?.order_number,
-              clientName: customer?.nome_razao || customer?.name
-            }}
-            label="Imprimir OS Completa"
-            variant="primary"
-            size="md"
-          />
-          <button
-            onClick={() => setShowProposalModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg hover:from-teal-700 hover:to-teal-800 flex items-center gap-2 shadow-lg"
-          >
-            <Eye className="h-4 w-4" />
-            Ver Proposta
-          </button>
-          <button
-            onClick={() => setShowContractModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 flex items-center gap-2 shadow-lg"
-          >
-            <FileText className="h-4 w-4" />
-            Ver Contrato
-          </button>
-          <button
-            onClick={() => navigate(`/service-orders?edit=${id}`)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <Edit className="h-4 w-4" />
-            Editar
-          </button>
-          <button
-            onClick={() => setShowTimelineModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 flex items-center gap-2 shadow-lg"
-          >
-            <Calendar className="h-4 w-4" />
-            Timeline
-          </button>
-          <button
-            onClick={() => setShowChecklistModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-lg hover:from-amber-700 hover:to-amber-800 flex items-center gap-2 shadow-lg"
-          >
-            <FileText className="h-4 w-4" />
-            Checklist
-          </button>
-          <button
-            onClick={() => setShowAuditModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 flex items-center gap-2 shadow-lg"
-          >
-            <AlertCircle className="h-4 w-4" />
-            Auditoria
-          </button>
-          <button
-            onClick={() => setShowDocumentsModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 flex items-center gap-2 shadow-lg"
-          >
-            <FileText className="h-4 w-4" />
-            Documentos
-          </button>
+        </div>
+
+        {/* Bottom row: action groups */}
+        <div className="flex items-center gap-2 px-5 pb-4 flex-wrap">
+
+          {/* Group: Edição */}
+          <div className="flex items-center gap-1.5 bg-white/80 rounded-xl p-1 shadow-sm border border-white/60">
+            <button
+              onClick={() => navigate(`/service-orders?edit=${id}`)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Editar OS"
+            >
+              <Edit className="h-3.5 w-3.5" />
+              Editar
+            </button>
+            <div className="w-px h-4 bg-gray-200" />
+            <button
+              onClick={() => setShowChecklistModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
+              title="Checklist"
+            >
+              <ClipboardCheck className="h-3.5 w-3.5" />
+              Checklist
+            </button>
+          </div>
+
+          {/* Group: Documentos */}
+          <div className="flex items-center gap-1.5 bg-white/80 rounded-xl p-1 shadow-sm border border-white/60">
+            <button
+              onClick={() => setShowDocGenModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+              title="Gerar Documento"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Documento
+            </button>
+            <div className="w-px h-4 bg-gray-200" />
+            <button
+              onClick={() => setShowDocumentsModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Arquivos anexados"
+            >
+              <FolderOpen className="h-3.5 w-3.5" />
+              Arquivos
+            </button>
+            <div className="w-px h-4 bg-gray-200" />
+            <button
+              onClick={() => setShowGiartechModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-50 rounded-lg transition-colors"
+              title="Orçamento"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Orçamento
+            </button>
+            <div className="w-px h-4 bg-gray-200" />
+            <button
+              onClick={() => setShowProposalModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-teal-700 hover:bg-teal-50 rounded-lg transition-colors"
+              title="Proposta"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Proposta
+            </button>
+            <div className="w-px h-4 bg-gray-200" />
+            <button
+              onClick={() => setShowContractModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Contrato"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Contrato
+            </button>
+          </div>
+
+          {/* Group: Histórico */}
+          <div className="flex items-center gap-1.5 bg-white/80 rounded-xl p-1 shadow-sm border border-white/60">
+            <button
+              onClick={() => setShowTimelineModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Timeline"
+            >
+              <History className="h-3.5 w-3.5" />
+              Timeline
+            </button>
+            <div className="w-px h-4 bg-gray-200" />
+            <button
+              onClick={() => setShowAuditModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Auditoria"
+            >
+              <AlertCircle className="h-3.5 w-3.5" />
+              Auditoria
+            </button>
+          </div>
+
+          {/* Danger: Excluir */}
           <button
             onClick={handleDeleteClick}
-            className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 flex items-center gap-2 shadow-lg"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-red-200 bg-white/80"
+            title="Excluir OS"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3.5 w-3.5" />
             Excluir
           </button>
         </div>
-      </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
