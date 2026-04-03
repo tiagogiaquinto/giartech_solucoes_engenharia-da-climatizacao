@@ -98,8 +98,8 @@ export function ThomazOrchestrator({ onOpenTaskBoard }: ThomazOrchestratorProps)
       const { data: events } = await supabase
         .from('agenda_events')
         .select('id')
-        .gte('scheduled_date', dateStr)
-        .lte('scheduled_date', dateStr)
+        .gte('start_date', dateStr)
+        .lte('start_date', dateStr)
         .limit(5)
 
       if (!events || events.length < 2) {
