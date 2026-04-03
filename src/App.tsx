@@ -433,6 +433,13 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
+          <Route path="/service-orders-kanban" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <ServiceOrdersKanban />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
           
           <Route path="/departmental-dashboard" element={
             <ProtectedRoute>

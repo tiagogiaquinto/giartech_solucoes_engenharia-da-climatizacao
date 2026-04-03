@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { X, Save, Loader2, FileText, GitBranch } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { CustomerSelector } from './ServiceOrder/CustomerSelector'
@@ -87,6 +87,7 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
 
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [totals, setTotals] = useState(EMPTY_TOTALS)
+  const loadingRef = useRef(false)
 
   const resetState = useCallback(() => {
     setSelectedCustomer(null)
@@ -101,9 +102,16 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
   }, [])
 
   useEffect(() => {
-    if (isOpen) {
-      resetState()
-      loadInitialData()
+    if (!isOpen) {
+      loadingRef.current = false
+      return
+    }
+    if (loadingRef.current) return
+    loadingRef.current = true
+    resetState()
+    loadInitialData()
+    return () => {
+      loadingRef.current = false
     }
   }, [isOpen, serviceOrderId])
 
@@ -178,9 +186,28 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
       if (error) throw error
       if (!order) return
 
-      const customerData = order.customer || (order.customer_id
-        ? { id: order.customer_id, nome_razao: order.client_name || '', telefone: order.client_phone || '', email: order.client_email || '' }
-        : null)
+      let customerData = order.customer || null
+      if (!customerData && order.customer_id) {
+        const { data: cust } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('id', order.customer_id)
+          .maybeSingle()
+        customerData = cust || {
+          id: order.customer_id,
+          nome_razao: order.client_name || '',
+          telefone: order.client_phone || '',
+          email: order.client_email || ''
+        }
+      }
+      if (!customerData && order.client_name) {
+        customerData = {
+          id: order.customer_id || '',
+          nome_razao: order.client_name || '',
+          telefone: order.client_phone || '',
+          email: order.client_email || ''
+        }
+      }
       setSelectedCustomer(customerData)
       setFormData({
         description: order.description || '',
