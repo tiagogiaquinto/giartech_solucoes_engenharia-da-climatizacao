@@ -11,6 +11,7 @@ import { OSFinancialWaterfall } from '../components/OSFinancialWaterfall'
 import { generateVisitReportPDF } from '../utils/generateVisitReportPDF'
 import { OSTrackQRCodePanel } from '../components/OSTrackQRCode'
 import OSPrintPreviewModal from '../components/OSPrintPreviewModal'
+import OSMilestonesPanel from '../components/OSMilestonesPanel'
 
 const ServiceOrderDetails = () => {
   const { id } = useParams()
@@ -278,6 +279,7 @@ const ServiceOrderDetails = () => {
 
   const tabs = [
     { id: 'overview', label: 'Visão Geral', icon: FileText },
+    { id: 'cronograma', label: 'Cronograma', icon: Clock },
     { id: 'items', label: 'Serviços', icon: Package, badge: items.length },
     { id: 'materials', label: 'Materiais', icon: Package, badge: materials.length },
     { id: 'team', label: 'Equipe', icon: Users, badge: team.length },
@@ -437,6 +439,18 @@ const ServiceOrderDetails = () => {
 
             {activeTab === 'documents' && (
               <DocumentsTab documents={documents} orderId={id!} onUpdate={loadOrderData} />
+            )}
+
+            {activeTab === 'cronograma' && (
+              <div className="bg-white rounded-xl border border-gray-100 p-5">
+                <div className="mb-5">
+                  <h3 className="text-lg font-bold text-gray-900">Cronograma de Etapas</h3>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Adicione, reprograme ou conclua etapas independentemente. A data real de execução é registrada separadamente da data prevista.
+                  </p>
+                </div>
+                <OSMilestonesPanel serviceOrderId={id!} />
+              </div>
             )}
 
             {activeTab === 'timeline' && (

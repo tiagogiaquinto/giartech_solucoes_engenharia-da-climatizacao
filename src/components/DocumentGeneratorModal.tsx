@@ -163,6 +163,14 @@ export default function DocumentGeneratorModal({
       warranty_days: order.warranty_period || company.default_warranty_days || 90,
       warranty_terms: order.warranty_terms || '',
       signature: { technician_name: order.technician_name || '' },
+      milestones: (order.milestones || []).map((m: any) => ({
+        title: m.title || m.etapa_nome || '',
+        scheduled_at: m.scheduled_at || m.data_agendada || null,
+        actual_at: m.actual_at || m.data_conclusao || null,
+        status: m.status || 'agendado',
+        completed_by: m.completed_by || null,
+        notes: m.notes || m.observacoes || null,
+      })),
     }
   }, [order, customer])
 

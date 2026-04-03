@@ -158,6 +158,12 @@ export async function generateOSPDF(data: OSDocumentData): Promise<Blob> {
     y = (doc as any).lastAutoTable.finalY + 3
   }
 
+  if (data.milestones && data.milestones.length > 0) {
+    y = checkBreak(doc, y, 40, company, 'Ordem de Serviço', docNum)
+    y = drawSectionBar(doc, company, 'Cronograma de Etapas', y)
+    y = drawMilestonesTable(doc, company, data.milestones, y, docNum)
+  }
+
   y = checkBreak(doc, y, 45, company, 'Ordem de Serviço', docNum)
   y = drawSectionBar(doc, company, 'Resumo Financeiro', y)
   y = drawFinancialBlock(doc, company, data.financial, y)
@@ -359,6 +365,117 @@ function drawSignatureBlock(doc: jsPDF, company: any, sig: Partial<OSDocumentDat
   }
 
   return y + signH + 4
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  agendado:     'Agendado',
+  em_andamento: 'Em Andamento',
+  concluido:    'Concluído',
+  atrasado:     'Atrasado',
+  pendente:     'Pendente',
+  cancelado:    'Cancelado',
+}
+
+const STATUS_COLORS: Record<string, [number, number, number]> = {
+  agendado:     [59, 130, 246],
+  em_andamento: [245, 158, 11],
+  concluido:    [34, 197, 94],
+  atrasado:     [239, 68, 68],
+  pendente:     [156, 163, 175],
+  cancelado:    [107, 114, 128],
+}
+
+function fmtDateShort(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  try {
+    const d = new Date(iso)
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  } catch { return '—' }
+}
+
+function drawMilestonesTable(
+  doc: jsPDF,
+  company: any,
+  milestones: NonNullable<OSDocumentData['milestones']>,
+  y: number,
+  docNum: string
+): number {
+  const [pr, pg, pb] = primaryRgb(company)
+
+  autoTable(doc, {
+    startY: y,
+    head: [['#', 'Etapa / Atividade', 'Data Prevista', 'Data de Execução', 'Status']],
+    body: milestones.map((m, i) => [
+      String(i + 1),
+      [m.title, m.notes ? `(${m.notes})` : ''].filter(Boolean).join('\n'),
+      fmtDateShort(m.scheduled_at),
+      fmtDateShort(m.actual_at),
+      STATUS_LABELS[m.status] || m.status,
+    ]),
+    theme: 'grid',
+    headStyles: {
+      fillColor: [pr, pg, pb] as [number, number, number],
+      textColor: [255, 255, 255],
+      fontSize: 7.5,
+      fontStyle: 'bold',
+      halign: 'center',
+    },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [248, 250, 252] as [number, number, number] },
+    columnStyles: {
+      0: { cellWidth: 8, halign: 'center' },
+      1: { cellWidth: 'auto' },
+      2: { cellWidth: 32, halign: 'center' },
+      3: { cellWidth: 32, halign: 'center' },
+      4: { cellWidth: 28, halign: 'center' },
+    },
+    didDrawCell: (hookData: any) => {
+      if (hookData.column.index === 4 && hookData.section === 'body') {
+        const statusKey = milestones[hookData.row.index]?.status || 'agendado'
+        const color = STATUS_COLORS[statusKey] || STATUS_COLORS.agendado
+        const cell = hookData.cell
+        const pad = 1.5
+        doc.setFillColor(color[0], color[1], color[2])
+        doc.setDrawColor(color[0], color[1], color[2])
+        const bw = cell.width - pad * 4
+        const bh = 5
+        const bx = cell.x + pad * 2
+        const by = cell.y + (cell.height - bh) / 2
+        doc.roundedRect(bx, by, bw, bh, 1, 1, 'F')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(6.5)
+        doc.setTextColor(255, 255, 255)
+        doc.text(STATUS_LABELS[statusKey] || statusKey, bx + bw / 2, by + 3.5, { align: 'center' })
+      }
+    },
+    margin: { left: MARGIN, right: MARGIN },
+  })
+
+  y = (doc as any).lastAutoTable.finalY + 3
+
+  const completedCount = milestones.filter(m => m.status === 'concluido').length
+  const pct = milestones.length > 0 ? Math.round((completedCount / milestones.length) * 100) : 0
+  const barW = CONTENT_W
+  const barH = 5
+  const filled = (barW * pct) / 100
+
+  doc.setFillColor(229, 231, 235)
+  doc.roundedRect(MARGIN, y, barW, barH, 1, 1, 'F')
+  if (filled > 0) {
+    doc.setFillColor(34, 197, 94)
+    doc.roundedRect(MARGIN, y, filled, barH, 1, 1, 'F')
+  }
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  doc.setTextColor(100, 100, 100)
+  doc.text(
+    `${completedCount}/${milestones.length} etapas concluídas — ${pct}% de progresso`,
+    MARGIN + barW / 2,
+    y + 9,
+    { align: 'center' }
+  )
+
+  return y + 14
 }
 
 function updatePageFooters(doc: jsPDF, company: any) {

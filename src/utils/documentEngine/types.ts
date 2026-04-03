@@ -84,6 +84,14 @@ export interface OSDocumentData {
   warranty_terms?: string
   team?: Array<{ name: string; role: string }>
   materials?: Array<{ name: string; quantity: number; unit?: string; unit_cost?: number; total_cost?: number }>
+  milestones?: Array<{
+    title: string
+    scheduled_at?: string | null
+    actual_at?: string | null
+    status: string
+    completed_by?: string | null
+    notes?: string | null
+  }>
 }
 
 export interface BudgetDocumentData {
