@@ -10,6 +10,12 @@ import { OSPipelineStepper, PipelineStage } from './ServiceOrder/OSPipelineStepp
 import { StockCheckPanel } from './ServiceOrder/StockCheckPanel'
 import { MaterialItem } from './ServiceOrder/InlineMaterialSearch'
 
+interface ExtraCost {
+  id: string
+  descricao: string
+  valor: number
+}
+
 interface ServiceItem {
   id: string
   service_catalog_id?: string
@@ -21,6 +27,7 @@ interface ServiceItem {
   tempo_estimado_minutos: number
   materiais: MaterialItem[]
   funcionarios: LaborItem[]
+  custos_extras?: ExtraCost[]
   custo_materiais: number
   custo_mao_obra: number
   custo_total: number
@@ -271,7 +278,8 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
           custo_mao_obra: parseFloat(item.custo_mao_obra || 0),
           custo_total: parseFloat(item.custo_total || 0),
           lucro: parseFloat(item.lucro || 0),
-          margem_lucro: parseFloat(item.margem_lucro || 0)
+          margem_lucro: parseFloat(item.margem_lucro || 0),
+          custos_extras: Array.isArray(item.custos_extras) ? item.custos_extras : []
         }))
         setServiceItems(mappedItems)
       }
@@ -414,9 +422,10 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
 
       const custoMateriais = updated.materiais?.reduce((sum, m) => sum + (m.custo_total || 0), 0) || 0
       const custoMaoObra = updated.funcionarios?.reduce((sum, f) => sum + (f.custo_total || 0), 0) || 0
+      const custoExtras = updated.custos_extras?.reduce((sum, e) => sum + (e.valor || 0), 0) || 0
       updated.custo_materiais = custoMateriais
       updated.custo_mao_obra = custoMaoObra
-      updated.custo_total = custoMateriais + custoMaoObra
+      updated.custo_total = custoMateriais + custoMaoObra + custoExtras
       updated.lucro = updated.preco_total - updated.custo_total
       updated.margem_lucro = updated.preco_total > 0 ? ((updated.lucro / updated.preco_total) * 100) : 0
 
@@ -585,7 +594,8 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
             custo_mao_obra: item.custo_mao_obra,
             custo_total: item.custo_total,
             lucro: item.lucro,
-            margem_lucro: item.margem_lucro
+            margem_lucro: item.margem_lucro,
+            custos_extras: item.custos_extras || []
           })
           .select()
           .single()
@@ -731,6 +741,7 @@ export const ServiceOrderModalOptimized: React.FC<ServiceOrderModalProps> = ({
                         key={item.id}
                         item={item}
                         index={index}
+                        staff={staff}
                         onUpdate={handleUpdateService}
                         onDelete={handleDeleteService}
                         onAddMaterial={handleAddMaterial}
