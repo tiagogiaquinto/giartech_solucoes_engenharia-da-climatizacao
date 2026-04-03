@@ -10,6 +10,7 @@ import { getServiceOrderStatusLabel } from '../utils/databaseMappers'
 import { GamificationToggle } from '../components/ServiceOrder/GamificationToggle'
 import { formatDateSafe } from '../utils/format'
 import DocumentGeneratorButton from '../components/DocumentGeneratorButton'
+import OSPrintPreviewModal from '../components/OSPrintPreviewModal'
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string; ring: string }> = {
   cotacao:     { label: 'Cotação',      dot: 'bg-sky-400',     badge: 'bg-sky-50 text-sky-700 ring-sky-200',       ring: 'ring-sky-300' },
@@ -51,6 +52,7 @@ const ServiceOrders = () => {
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [editingOrderId, setEditingOrderId] = useState<string | undefined>(undefined)
   const [showFilters, setShowFilters]       = useState(false)
+  const [printOrderId, setPrintOrderId]     = useState<string | null>(null)
 
   useEffect(() => { loadServiceOrders() }, [])
 
@@ -466,7 +468,7 @@ const ServiceOrders = () => {
                         <Edit2 className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => navigate(`/service-orders/${order.id}/view`)}
+                        onClick={() => setPrintOrderId(order.id)}
                         className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                         title="Imprimir OS"
                       >
@@ -568,6 +570,14 @@ const ServiceOrders = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ── PRINT MODAL ──────────────────────────────── */}
+      {printOrderId && (
+        <OSPrintPreviewModal
+          orderId={printOrderId}
+          onClose={() => setPrintOrderId(null)}
+        />
+      )}
 
       {/* ── OS MODAL ─────────────────────────────────── */}
       <ServiceOrderModalOptimized
