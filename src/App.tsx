@@ -138,6 +138,7 @@ import WhatsAppCRM from './pages/WhatsAppCRM'
 import StaffManagement from './pages/StaffManagement'
 import CadastroClientesParceiros from './pages/CadastroClientesParceiros'
 import GiartechCare from './pages/care/GiartechCare'
+import OSTrackPage from './pages/track/OSTrackPage'
 import QRCodeManager from './pages/QRCodeManager'
 import { NotificationHubProvider } from './contexts/NotificationHubContext'
 import { GiartechNotificationHub } from './components/GiartechNotificationHub'
@@ -1188,6 +1189,9 @@ function App() {
 
           {/* Rota pública Giartech Care — acesso via QR Code sem login */}
           <Route path="/care/:qr_code_id" element={<GiartechCare />} />
+
+          {/* Rota pública Track & Trace — cliente acompanha OS via QR Code sem login */}
+          <Route path="/track/:token" element={<OSTrackPage />} />
 
           <Route path="/portal/login" element={
             <PortalProvider>
