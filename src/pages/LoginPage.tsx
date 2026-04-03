@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom'
 const getRedirectPath = (role: string): string => {
   switch (role) {
     case 'technician':
-      return '/mobile'
+      return '/tecnico'
     case 'viewer':
       return '/portal/dashboard'
     default:
@@ -241,17 +241,21 @@ const LoginPage = () => {
               </form>
 
               <div className="mt-6 pt-5 border-t border-white/8">
-                <div className="flex flex-wrap gap-2 justify-center">
+                <p className="text-xs text-gray-600 text-center mb-3">Tipos de acesso disponíveis</p>
+                <div className="grid grid-cols-2 gap-1.5">
                   {[
-                    { role: 'Gestor', desc: 'Dashboard completo', color: 'blue' },
-                    { role: 'Técnico', desc: 'App de campo', color: 'green' },
-                    { role: 'Cliente', desc: 'Portal cliente', color: 'amber' },
+                    { role: 'Administrador', desc: 'Painel completo',  color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+                    { role: 'Técnico',       desc: 'App de campo',     color: 'text-green-400 bg-green-500/10 border-green-500/20' },
+                    { role: 'Cliente',       desc: 'Portal /portal',   color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' },
+                    { role: 'Parceiro',      desc: 'Portal /portal',   color: 'text-teal-400 bg-teal-500/10 border-teal-500/20' },
                   ].map(item => (
                     <div
                       key={item.role}
-                      className={`text-xs px-3 py-1.5 rounded-full bg-${item.color}-500/10 text-${item.color}-400 border border-${item.color}-500/20`}
+                      className={`text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 ${item.color}`}
                     >
-                      {item.role}: {item.desc}
+                      <span className="font-semibold">{item.role}</span>
+                      <span className="opacity-60">·</span>
+                      <span className="opacity-70">{item.desc}</span>
                     </div>
                   ))}
                 </div>
