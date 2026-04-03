@@ -31,6 +31,7 @@ import { UserProvider, useUser } from './contexts/UserContext'
 import { AuthProvider } from './contexts/AuthContext'
 import LoginPage from './pages/LoginPage'
 import UserAccessManagement from './pages/UserAccessManagement'
+import PortalAccessManager from './pages/PortalAccessManager'
 import AuditDashboard from './pages/AuditDashboard'
 import FinancialIntegration from './pages/FinancialIntegration'
 import ClientManagement from './pages/ClientManagement'
@@ -994,6 +995,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <UserAccessManagement />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/portal-access" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <PortalAccessManager />
               </WebLayout>
             </ProtectedRoute>
           } />
