@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, AlertCircle, Eye, MapPin, Phone, Mail, Briefcase, Star, FileDown as DocIcon } from 'lucide-react'
+import { ArrowLeft, User, Calendar, FileText, Package, Users, DollarSign, FileDown, CreditCard as Edit, Trash2, AlertCircle, Eye, MapPin, Phone, Mail, Briefcase, Star, FileDown as DocIcon, Printer } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
 import { generateServiceOrderPDFGiartech } from '../utils/generateServiceOrderPDFGiartech'
 import { mapServiceItems } from '../utils/serviceOrderDataMapper'
 import { usePrintDocument } from '../hooks/usePrintDocument'
 import PrintDocumentButton from '../components/PrintDocumentButton'
+import OSPrintPreviewModal from '../components/OSPrintPreviewModal'
 import ContractViewModal from '../components/ContractViewModal'
 import ProposalViewModal from '../components/ProposalViewModal'
 import ServiceOrderViewGiartech from '../components/ServiceOrderViewGiartech'
@@ -43,6 +44,7 @@ const ServiceOrderView = () => {
   const [osAddresses, setOsAddresses] = useState<any[]>([])
   const [osContacts, setOsContacts] = useState<any[]>([])
   const [showDocGenModal, setShowDocGenModal] = useState(false)
+  const [showPrintModal, setShowPrintModal] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -354,6 +356,13 @@ const ServiceOrderView = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowPrintModal(true)}
+            className="px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-lg hover:from-gray-800 hover:to-black flex items-center gap-2 shadow-lg font-semibold"
+          >
+            <Printer className="h-4 w-4" />
+            Imprimir OS
+          </button>
           <button
             onClick={() => setShowDocGenModal(true)}
             className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-lg hover:from-emerald-700 hover:to-emerald-800 flex items-center gap-2 shadow-lg font-semibold"
@@ -1025,6 +1034,13 @@ const ServiceOrderView = () => {
         order={order}
         customer={customer}
       />
+
+      {showPrintModal && id && (
+        <OSPrintPreviewModal
+          orderId={id}
+          onClose={() => setShowPrintModal(false)}
+        />
+      )}
     </div>
   )
 }

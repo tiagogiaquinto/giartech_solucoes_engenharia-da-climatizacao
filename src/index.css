@@ -571,6 +571,82 @@ body {
   overflow-wrap: break-word;
 }
 
+/* === IMPRESSÃO DE ORDEM DE SERVIÇO === */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-family: 'Arial', sans-serif !important;
+    overflow: visible !important;
+  }
+
+  .no-print,
+  nav,
+  aside,
+  header:not(.print-header),
+  footer:not(.print-footer),
+  .sidebar,
+  .mobile-sidebar,
+  [data-sidebar],
+  [data-nav],
+  .app-modal-backdrop {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .os-print-document {
+    display: block !important;
+    width: 100% !important;
+    max-width: 210mm !important;
+    margin: 0 auto !important;
+    padding: 12mm 14mm !important;
+    background: white !important;
+    color: black !important;
+    font-size: 10pt !important;
+    line-height: 1.5 !important;
+  }
+
+  .os-print-document table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: avoid;
+  }
+
+  .os-print-document table th,
+  .os-print-document table td {
+    border: 1px solid #ccc !important;
+    padding: 4pt 6pt !important;
+    text-align: left !important;
+    font-size: 9pt !important;
+  }
+
+  .os-print-document table th {
+    background-color: #f3f4f6 !important;
+    font-weight: bold !important;
+  }
+
+  .os-print-page-break {
+    page-break-before: always;
+  }
+
+  .os-print-no-break {
+    page-break-inside: avoid;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}
+
 /* === TEMA CLARO/ESCURO === */
 :root {
   --color-primary: #2196F3;

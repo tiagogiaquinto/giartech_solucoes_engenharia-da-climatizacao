@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, FileText, Package, Users, DollarSign, Clock, CheckCircle, AlertCircle, FileEdit as Edit, Trash2, Download, Eye, MessageCircle, Share2, MapPin, Phone, Mail, Star, User } from 'lucide-react'
+import { ArrowLeft, FileText, Package, Users, DollarSign, Clock, CheckCircle, AlertCircle, FileEdit as Edit, Trash2, Download, Eye, MessageCircle, Share2, MapPin, Phone, Mail, Star, User, Printer } from 'lucide-react'
 import { supabase, getServiceOrderById, deleteServiceOrder } from '../lib/supabase'
 import { formatDateSafe } from '../utils/format'
 import { OSFiscalHealth } from '../components/OSFiscalHealth'
@@ -10,6 +10,7 @@ import { OSChatPanel } from '../components/OSChatPanel'
 import { OSFinancialWaterfall } from '../components/OSFinancialWaterfall'
 import { generateVisitReportPDF } from '../utils/generateVisitReportPDF'
 import { OSTrackQRCodePanel } from '../components/OSTrackQRCode'
+import OSPrintPreviewModal from '../components/OSPrintPreviewModal'
 
 const ServiceOrderDetails = () => {
   const { id } = useParams()
@@ -25,6 +26,7 @@ const ServiceOrderDetails = () => {
   const [osContacts, setOsContacts] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState('overview')
   const [error, setError] = useState<string | null>(null)
+  const [showPrintModal, setShowPrintModal] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -304,6 +306,14 @@ const ServiceOrderDetails = () => {
 
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setShowPrintModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-lg hover:from-gray-800 hover:to-black transition-colors font-semibold shadow-sm"
+                title="Imprimir Ordem de Serviço"
+              >
+                <Printer className="h-4 w-4" />
+                Imprimir OS
+              </button>
+              <button
                 onClick={handleDownloadReport}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-900 transition-colors"
                 title="Baixar Relatório de Visita Técnica (PDF)"
@@ -435,6 +445,13 @@ const ServiceOrderDetails = () => {
           </div>
         </div>
       </motion.div>
+
+      {showPrintModal && id && (
+        <OSPrintPreviewModal
+          orderId={id}
+          onClose={() => setShowPrintModal(false)}
+        />
+      )}
     </div>
   )
 }
