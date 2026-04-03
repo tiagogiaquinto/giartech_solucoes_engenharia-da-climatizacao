@@ -196,7 +196,7 @@ const MobileProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) {
-    return <Navigate to="/mobile/login" state={{ from: location }} replace />
+    return <Navigate to="/login" state={{ from: location }} replace />
   }
 
   return <>{children}</>
@@ -407,7 +407,7 @@ function App() {
         <UpdateBanner />
         <Routes location={location}>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/mobile/login" element={<MobileLogin />} />
+            <Route path="/mobile/login" element={<Navigate to="/login" replace />} />
           <Route path="/pricing" element={<PricingPlans />} />
           
           <Route path="/" element={
