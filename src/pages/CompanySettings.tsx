@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Building, Save, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useUser } from '../contexts/UserContext'
+import { FiscalConfigPanel } from '../components/FiscalConfigPanel'
 
 interface CompanyData {
   id?: string
@@ -312,7 +313,11 @@ const CompanySettings = () => {
             </div>
           </div>
 
-          <div className="mt-8 flex justify-end">
+          <div className="mt-8">
+            <FiscalConfigPanel />
+          </div>
+
+          <div className="mt-6 flex justify-end">
             <button
               onClick={handleSave}
               disabled={saving}

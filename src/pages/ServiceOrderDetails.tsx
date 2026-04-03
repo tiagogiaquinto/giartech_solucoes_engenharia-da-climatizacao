@@ -7,6 +7,7 @@ import { formatDateSafe } from '../utils/format'
 import { OSFiscalHealth } from '../components/OSFiscalHealth'
 import { OSPaymentFlow } from '../components/OSPaymentFlow'
 import { OSChatPanel } from '../components/OSChatPanel'
+import { OSFinancialWaterfall } from '../components/OSFinancialWaterfall'
 import { generateVisitReportPDF } from '../utils/generateVisitReportPDF'
 import { OSTrackQRCodePanel } from '../components/OSTrackQRCode'
 
@@ -607,49 +608,27 @@ const TeamTab = ({ team, orderId, onUpdate }: any) => (
 )
 
 const FinancialTab = ({ order, items, materials, team, onUpdate }: any) => {
-  const total = parseFloat(order.total_value || 0)
-
-  const materialsTotal = materials.reduce((sum: number, mat: any) =>
-    sum + (parseFloat(mat.unit_cost || mat.total_cost || 0) * (mat.unit_cost ? parseFloat(mat.quantity || 1) : 1)), 0
-  )
-  const laborTotal = team.reduce((sum: number, member: any) =>
-    sum + parseFloat(member.labor_cost || 0), 0
-  )
-  const itemsTotal = items.reduce((sum: number, item: any) =>
+  const grossValue = items.reduce((sum: number, item: any) =>
     sum + (parseFloat(item.unit_price || 0) * parseFloat(item.quantity || 1)), 0
   )
+  const materialsTotal = materials.reduce((sum: number, mat: any) =>
+    sum + (parseFloat(mat.unit_cost || 0) * parseFloat(mat.quantity || 1)), 0
+  )
+  const laborTotal = team.reduce((sum: number, member: any) =>
+    sum + parseFloat(member.labor_cost || member.custo_total || 0), 0
+  )
+  const total = parseFloat(order.total_value || grossValue || 0)
 
   return (
     <div className="space-y-5">
-      {/* Cost breakdown */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-          <p className="text-xs text-gray-500 mb-1">Serviços</p>
-          <p className="text-lg font-bold text-blue-600">
-            R$ {itemsTotal.toFixed(2)}
-          </p>
-        </div>
-        <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-          <p className="text-xs text-gray-500 mb-1">Materiais</p>
-          <p className="text-lg font-bold text-orange-600">
-            R$ {materialsTotal.toFixed(2)}
-          </p>
-        </div>
-        <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-          <p className="text-xs text-gray-500 mb-1">Mão de Obra</p>
-          <p className="text-lg font-bold text-purple-600">
-            R$ {laborTotal.toFixed(2)}
-          </p>
-        </div>
-      </div>
-
-      {/* Fiscal Health Widget */}
-      <OSFiscalHealth
-        totalValue={total}
-        custoMateriais={materialsTotal}
-        custoMaoObra={laborTotal}
-        regime={order.regime_tributario || 'lucro_presumido'}
-        compact={false}
+      {/* Full financial waterfall */}
+      <OSFinancialWaterfall
+        orderId={order.id}
+        grossValue={grossValue || total}
+        materialsTotal={materialsTotal}
+        laborTotal={laborTotal}
+        regime={order.regime_tributario || undefined}
+        showConfig={true}
       />
 
       {/* Payment Flow Stepper */}
@@ -663,6 +642,7 @@ const FinancialTab = ({ order, items, materials, team, onUpdate }: any) => {
         reciboEmitido={order.recibo_emitido || false}
         onUpdate={onUpdate}
       />
+
       <OSChatPanel
         serviceOrderId={order.id}
         serviceOrderTitle={order.title || order.order_number || ''}
