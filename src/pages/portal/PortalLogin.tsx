@@ -1,9 +1,50 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Loader2, Eye, EyeOff, Building2, Users } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Loader2, Eye, EyeOff, Building2, Briefcase, UserCheck, ArrowLeft, Mail, Lock } from 'lucide-react'
 import { usePortal } from '../../contexts/PortalContext'
 
+type PortalType = 'cliente' | 'parceiro'
+
+interface PortalConfig {
+  tipo: PortalType
+  label: string
+  description: string
+  icon: React.ReactNode
+  color: string
+  iconBg: string
+  btnClass: string
+  cardAccent: string
+}
+
+const PORTAL_CONFIG: Record<PortalType, PortalConfig> = {
+  cliente: {
+    tipo: 'cliente',
+    label: 'Portal do Cliente',
+    description: 'Acompanhe suas ordens de servico, documentos e historico',
+    icon: <UserCheck size={28} />,
+    color: 'text-amber-500',
+    iconBg: 'bg-amber-500/10',
+    btnClass: 'bg-amber-500 hover:bg-amber-600',
+    cardAccent: 'border-amber-500/20',
+  },
+  parceiro: {
+    tipo: 'parceiro',
+    label: 'Portal do Parceiro',
+    description: 'Acesse indicacoes, comissoes e historico de negocios',
+    icon: <Briefcase size={28} />,
+    color: 'text-orange-500',
+    iconBg: 'bg-orange-500/10',
+    btnClass: 'bg-orange-500 hover:bg-orange-600',
+    cardAccent: 'border-orange-500/20',
+  },
+}
+
 export default function PortalLogin() {
+  const [searchParams] = useSearchParams()
+  const tipoParam = (searchParams.get('tipo') as PortalType) || 'cliente'
+  const config = PORTAL_CONFIG[tipoParam] ?? PORTAL_CONFIG.cliente
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPwd, setShowPwd] = useState(false)
@@ -20,7 +61,7 @@ export default function PortalLogin() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0f1a]">
         <Loader2 size={32} className="animate-spin text-blue-400" />
       </div>
     )
@@ -34,97 +75,135 @@ export default function PortalLogin() {
       await login(email, password)
       navigate('/portal/dashboard')
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message || 'Credenciais invalidas. Tente novamente.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
-            <Building2 size={32} className="text-white" />
+    <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-60 -right-60 w-[600px] h-[600px] bg-blue-700/6 rounded-full blur-3xl" />
+        <div className="absolute -bottom-60 -left-60 w-[600px] h-[600px] bg-cyan-600/5 rounded-full blur-3xl" />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 28 }}
+        className="w-full max-w-sm z-10"
+      >
+        <button
+          onClick={() => navigate('/login')}
+          className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition-colors text-sm mb-7"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Voltar
+        </button>
+
+        <div className="text-center mb-7">
+          <div className={`inline-flex w-16 h-16 ${config.iconBg} rounded-2xl items-center justify-center mb-3 ${config.color}`}>
+            {config.icon}
           </div>
-          <h1 className="text-2xl font-bold text-white">Portal de Acesso</h1>
-          <p className="text-slate-400 text-sm mt-1">Clientes e Parceiros</p>
+          <h1 className="text-2xl font-bold text-white">{config.label}</h1>
+          <p className="text-gray-500 text-sm mt-1 max-w-xs mx-auto">{config.description}</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <div className={`bg-white/4 backdrop-blur-xl border ${config.cardAccent} border-white/8 rounded-3xl p-6 shadow-2xl`}>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 px-3.5 py-3 rounded-xl text-sm"
+              >
+                <span>{error}</span>
+              </motion.div>
+            )}
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
                 E-mail
               </label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                placeholder="seu@email.com"
-              />
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/8 rounded-xl text-white placeholder-gray-700 text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/7 transition-all"
+                  placeholder="seu@email.com"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
                 Senha
               </label>
               <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
                 <input
                   type={showPwd ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-3 pr-11 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  autoComplete="current-password"
+                  className="w-full pl-10 pr-10 py-3 bg-white/5 border border-white/8 rounded-xl text-white placeholder-gray-700 text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/7 transition-all"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors"
+                  tabIndex={-1}
                 >
-                  {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
-            <button
+            <motion.button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+              whileTap={{ scale: 0.97 }}
+              className={`w-full py-3 px-4 ${config.btnClass} disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg mt-1`}
             >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : null}
-              {loading ? 'Entrando...' : 'Entrar no Portal'}
-            </button>
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Entrando...
+                </>
+              ) : `Entrar no ${config.label}`}
+            </motion.button>
           </form>
-
-          <div className="mt-6 pt-5 border-t border-gray-100">
-            <div className="grid grid-cols-2 gap-3 text-center text-xs text-gray-500">
-              <div className="flex flex-col items-center gap-1 p-3 bg-blue-50 rounded-xl">
-                <Building2 size={18} className="text-blue-500" />
-                <span className="font-medium text-blue-700">Portal do Cliente</span>
-                <span>Acompanhe suas OS e documentos</span>
-              </div>
-              <div className="flex flex-col items-center gap-1 p-3 bg-green-50 rounded-xl">
-                <Users size={18} className="text-green-500" />
-                <span className="font-medium text-green-700">Portal do Parceiro</span>
-                <span>Indicacoes e comissoes</span>
-              </div>
-            </div>
-            <p className="text-center text-xs text-gray-400 mt-4">
-              Nao tem acesso? Contate a equipe comercial.
-            </p>
-          </div>
         </div>
-      </div>
+
+        <div className="mt-5 flex items-center justify-center gap-3">
+          <button
+            onClick={() => navigate('/portal/login?tipo=cliente')}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all ${tipoParam === 'cliente' ? 'bg-amber-500/15 text-amber-400 font-semibold' : 'text-gray-600 hover:text-gray-400'}`}
+          >
+            <UserCheck size={13} />
+            Cliente
+          </button>
+          <div className="w-px h-4 bg-white/10" />
+          <button
+            onClick={() => navigate('/portal/login?tipo=parceiro')}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all ${tipoParam === 'parceiro' ? 'bg-orange-500/15 text-orange-400 font-semibold' : 'text-gray-600 hover:text-gray-400'}`}
+          >
+            <Briefcase size={13} />
+            Parceiro
+          </button>
+        </div>
+
+        <p className="text-center text-xs text-gray-700 mt-4">
+          Acesso restrito. Contate a equipe comercial para cadastro.
+        </p>
+      </motion.div>
     </div>
   )
 }

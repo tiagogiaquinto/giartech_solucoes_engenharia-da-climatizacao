@@ -407,7 +407,7 @@ function App() {
         <UpdateBanner />
         <Routes location={location}>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/mobile/login" element={<Navigate to="/login" replace />} />
+            <Route path="/mobile/login" element={<MobileLogin />} />
           <Route path="/pricing" element={<PricingPlans />} />
           
           <Route path="/" element={
