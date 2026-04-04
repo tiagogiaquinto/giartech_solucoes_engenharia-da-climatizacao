@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   ClipboardList, CheckCircle2, Clock, AlertCircle, Calendar,
@@ -76,19 +76,37 @@ export default function CustomerPortalDashboard() {
   const [budgetsLoading, setBudgetsLoading] = useState(true)
   const [signingOrder, setSigningOrder] = useState<CustomerOrder | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('os')
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
-    if (portalUser?.linked_customer_id) {
-      loadOrders()
-      loadBudgets()
-    }
-  }, [portalUser])
+    if (!portalUser?.linked_customer_id) return
+    loadOrders()
+    loadBudgets()
+
+    const ch = supabase
+      .channel(`portal-dashboard-${portalUser.linked_customer_id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'service_orders',
+      }, () => { loadOrders() })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'budgets',
+      }, () => { loadBudgets() })
+      .subscribe()
+
+    channelRef.current = ch
+    return () => { ch.unsubscribe() }
+  }, [portalUser?.linked_customer_id])
 
   const loadOrders = async () => {
+    if (!portalUser?.linked_customer_id) return
     setLoading(true)
     try {
       const { data, error } = await supabase.rpc('get_customer_portal_orders', {
-        p_customer_id: portalUser!.linked_customer_id
+        p_customer_id: portalUser.linked_customer_id
       })
       if (!error) setOrders(data || [])
     } catch (err) {
@@ -99,10 +117,11 @@ export default function CustomerPortalDashboard() {
   }
 
   const loadBudgets = async () => {
+    if (!portalUser?.linked_customer_id) return
     setBudgetsLoading(true)
     try {
       const { data, error } = await supabase.rpc('get_customer_portal_budgets', {
-        p_customer_id: portalUser!.linked_customer_id
+        p_customer_id: portalUser.linked_customer_id
       })
       if (!error) setBudgets(data || [])
     } catch (err) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   Users, DollarSign, CheckCircle2, Clock, TrendingUp,
@@ -8,9 +8,9 @@ import { supabase } from '../../lib/supabase'
 import { usePortal } from '../../contexts/PortalContext'
 
 interface Referral {
-  referral_id: string
-  service_order_id: string | null
-  order_number: string | null
+  id: string
+  os_id: string | null
+  os_number: string | null
   customer_name: string
   status: string
   commission_value: number
@@ -47,10 +47,24 @@ export default function PartnerPortalDashboard() {
     commission_type: 'fixed' as 'fixed' | 'percentage',
     commission_value: ''
   })
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
-    if (portalUser) loadReferrals()
-  }, [portalUser])
+    if (!portalUser) return
+    loadReferrals()
+
+    const ch = supabase
+      .channel(`portal-partner-${portalUser.account_id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'partner_referrals',
+      }, () => { loadReferrals() })
+      .subscribe()
+
+    channelRef.current = ch
+    return () => { ch.unsubscribe() }
+  }, [portalUser?.account_id])
 
   const loadReferrals = async () => {
     if (!portalUser) return
@@ -253,15 +267,15 @@ export default function PartnerPortalDashboard() {
             {referrals.map(ref => {
               const statusInfo = STATUS_MAP[ref.status] || STATUS_MAP.pendente
               return (
-                <div key={ref.referral_id} className="px-6 py-4">
+                <div key={ref.id} className="px-6 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
                           {statusInfo.label}
                         </span>
-                        {ref.order_number && (
-                          <span className="text-xs font-mono text-gray-400">OS {ref.order_number}</span>
+                        {ref.os_number && (
+                          <span className="text-xs font-mono text-gray-400">OS {ref.os_number}</span>
                         )}
                       </div>
                       <p className="font-semibold text-gray-900">{ref.customer_name}</p>

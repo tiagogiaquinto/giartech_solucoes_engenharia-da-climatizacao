@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ClipboardList, CheckCircle2, Clock, AlertCircle, Calendar,
@@ -266,16 +266,31 @@ export default function CustomerPortalHistory() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'todos' | 'concluido' | 'em_andamento'>('todos')
   const [selected, setSelected] = useState<HistoryEntry | null>(null)
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
-    if (portalUser?.linked_customer_id) loadHistory()
-  }, [portalUser])
+    if (!portalUser?.linked_customer_id) return
+    loadHistory()
+
+    const ch = supabase
+      .channel(`portal-history-${portalUser.linked_customer_id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'service_orders',
+      }, () => { loadHistory() })
+      .subscribe()
+
+    channelRef.current = ch
+    return () => { ch.unsubscribe() }
+  }, [portalUser?.linked_customer_id])
 
   const loadHistory = async () => {
+    if (!portalUser?.linked_customer_id) return
     setLoading(true)
     try {
       const { data, error } = await supabase.rpc('get_customer_portal_history', {
-        p_customer_id: portalUser!.linked_customer_id
+        p_customer_id: portalUser.linked_customer_id
       })
       if (!error && data) setHistory(data)
     } finally {

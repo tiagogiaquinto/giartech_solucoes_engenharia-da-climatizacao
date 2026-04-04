@@ -1,34 +1,34 @@
-import React, { useState, useEffect } from 'react'
-import { FileText, Download, Search, Filter, FileCheck, Receipt, FileSpreadsheet, RefreshCw } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { FileText, Download, Search, FileCheck, Receipt, FileSpreadsheet, RefreshCw, Eye } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { usePortal } from '../../contexts/PortalContext'
 
 interface Document {
   id: string
-  file_name: string
-  file_type: string
-  file_url: string
-  category: string
-  description: string
+  title: string
+  document_type: string
+  pdf_url: string | null
+  status: string
   created_at: string
-  service_order_id: string
-  order_number: string
+  customer_name: string
 }
 
-const CATEGORY_ICONS: Record<string, any> = {
+const TYPE_ICONS: Record<string, any> = {
+  orcamento:   FileSpreadsheet,
   certificado: FileCheck,
-  orcamento: FileSpreadsheet,
   nota_fiscal: Receipt,
-  contrato: FileText,
-  outros: FileText,
+  contrato:    FileText,
+  recibo:      Receipt,
+  outros:      FileText,
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
+const TYPE_LABELS: Record<string, string> = {
+  orcamento:   'Orcamento',
   certificado: 'Certificado',
-  orcamento: 'Orcamento',
   nota_fiscal: 'Nota Fiscal',
-  contrato: 'Contrato',
-  outros: 'Outros',
+  contrato:    'Contrato',
+  recibo:      'Recibo',
+  outros:      'Outros',
 }
 
 export default function CustomerPortalDocuments() {
@@ -36,39 +36,37 @@ export default function CustomerPortalDocuments() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filterCategory, setFilterCategory] = useState('')
+  const [filterType, setFilterType] = useState('')
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
-    if (portalUser?.linked_customer_id) loadDocuments()
-  }, [portalUser])
+    if (!portalUser?.linked_customer_id) return
+    loadDocuments()
+
+    const ch = supabase
+      .channel(`portal-docs-${portalUser.linked_customer_id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'generated_documents',
+      }, () => { loadDocuments() })
+      .subscribe()
+
+    channelRef.current = ch
+    return () => { ch.unsubscribe() }
+  }, [portalUser?.linked_customer_id])
 
   const loadDocuments = async () => {
+    if (!portalUser?.linked_customer_id) return
     setLoading(true)
     try {
-      const { data: osData } = await supabase
-        .from('service_orders')
-        .select('id, order_number')
-        .eq('customer_id', portalUser!.linked_customer_id)
-
-      if (!osData?.length) {
-        setDocuments([])
-        return
-      }
-
-      const osIds = osData.map(o => o.id)
-      const osMap = Object.fromEntries(osData.map(o => [o.id, o.order_number]))
-
-      const { data: docs } = await supabase
-        .from('service_order_documents')
-        .select('id, file_name, file_type, file_url, category, description, created_at, service_order_id')
-        .in('service_order_id', osIds)
-        .in('category', ['certificado', 'orcamento', 'nota_fiscal', 'contrato', 'outros'])
+      const { data, error } = await supabase
+        .from('generated_documents')
+        .select('id, title, document_type, pdf_url, status, created_at, customer_name')
+        .eq('customer_id', portalUser.linked_customer_id)
         .order('created_at', { ascending: false })
 
-      setDocuments((docs || []).map(d => ({
-        ...d,
-        order_number: osMap[d.service_order_id] || '—'
-      })))
+      if (!error) setDocuments(data || [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -76,23 +74,42 @@ export default function CustomerPortalDocuments() {
     }
   }
 
+  const logView = async (doc: Document) => {
+    if (!portalUser) return
+    await supabase.rpc('log_portal_document_view', {
+      p_portal_account_id: portalUser.account_id,
+      p_customer_id: portalUser.linked_customer_id,
+      p_document_name: doc.title || doc.document_type,
+      p_document_type: doc.document_type || 'outros',
+    })
+  }
+
+  const handleDownload = async (doc: Document) => {
+    await logView(doc)
+    if (doc.pdf_url) {
+      window.open(doc.pdf_url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
   const filtered = documents.filter(d => {
-    const matchSearch = !search || d.file_name.toLowerCase().includes(search.toLowerCase())
-    const matchCategory = !filterCategory || d.category === filterCategory
-    return matchSearch && matchCategory
+    const matchSearch = !search || (d.title || '').toLowerCase().includes(search.toLowerCase())
+    const matchType = !filterType || d.document_type === filterType
+    return matchSearch && matchType
   })
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('pt-BR')
+
+  const docTypes = Array.from(new Set(documents.map(d => d.document_type).filter(Boolean)))
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Documentos</h1>
-          <p className="text-gray-500 text-sm">Certificados, orcamentos e notas fiscais</p>
+          <p className="text-gray-500 text-sm">Orcamentos, certificados e contratos</p>
         </div>
         <button onClick={loadDocuments} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
-          <RefreshCw size={18} className="text-gray-500" />
+          <RefreshCw size={18} className={`text-gray-500 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
@@ -108,13 +125,13 @@ export default function CustomerPortalDocuments() {
           />
         </div>
         <select
-          value={filterCategory}
-          onChange={e => setFilterCategory(e.target.value)}
+          value={filterType}
+          onChange={e => setFilterType(e.target.value)}
           className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Todos os tipos</option>
-          {Object.entries(CATEGORY_LABELS).map(([v, l]) => (
-            <option key={v} value={v}>{l}</option>
+          {docTypes.map(t => (
+            <option key={t} value={t}>{TYPE_LABELS[t] || t}</option>
           ))}
         </select>
       </div>
@@ -132,31 +149,39 @@ export default function CustomerPortalDocuments() {
         ) : (
           <div className="divide-y divide-gray-50">
             {filtered.map(doc => {
-              const Icon = CATEGORY_ICONS[doc.category] || FileText
+              const Icon = TYPE_ICONS[doc.document_type] || FileText
               return (
                 <div key={doc.id} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
                   <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
                     <Icon size={18} className="text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{doc.file_name}</p>
+                    <p className="font-medium text-gray-900 truncate">{doc.title || TYPE_LABELS[doc.document_type] || 'Documento'}</p>
                     <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
                       <span className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">
-                        {CATEGORY_LABELS[doc.category] || doc.category}
+                        {TYPE_LABELS[doc.document_type] || doc.document_type}
                       </span>
-                      <span>OS {doc.order_number}</span>
                       <span>{formatDate(doc.created_at)}</span>
+                      {doc.status && (
+                        <span className={`px-1.5 py-0.5 rounded ${
+                          doc.status === 'aprovado' ? 'bg-green-100 text-green-700' :
+                          doc.status === 'enviado'  ? 'bg-blue-100 text-blue-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>{doc.status}</span>
+                      )}
                     </div>
                   </div>
-                  {doc.file_url && (
-                    <a
-                      href={doc.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                  {doc.pdf_url ? (
+                    <button
+                      onClick={() => handleDownload(doc)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors shrink-0"
                     >
                       <Download size={12} /> Baixar
-                    </a>
+                    </button>
+                  ) : (
+                    <span className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-400 shrink-0">
+                      <Eye size={12} /> Sem PDF
+                    </span>
                   )}
                 </div>
               )
