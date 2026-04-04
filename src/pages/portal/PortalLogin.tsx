@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Loader2, Eye, EyeOff, Building2, Briefcase, UserCheck, ArrowLeft, Mail, Lock } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Building2, Briefcase, UserCheck, Wrench, ArrowLeft, Mail, Lock } from 'lucide-react'
 import { usePortal } from '../../contexts/PortalContext'
 
 type PortalType = 'cliente' | 'parceiro'
+type NavType = 'cliente' | 'parceiro' | 'admin' | 'tecnico'
 
 interface PortalConfig {
   tipo: PortalType
@@ -39,6 +40,43 @@ const PORTAL_CONFIG: Record<PortalType, PortalConfig> = {
     cardAccent: 'border-orange-500/20',
   },
 }
+
+interface NavTab {
+  id: NavType
+  label: string
+  icon: React.ReactNode
+  activeClass: string
+  redirectTo?: string
+}
+
+const NAV_TABS: NavTab[] = [
+  {
+    id: 'admin',
+    label: 'Administrativo',
+    icon: <Building2 size={13} />,
+    activeClass: 'bg-blue-500/15 text-blue-400 font-semibold',
+    redirectTo: '/login',
+  },
+  {
+    id: 'tecnico',
+    label: 'Tecnico',
+    icon: <Wrench size={13} />,
+    activeClass: 'bg-emerald-500/15 text-emerald-400 font-semibold',
+    redirectTo: '/login',
+  },
+  {
+    id: 'cliente',
+    label: 'Cliente',
+    icon: <UserCheck size={13} />,
+    activeClass: 'bg-amber-500/15 text-amber-400 font-semibold',
+  },
+  {
+    id: 'parceiro',
+    label: 'Parceiro',
+    icon: <Briefcase size={13} />,
+    activeClass: 'bg-orange-500/15 text-orange-400 font-semibold',
+  },
+]
 
 export default function PortalLogin() {
   const [searchParams] = useSearchParams()
@@ -78,6 +116,16 @@ export default function PortalLogin() {
       setError(err.message || 'Credenciais invalidas. Tente novamente.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleNavTab = (tab: NavTab) => {
+    if (tab.redirectTo) {
+      navigate(tab.redirectTo)
+      return
+    }
+    if (tab.id === 'cliente' || tab.id === 'parceiro') {
+      navigate(`/portal/login?tipo=${tab.id}`)
     }
   }
 
@@ -182,22 +230,23 @@ export default function PortalLogin() {
           </form>
         </div>
 
-        <div className="mt-5 flex items-center justify-center gap-3">
-          <button
-            onClick={() => navigate('/portal/login?tipo=cliente')}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all ${tipoParam === 'cliente' ? 'bg-amber-500/15 text-amber-400 font-semibold' : 'text-gray-600 hover:text-gray-400'}`}
-          >
-            <UserCheck size={13} />
-            Cliente
-          </button>
-          <div className="w-px h-4 bg-white/10" />
-          <button
-            onClick={() => navigate('/portal/login?tipo=parceiro')}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all ${tipoParam === 'parceiro' ? 'bg-orange-500/15 text-orange-400 font-semibold' : 'text-gray-600 hover:text-gray-400'}`}
-          >
-            <Briefcase size={13} />
-            Parceiro
-          </button>
+        <div className="mt-5 flex items-center justify-center gap-1">
+          {NAV_TABS.map((tab, idx) => (
+            <React.Fragment key={tab.id}>
+              {idx > 0 && <div className="w-px h-4 bg-white/10" />}
+              <button
+                onClick={() => handleNavTab(tab)}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all ${
+                  tipoParam === tab.id
+                    ? tab.activeClass
+                    : 'text-gray-600 hover:text-gray-400'
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            </React.Fragment>
+          ))}
         </div>
 
         <p className="text-center text-xs text-gray-700 mt-4">
