@@ -117,10 +117,6 @@ const LoginPage = () => {
       navigate('/portal/login?tipo=parceiro')
       return
     }
-    if (type === 'technician') {
-      navigate('/mobile/login')
-      return
-    }
     setAccessType(type)
     setError('')
     setEmail('')
