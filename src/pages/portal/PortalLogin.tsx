@@ -252,6 +252,9 @@ export default function PortalLogin() {
         <p className="text-center text-xs text-gray-700 mt-4">
           Acesso restrito. Contate a equipe comercial para cadastro.
         </p>
+        <p className="text-center text-xs text-gray-600 mt-1">
+          Senha padrao de primeiro acesso: <span className="text-gray-400 font-mono">GS2026</span>
+        </p>
       </motion.div>
     </div>
   )
