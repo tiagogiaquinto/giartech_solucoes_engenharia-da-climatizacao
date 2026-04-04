@@ -231,23 +231,24 @@ const LoginPage = () => {
 
             <div className="space-y-3">
               {ACCESS_OPTIONS.map((option, idx) => (
-                <motion.button
+                <button
                   key={option.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.08 }}
+                  type="button"
                   onClick={() => handleSelectAccess(option.id)}
-                  className={`w-full flex items-center gap-4 p-4 bg-white/4 border ${option.borderColor} rounded-2xl text-left transition-all duration-200 hover:bg-white/7 group`}
+                  className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-200 group border border-white/10 hover:border-white/20"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.09)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
                 >
-                  <div className={`flex-shrink-0 w-12 h-12 ${option.iconBg} rounded-xl flex items-center justify-center ${option.color} transition-transform group-hover:scale-105`}>
+                  <div className={`flex-shrink-0 w-12 h-12 ${option.iconBg} rounded-xl flex items-center justify-center ${option.color}`}>
                     {option.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-semibold text-sm">{option.label}</p>
                     <p className="text-gray-500 text-xs mt-0.5 truncate">{option.description}</p>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 flex-shrink-0 transition-colors" />
-                </motion.button>
+                  <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-300 flex-shrink-0 transition-colors" />
+                </button>
               ))}
             </div>
 
