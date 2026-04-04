@@ -544,6 +544,20 @@ function App() {
               </TechnicianLayout>
             </TechnicianRoute>
           } />
+          <Route path="/tecnico/ordens" element={
+            <TechnicianRoute>
+              <TechnicianLayout>
+                <TechnicianHistorico />
+              </TechnicianLayout>
+            </TechnicianRoute>
+          } />
+          <Route path="/tecnico/roteiro" element={
+            <TechnicianRoute>
+              <TechnicianLayout>
+                <TechnicianRoteiro />
+              </TechnicianLayout>
+            </TechnicianRoute>
+          } />
 
           {/* OS Distribution Page */}
           <Route path="/os-distribution" element={

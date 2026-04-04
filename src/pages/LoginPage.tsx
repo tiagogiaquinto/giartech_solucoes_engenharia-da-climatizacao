@@ -110,11 +110,11 @@ const LoginPage = () => {
 
   const handleSelectAccess = (type: AccessType) => {
     if (type === 'client') {
-      navigate('/portal/login?tipo=cliente')
+      window.location.assign('/portal/login?tipo=cliente')
       return
     }
     if (type === 'partner') {
-      navigate('/portal/login?tipo=parceiro')
+      window.location.assign('/portal/login?tipo=parceiro')
       return
     }
     setAccessType(type)
