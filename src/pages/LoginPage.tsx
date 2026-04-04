@@ -134,19 +134,15 @@ const LoginPage = () => {
   const selectedOption = ACCESS_OPTIONS.find(o => o.id === accessType)
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center p-4 overflow-hidden relative">
+    <div className="min-h-screen flex items-center justify-center p-4 overflow-hidden relative"
+      style={{ background: '#0e1219' }}>
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-60 -right-60 w-[700px] h-[700px] bg-blue-700/8 rounded-full blur-3xl" />
-        <div className="absolute -bottom-60 -left-60 w-[700px] h-[700px] bg-cyan-600/6 rounded-full blur-3xl" />
-        {[...Array(16)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-white/15 rounded-full"
-            style={{ left: `${(i * 6.5) % 100}%`, top: `${(i * 13.7) % 100}%` }}
-            animate={{ opacity: [0, 0.8, 0], scale: [0, 1, 0] }}
-            transition={{ duration: 3 + (i % 3), repeat: Infinity, delay: i * 0.4 }}
-          />
-        ))}
+        <div className="absolute -top-80 -right-80 w-[800px] h-[800px] rounded-full blur-3xl"
+          style={{ background: 'radial-gradient(circle, rgba(0,98,246,0.10) 0%, transparent 70%)' }} />
+        <div className="absolute -bottom-80 -left-80 w-[800px] h-[800px] rounded-full blur-3xl"
+          style={{ background: 'radial-gradient(circle, rgba(0,209,255,0.07) 0%, transparent 70%)' }} />
+        <div className="absolute top-1/2 right-1/4 w-[400px] h-[400px] rounded-full blur-3xl"
+          style={{ background: 'radial-gradient(circle, rgba(255,129,73,0.05) 0%, transparent 70%)' }} />
       </div>
 
       <AnimatePresence mode="wait">
@@ -155,58 +151,59 @@ const LoginPage = () => {
             key="splash"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 0.92 }}
-            transition={{ duration: 0.4 }}
+            exit={{ opacity: 0, scale: 0.94 }}
+            transition={{ duration: 0.35 }}
             className="text-center z-10"
           >
             <motion.div
-              initial={{ scale: 0, rotate: -160 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 180, damping: 18 }}
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
               className="relative mb-8 inline-block"
             >
-              <div className="w-28 h-28 bg-gradient-to-br from-blue-600 to-cyan-400 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/40">
-                <img
-                  src="/1000156010.jpg"
-                  alt="Giartech"
-                  className="w-20 h-20 rounded-2xl object-cover"
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                />
-              </div>
+              <svg width="80" height="64" viewBox="0 0 80 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0"  y="36" width="18" height="28" rx="5" transform="rotate(-35 10 44)"  fill="#ff8149" />
+                <rect x="26" y="22" width="18" height="38" rx="5" transform="rotate(-35 35 36)" fill="#00d1ff" />
+                <rect x="52" y="4"  width="18" height="52" rx="5" transform="rotate(-35 61 24)" fill="#0062f6" />
+              </svg>
               <motion.div
-                animate={{ scale: [1, 1.35, 1], opacity: [0.2, 0.5, 0.2] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="absolute inset-0 bg-blue-400/20 rounded-3xl blur-xl"
+                animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.4, 0.15] }}
+                transition={{ duration: 2.5, repeat: Infinity }}
+                className="absolute inset-0 rounded-3xl blur-2xl"
+                style={{ background: 'linear-gradient(135deg, #0062f6, #00d1ff)' }}
               />
             </motion.div>
             <motion.h1
-              initial={{ y: 20, opacity: 0 }}
+              initial={{ y: 16, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.35 }}
+              transition={{ delay: 0.3 }}
               className="text-4xl font-bold text-white mb-1 tracking-tight"
+              style={{ fontFamily: 'Questrial, Inter, sans-serif' }}
             >
               Giartech
             </motion.h1>
             <motion.p
-              initial={{ y: 20, opacity: 0 }}
+              initial={{ y: 16, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.55 }}
-              className="text-blue-300/80 text-sm"
+              transition={{ delay: 0.5 }}
+              className="text-sm"
+              style={{ color: 'rgba(0,209,255,0.65)' }}
             >
-              Sistema de Gestao Integrada
+              Solucoes
             </motion.p>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.9 }}
+              transition={{ delay: 0.85 }}
               className="flex justify-center gap-2 mt-10"
             >
               {[0, 0.15, 0.3].map((d, i) => (
                 <motion.div
                   key={i}
-                  animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
+                  animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
                   transition={{ duration: 1, repeat: Infinity, delay: d }}
-                  className="w-2 h-2 bg-blue-400 rounded-full"
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: '#0062f6' }}
                 />
               ))}
             </motion.div>
@@ -221,15 +218,14 @@ const LoginPage = () => {
             className="w-full max-w-md z-10"
           >
             <div className="text-center mb-8">
-              <div className="inline-flex w-14 h-14 bg-gradient-to-br from-blue-600 to-cyan-400 rounded-2xl items-center justify-center mb-4 shadow-lg shadow-blue-500/30">
-                <img
-                  src="/1000156010.jpg"
-                  alt=""
-                  className="w-10 h-10 rounded-xl object-cover"
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                />
+              <div className="inline-flex mb-4">
+                <svg width="44" height="36" viewBox="0 0 80 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0"  y="36" width="18" height="28" rx="5" transform="rotate(-35 10 44)"  fill="#ff8149" />
+                  <rect x="26" y="22" width="18" height="38" rx="5" transform="rotate(-35 35 36)" fill="#00d1ff" />
+                  <rect x="52" y="4"  width="18" height="52" rx="5" transform="rotate(-35 61 24)" fill="#0062f6" />
+                </svg>
               </div>
-              <h1 className="text-2xl font-bold text-white">Como deseja acessar?</h1>
+              <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Questrial, Inter, sans-serif' }}>Como deseja acessar?</h1>
               <p className="text-gray-500 text-sm mt-1">Selecione o tipo de acesso para continuar</p>
             </div>
 

@@ -263,49 +263,76 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
   return (
     <motion.aside
       initial={{ x: 0 }}
-      animate={{ width: isCollapsed ? '80px' : '280px' }}
-      transition={{ duration: 0.3 }}
-      className="fixed left-0 top-0 bg-gradient-to-b from-gray-900 to-gray-800 text-white h-screen flex flex-col shadow-2xl z-50"
+      animate={{ width: isCollapsed ? '72px' : '272px' }}
+      transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+      style={{ background: 'var(--sidebar-bg)' }}
+      className="fixed left-0 top-0 text-white h-screen flex flex-col shadow-2xl z-50 border-r"
+      // border color via CSS var
     >
-      {/* Header */}
-      <div className="p-4 border-b border-gray-700">
+      {/* Brand Header */}
+      <div className="px-4 py-4 border-b" style={{ borderColor: 'var(--sidebar-border)' }}>
         <div className="flex items-center justify-between">
           {!isCollapsed && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-              <BarChart3 className="h-8 w-8 text-blue-400" />
-              <div>
-                <h1 className="text-xl font-bold">GiarTech</h1>
-                <p className="text-xs text-gray-400">Sistema Integrado</p>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-2.5 min-w-0"
+            >
+              {/* Giartech 3-bar logo mark */}
+              <svg width="32" height="26" viewBox="0 0 32 26" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+                <rect x="0"  y="14" width="7" height="12" rx="2" transform="rotate(-35 4 18)"  fill="#ff8149" />
+                <rect x="10" y="8"  width="7" height="16" rx="2" transform="rotate(-35 14 14)" fill="#00d1ff" />
+                <rect x="20" y="2"  width="7" height="20" rx="2" transform="rotate(-35 24 10)" fill="#0062f6" />
+              </svg>
+              <div className="min-w-0">
+                <h1 className="text-[17px] font-bold tracking-tight leading-none text-white" style={{ fontFamily: 'Questrial, Inter, sans-serif' }}>
+                  Giartech
+                </h1>
+                <p className="text-[10px] mt-0.5" style={{ color: 'var(--sidebar-text-muted)' }}>Soluções</p>
               </div>
             </motion.div>
           )}
+          {isCollapsed && (
+            <div className="mx-auto">
+              <svg width="28" height="22" viewBox="0 0 32 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0"  y="14" width="7" height="12" rx="2" transform="rotate(-35 4 18)"  fill="#ff8149" />
+                <rect x="10" y="8"  width="7" height="16" rx="2" transform="rotate(-35 14 14)" fill="#00d1ff" />
+                <rect x="20" y="2"  width="7" height="20" rx="2" transform="rotate(-35 24 10)" fill="#0062f6" />
+              </svg>
+            </div>
+          )}
           <button
             onClick={toggleCollapse}
-            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-1.5 rounded-lg transition-colors flex-shrink-0"
+            style={{ color: 'var(--sidebar-text-muted)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover-bg)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
-            {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
         </div>
       </div>
 
       {/* Edit Mode Toggle */}
       {!isCollapsed && (
-        <div className="px-4 py-2 border-b border-gray-700">
+        <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--sidebar-border)' }}>
           <div className="flex items-center justify-between">
             <button
               onClick={() => setIsEditMode(!isEditMode)}
-              className={`text-xs px-3 py-1 rounded transition-colors ${
+              className={`text-xs px-3 py-1 rounded-md transition-colors ${
                 isEditMode
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  ? 'text-white'
+                  : 'text-white/40 hover:text-white/60'
               }`}
+              style={isEditMode ? { background: 'var(--brand-blue, #0062f6)' } : { background: 'rgba(255,255,255,0.06)' }}
             >
               {isEditMode ? 'Salvar Ordem' : 'Editar Menu'}
             </button>
             {isEditMode && (
               <button
                 onClick={resetMenuOrder}
-                className="text-xs px-3 py-1 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 flex items-center gap-1"
+                className="text-xs px-2 py-1 rounded-md text-white/40 hover:text-white/60 flex items-center gap-1 transition-colors"
+                style={{ background: 'rgba(255,255,255,0.06)' }}
                 title="Restaurar ordem padrão"
               >
                 <RotateCcw className="h-3 w-3" />
@@ -314,13 +341,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
             )}
           </div>
           {isEditMode && (
-            <p className="text-xs text-gray-400 mt-2">Arraste os itens para reordenar</p>
+            <p className="text-[10px] mt-1.5" style={{ color: 'var(--sidebar-text-muted)' }}>Arraste os itens para reordenar</p>
           )}
         </div>
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+      <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
         {menuItems.filter(item => {
           if (item.superAdminOnly) return isSuperAdmin
           if (!item.moduleCode) return true
@@ -339,13 +366,15 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
               onDragStart={(e) => handleDragStart(e, item.id)}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, item.id)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group relative ${
-                active
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'hover:bg-gray-700 text-gray-300'
-              } ${isEditMode ? 'cursor-move' : 'cursor-pointer'} ${
-                draggedItem === item.id ? 'opacity-50' : ''
-              }`}
+              className={`flex items-center gap-3 px-2.5 py-2 rounded-lg transition-all group relative ${
+                isEditMode ? 'cursor-move' : 'cursor-pointer'
+              } ${draggedItem === item.id ? 'opacity-50' : ''}`}
+              style={active
+                ? { background: 'var(--sidebar-active-bg)', color: '#fff' }
+                : { color: 'var(--sidebar-text)' }
+              }
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--sidebar-hover-bg)' }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
               title={isCollapsed ? item.label : ''}
             >
               {isEditMode && !isCollapsed && (
@@ -440,33 +469,40 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
       </nav>
 
       {/* User Section */}
-      <div className="p-4 border-t border-gray-700">
+      <div className="px-3 py-3 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
         {!isCollapsed ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-800 rounded-lg">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold">
-                {user?.name?.[0] || 'U'}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, #0062f6 0%, #00d1ff 100%)' }}>
+                {user?.name?.[0]?.toUpperCase() || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{user?.name || 'Usuário'}</p>
-                <p className="text-xs text-gray-400 truncate">{user?.email || 'user@example.com'}</p>
+                <p className="text-sm font-semibold text-white truncate leading-tight">{user?.name || 'Usuário'}</p>
+                <p className="text-[10px] truncate" style={{ color: 'var(--sidebar-text-muted)' }}>{user?.email || 'user@example.com'}</p>
               </div>
             </div>
             <button
               onClick={logout}
-              className="w-full flex items-center gap-3 px-3 py-2 text-red-400 hover:bg-gray-700 rounded-lg transition-colors"
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors text-sm"
+              style={{ color: '#ff8149' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,129,73,0.1)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-4 w-4" />
               <span>Sair</span>
             </button>
           </div>
         ) : (
           <button
             onClick={logout}
-            className="w-full p-2 text-red-400 hover:bg-gray-700 rounded-lg transition-colors"
+            className="w-full p-2 rounded-lg transition-colors"
+            style={{ color: '#ff8149' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,129,73,0.1)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             title="Sair"
           >
-            <LogOut className="h-5 w-5 mx-auto" />
+            <LogOut className="h-4 w-4 mx-auto" />
           </button>
         )}
       </div>

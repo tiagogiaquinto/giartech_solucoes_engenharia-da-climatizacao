@@ -51,51 +51,48 @@ const Header = () => {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 bg-white shadow-sm ml-64">
-      <div className="h-16 px-4 flex items-center justify-between">
-        
-        <h1 className="text-lg font-semibold text-gray-900">
+    <header className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100 ml-[272px]"
+      style={{ boxShadow: '0 1px 0 0 rgba(0,98,246,0.06)' }}>
+      <div className="h-14 px-5 flex items-center justify-between gap-4">
+
+        <h1 className="text-sm font-semibold text-gray-800 truncate" style={{ fontFamily: 'Inter, sans-serif' }}>
           {getPageTitle()}
         </h1>
-        
-        <div className="flex items-center space-x-3">
+
+        <div className="flex items-center gap-2.5 flex-shrink-0">
           <button
             onClick={openCommandPalette}
-            className="flex items-center gap-2 w-64 pl-3 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 hover:border-gray-300 transition-colors text-left group"
+            className="hidden sm:flex items-center gap-2 w-56 pl-3 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 hover:border-[#0062f6]/30 transition-colors text-left group"
           >
-            <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
-            <span className="flex-1 text-gray-400 text-sm">Buscar em tudo...</span>
-            <kbd className="hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px] font-mono text-gray-400 shadow-sm group-hover:border-gray-300">
+            <Search className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+            <span className="flex-1 text-gray-400 text-xs">Buscar em tudo...</span>
+            <kbd className="hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px] font-mono text-gray-400 shadow-sm">
               Ctrl K
             </kbd>
           </button>
-          
+
           <NotificationCenter />
 
-          <button 
-            className="flex items-center space-x-2"
+          <button
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             onClick={() => navigate('/profile')}
           >
             {user?.avatar ? (
               <div className="relative">
-                <img 
-                  src={user.avatar} 
-                  alt={user.name} 
-                  className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full object-cover border-2"
+                  style={{ borderColor: '#0062f6' }}
                 />
-                {isPremium && (
-                  <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-3 h-3 border border-white">
-                    <Crown className="h-2 w-2 text-white" />
-                  </div>
-                )}
               </div>
             ) : (
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                <User className="h-4 w-4" />
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                style={{ background: 'linear-gradient(135deg, #0062f6 0%, #00d1ff 100%)' }}>
+                {user?.name?.[0]?.toUpperCase() || <User className="h-3.5 w-3.5" />}
               </div>
             )}
-            
-            <span className="text-sm font-medium text-gray-700">{user?.name}</span>
+            <span className="hidden md:block text-xs font-medium text-gray-600">{user?.name}</span>
           </button>
         </div>
       </div>

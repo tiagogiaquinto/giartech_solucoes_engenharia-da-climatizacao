@@ -10,10 +10,10 @@ interface WebLayoutProps {
 const WebLayout: React.FC<WebLayoutProps> = ({ children }) => {
   const { isTechnician, isLoading } = useUser()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [mainContentMargin, setMainContentMargin] = useState('280px')
+  const [mainContentMargin, setMainContentMargin] = useState('272px')
 
   useEffect(() => {
-    setMainContentMargin(sidebarCollapsed ? '80px' : '280px')
+    setMainContentMargin(sidebarCollapsed ? '72px' : '272px')
   }, [sidebarCollapsed])
 
   if (isLoading) return null
