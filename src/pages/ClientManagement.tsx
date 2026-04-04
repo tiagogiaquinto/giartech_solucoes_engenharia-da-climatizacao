@@ -934,7 +934,7 @@ const ClientManagement = () => {
                               <div
                                 key={order.id}
                                 className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors cursor-pointer"
-                                onClick={() => navigate(`/ordens-servico/${order.id}`)}
+                                onClick={() => navigate(`/service-orders/${order.id}/view`)}
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex-1">
@@ -964,7 +964,7 @@ const ClientManagement = () => {
                             ))}
                             {serviceOrders.filter((so: any) => so.customer_id === client.id).length > 5 && (
                               <button
-                                onClick={() => navigate('/ordens-servico')}
+                                onClick={() => navigate('/service-orders')}
                                 className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
                               >
                                 Ver todas as {serviceOrders.filter((so: any) => so.customer_id === client.id).length} ordens de serviço

@@ -167,7 +167,7 @@ export function NotificationHubProvider({ children }: { children: React.ReactNod
             severity: 'critical',
             title: `OS ${os.order_number} — Prazo Vencido`,
             message: `Cliente: ${os.client_name || 'N/A'} · Prazo: ${os.execution_deadline ? new Date(os.execution_deadline).toLocaleDateString('pt-BR') : '—'}`,
-            link: `/ordens-servico/${os.id}`,
+            link: `/service-orders/${os.id}/view`,
             action_label: 'Ir para OS',
             sticky: true,
             created_at: new Date().toISOString(),
