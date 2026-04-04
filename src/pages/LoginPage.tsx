@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Mail, Lock, Eye, EyeOff, AlertCircle,
-  Building2, Wrench, Users, ChevronRight, ArrowLeft
+  Building2, Wrench, UserCheck, Briefcase, ChevronRight, ArrowLeft
 } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { useNavigate } from 'react-router-dom'
 
-type AccessType = 'admin' | 'technician' | 'portal'
+type AccessType = 'admin' | 'technician' | 'client' | 'partner'
 
 interface AccessOption {
   id: AccessType
@@ -22,7 +22,7 @@ interface AccessOption {
 const ACCESS_OPTIONS: AccessOption[] = [
   {
     id: 'admin',
-    label: 'Painel Administrativo',
+    label: 'Administrativo',
     description: 'Diretores, gerentes e equipe administrativa',
     icon: <Building2 className="w-6 h-6" />,
     color: 'text-blue-400',
@@ -30,22 +30,31 @@ const ACCESS_OPTIONS: AccessOption[] = [
     iconBg: 'bg-blue-500/15',
   },
   {
+    id: 'partner',
+    label: 'Parceiro',
+    description: 'Parceiros comerciais e revendedores',
+    icon: <Briefcase className="w-6 h-6" />,
+    color: 'text-orange-400',
+    borderColor: 'border-orange-500/40 hover:border-orange-400',
+    iconBg: 'bg-orange-500/15',
+  },
+  {
+    id: 'client',
+    label: 'Cliente',
+    description: 'Clientes para acompanhamento de servicos',
+    icon: <UserCheck className="w-6 h-6" />,
+    color: 'text-amber-400',
+    borderColor: 'border-amber-500/40 hover:border-amber-400',
+    iconBg: 'bg-amber-500/15',
+  },
+  {
     id: 'technician',
-    label: 'Acesso Tecnico',
+    label: 'Tecnico',
     description: 'Tecnicos de campo e executores de ordens de servico',
     icon: <Wrench className="w-6 h-6" />,
     color: 'text-emerald-400',
     borderColor: 'border-emerald-500/40 hover:border-emerald-400',
     iconBg: 'bg-emerald-500/15',
-  },
-  {
-    id: 'portal',
-    label: 'Portal do Cliente / Parceiro',
-    description: 'Clientes e parceiros para acompanhamento de servicos',
-    icon: <Users className="w-6 h-6" />,
-    color: 'text-amber-400',
-    borderColor: 'border-amber-500/40 hover:border-amber-400',
-    iconBg: 'bg-amber-500/15',
   },
 ]
 
@@ -100,7 +109,7 @@ const LoginPage = () => {
   }
 
   const handleSelectAccess = (type: AccessType) => {
-    if (type === 'portal') {
+    if (type === 'client' || type === 'partner') {
       navigate('/portal/login')
       return
     }
@@ -283,6 +292,7 @@ const LoginPage = () => {
                   ? 'Acesse sua conta de tecnico'
                   : 'Acesse o painel administrativo'}
               </p>
+
             </div>
 
             <div className="bg-white/4 backdrop-blur-xl border border-white/8 rounded-3xl p-6 shadow-2xl">
