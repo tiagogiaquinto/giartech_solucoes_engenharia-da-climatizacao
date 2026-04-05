@@ -67,11 +67,11 @@ const WebSidebar = () => {
       description: 'Gestão de clientes PF/PJ'
     },
     {
-      id: 'access-management',
-      path: '/access-management',
+      id: 'identity-control',
+      path: '/identity-control',
       icon: Shield,
-      label: 'Acessos',
-      description: 'Controle de permissões'
+      label: 'Hub IAM',
+      description: 'Perfis, permissões e acessos ao portal'
     },
     {
       id: 'monitoring',

@@ -994,13 +994,7 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/access-management" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <UserAccessManagement />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/access-management" element={<Navigate to="/identity-control" replace />} />
 
           <Route path="/audit-dashboard" element={
             <ProtectedRoute>
@@ -1018,13 +1012,7 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/portal-access" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <PortalAccessManager />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/portal-access" element={<Navigate to="/identity-control" replace />} />
 
           <Route path="/identity-control" element={
             <ProtectedRoute>

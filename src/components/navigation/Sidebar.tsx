@@ -102,8 +102,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'staff', path: '/staff', icon: Users, label: 'Hub de Equipe', description: 'Funcionários, permissões e engajamento', moduleCode: 'pessoas', superAdminOnly: true },
   { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações', moduleCode: 'auditoria' },
   { id: 'chat-interno', path: '/chat-interno', icon: MessageCircle, label: 'Chat Corporativo', description: 'Mensagens internas entre funcionarios', moduleCode: 'chat' },
-  { id: 'portal-access', path: '/portal-access', icon: Crown, label: 'Acessos ao Portal', description: 'Criar e gerenciar acesso de clientes e parceiros ao portal', moduleCode: 'portal', superAdminOnly: true },
-  { id: 'identity-control', path: '/identity-control', icon: Fingerprint, label: 'Controle de Identidades', description: 'Gestão 360° de todos os perfis: equipe, clientes e parceiros', moduleCode: 'configuracoes', superAdminOnly: true },
+  { id: 'identity-control', path: '/identity-control', icon: Fingerprint, label: 'Hub IAM', description: 'Perfis, permissões, acessos ao portal e gestão de dispositivos', moduleCode: 'configuracoes', superAdminOnly: true },
   { id: 'portal-clientes', path: '/portal/login', icon: Building2, label: 'Portal Cliente/Parceiro', description: 'Acesso externo para clientes e parceiros', moduleCode: 'portal' },
   { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais', moduleCode: 'configuracoes' },
 ]

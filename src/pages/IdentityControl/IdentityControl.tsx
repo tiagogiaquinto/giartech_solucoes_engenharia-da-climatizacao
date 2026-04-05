@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users, Search, RefreshCw, Filter,
   AlertCircle, CheckCircle, Crown, UserCog, Building2, Wrench,
-  Eye, Lock
+  Eye, Lock, Globe
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../contexts/UserContext'
@@ -14,8 +14,10 @@ import { ProfileEditDrawer } from './ProfileEditDrawer'
 import { IAMStatsBar } from './IAMStatsBar'
 import { PendingApprovals } from './PendingApprovals'
 import { DeviceSessionsDrawer } from './DeviceSessionsDrawer'
+import { CreatePortalAccessPanel } from './CreatePortalAccessPanel'
 
 type FilterType = 'todos' | 'staff' | 'cliente' | 'parceiro'
+type MainTab = 'profiles' | 'portal'
 
 interface IAMStats {
   online_count: number
@@ -36,6 +38,7 @@ const IdentityControl: React.FC = () => {
   const { user, isSuperAdmin } = useUser()
   const { startImpersonation, error: impersonationError } = useImpersonation()
 
+  const [activeTab, setActiveTab] = useState<MainTab>('profiles')
   const [allProfiles, setAllProfiles] = useState<AnyProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [statsLoading, setStatsLoading] = useState(true)
@@ -151,10 +154,10 @@ const IdentityControl: React.FC = () => {
               Hub de Identidade e Acesso
             </h1>
             <p className="text-gray-400 text-sm mt-0.5">
-              Gestão 360° — perfis, permissões, dispositivos e impersonation em um único painel
+              Gestão 360° — perfis, permissões, acessos ao portal, dispositivos e impersonation
             </p>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto">
             <button
               onClick={loadAll}
               disabled={loading}
@@ -176,7 +179,7 @@ const IdentityControl: React.FC = () => {
           style={{ background: 'rgba(180,83,9,0.12)', border: '1px solid rgba(251,191,36,0.18)' }}>
           <Eye size={12} className="text-amber-400 flex-shrink-0" />
           <p className="text-amber-300/70 text-xs">
-            Use <span className="font-semibold text-amber-300">Visualizar como</span> nos cards de Clientes e Parceiros para acessar o portal deles sem precisar de senha.
+            Use <span className="font-semibold text-amber-300">Visualizar como</span> nos cards de Clientes e Parceiros para testar permissões em tempo real.
           </p>
         </div>
       </div>
@@ -187,78 +190,130 @@ const IdentityControl: React.FC = () => {
       {/* ── Pending Approvals ── */}
       <PendingApprovals onApproved={loadAll} />
 
-      {/* ── Search + Filter controls ── */}
-      <div className="flex flex-col md:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3.5 top-3 text-gray-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por nome, e-mail ou função..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm text-white outline-none transition-all focus:ring-1 focus:ring-blue-500/40"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(59,130,246,0.18)' }}
-          />
-        </div>
-
-        <div className="flex gap-1 p-1 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(59,130,246,0.1)' }}>
-          {FILTER_OPTIONS.map(opt => {
-            const Icon = opt.icon
-            const active = filter === opt.id
-            return (
-              <button key={opt.id} onClick={() => setFilter(opt.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap"
-                style={{
-                  background: active ? 'rgba(29,78,216,0.55)' : 'transparent',
-                  color: active ? '#93c5fd' : '#6b7280',
-                  border: active ? '1px solid rgba(59,130,246,0.4)' : '1px solid transparent',
-                }}>
-                <Icon size={11} />
-                {opt.label}
-                {opt.id !== 'todos' && (
-                  <span className="ml-0.5 text-gray-600 font-normal">
-                    ({allProfiles.filter(p => p.type === opt.id).length})
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+      {/* ── Main Tabs ── */}
+      <div className="flex gap-1 p-1 rounded-2xl mb-6 w-fit"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(59,130,246,0.12)' }}>
+        {([
+          { id: 'profiles' as const, label: 'Perfis & Identidades', icon: Users, desc: 'Equipe, clientes e parceiros' },
+          { id: 'portal'   as const, label: 'Acessos ao Portal',    icon: Globe, desc: 'Criar e gerenciar logins externos' },
+        ]).map(tab => {
+          const Icon = tab.icon
+          const active = activeTab === tab.id
+          return (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{
+                background: active ? 'rgba(29,78,216,0.55)' : 'transparent',
+                color: active ? '#93c5fd' : '#6b7280',
+                border: active ? '1px solid rgba(59,130,246,0.4)' : '1px solid transparent',
+              }}>
+              <Icon size={14} />
+              {tab.label}
+            </button>
+          )
+        })}
       </div>
 
-      {/* ── Profile Grid ── */}
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-2xl h-56 animate-pulse"
-              style={{ background: 'rgba(255,255,255,0.03)' }} />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-gray-600">
-          <Filter size={36} className="mb-3 opacity-30" />
-          <p className="text-sm">Nenhum perfil encontrado.</p>
-        </div>
-      ) : (
-        <motion.div
-          layout
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-        >
-          {filtered.map((p, i) => (
-            <ProfileCard
-              key={p.id}
-              profile={p}
-              index={i}
-              onEdit={setEditTarget}
-              onToggleActive={handleToggleActive}
-              onImpersonate={handleImpersonate}
-              onDevices={setDevicesTarget}
-              impersonating={impersonatingId === p.id}
-            />
-          ))}
-        </motion.div>
-      )}
+      <AnimatePresence mode="wait">
+
+        {/* ── TAB: Profiles ── */}
+        {activeTab === 'profiles' && (
+          <motion.div
+            key="profiles"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+          >
+            {/* Search + Filter controls */}
+            <div className="flex flex-col md:flex-row gap-3 mb-6">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3.5 top-3 text-gray-500" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar por nome, e-mail ou função..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm text-white outline-none transition-all focus:ring-1 focus:ring-blue-500/40"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(59,130,246,0.18)' }}
+                />
+              </div>
+
+              <div className="flex gap-1 p-1 rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(59,130,246,0.1)' }}>
+                {FILTER_OPTIONS.map(opt => {
+                  const Icon = opt.icon
+                  const active = filter === opt.id
+                  return (
+                    <button key={opt.id} onClick={() => setFilter(opt.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap"
+                      style={{
+                        background: active ? 'rgba(29,78,216,0.55)' : 'transparent',
+                        color: active ? '#93c5fd' : '#6b7280',
+                        border: active ? '1px solid rgba(59,130,246,0.4)' : '1px solid transparent',
+                      }}>
+                      <Icon size={11} />
+                      {opt.label}
+                      {opt.id !== 'todos' && (
+                        <span className="ml-0.5" style={{ color: active ? '#93c5fd60' : '#374151' }}>
+                          ({allProfiles.filter(p => p.type === opt.id).length})
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Profile Grid */}
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="rounded-2xl h-56 animate-pulse"
+                    style={{ background: 'rgba(255,255,255,0.03)' }} />
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-gray-600">
+                <Filter size={36} className="mb-3 opacity-30" />
+                <p className="text-sm">Nenhum perfil encontrado.</p>
+              </div>
+            ) : (
+              <motion.div layout
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filtered.map((p, i) => (
+                  <ProfileCard
+                    key={p.id}
+                    profile={p}
+                    index={i}
+                    onEdit={setEditTarget}
+                    onToggleActive={handleToggleActive}
+                    onImpersonate={handleImpersonate}
+                    onDevices={setDevicesTarget}
+                    impersonating={impersonatingId === p.id}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ── TAB: Portal Access ── */}
+        {activeTab === 'portal' && (
+          <motion.div
+            key="portal"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="rounded-2xl p-5"
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(59,130,246,0.12)' }}
+          >
+            <CreatePortalAccessPanel onCreated={loadAll} />
+          </motion.div>
+        )}
+
+      </AnimatePresence>
 
       {/* ── Edit Drawer ── */}
       <AnimatePresence>
