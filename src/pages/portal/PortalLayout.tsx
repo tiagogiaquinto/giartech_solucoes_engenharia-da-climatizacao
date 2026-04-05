@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { usePortal } from '../../contexts/PortalContext'
 import { Loader2 } from 'lucide-react'
+import { ImpersonationBar } from '../../components/ImpersonationBar'
 
 interface PortalLayoutProps {
   children: React.ReactNode
@@ -50,6 +51,7 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
+      <ImpersonationBar />
       <aside className="w-60 bg-white border-r border-gray-100 flex flex-col shadow-sm">
         <div className="p-5 border-b border-gray-100">
           <div className="flex items-center gap-3">

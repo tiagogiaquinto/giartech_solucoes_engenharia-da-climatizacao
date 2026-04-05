@@ -44,7 +44,8 @@ import {
   Box,
   Wind,
   LayoutGrid,
-  QrCode
+  QrCode,
+  Fingerprint
 } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { supabase } from '../../lib/supabase'
@@ -102,6 +103,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações', moduleCode: 'auditoria' },
   { id: 'chat-interno', path: '/chat-interno', icon: MessageCircle, label: 'Chat Corporativo', description: 'Mensagens internas entre funcionarios', moduleCode: 'chat' },
   { id: 'portal-access', path: '/portal-access', icon: Crown, label: 'Acessos ao Portal', description: 'Criar e gerenciar acesso de clientes e parceiros ao portal', moduleCode: 'portal', superAdminOnly: true },
+  { id: 'identity-control', path: '/identity-control', icon: Fingerprint, label: 'Controle de Identidades', description: 'Gestão 360° de todos os perfis: equipe, clientes e parceiros', moduleCode: 'configuracoes', superAdminOnly: true },
   { id: 'portal-clientes', path: '/portal/login', icon: Building2, label: 'Portal Cliente/Parceiro', description: 'Acesso externo para clientes e parceiros', moduleCode: 'portal' },
   { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais', moduleCode: 'configuracoes' },
 ]

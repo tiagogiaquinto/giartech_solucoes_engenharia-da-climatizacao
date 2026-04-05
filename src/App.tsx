@@ -150,6 +150,9 @@ import { useThomazInterrupt } from './hooks/useThomazInterrupt'
 import { useDailyAutomations } from './hooks/useDailyAutomations'
 import TaskBoard from './pages/TaskBoard/TaskBoard'
 import { ThomazOrchestrator } from './components/ThomazOrchestrator'
+import IdentityControl from './pages/IdentityControl/IdentityControl'
+import { ImpersonationProvider } from './contexts/ImpersonationContext'
+import { ImpersonationBar } from './components/ImpersonationBar'
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
   const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
@@ -399,6 +402,7 @@ function App() {
   return (
     <AuthProvider>
       <UserProvider>
+      <ImpersonationProvider>
         <PortalProvider>
         <NotificationHubProvider>
         <ThomazInterruptActivator />
@@ -1022,6 +1026,14 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/identity-control" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <IdentityControl />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/funcionarios" element={
             <ProtectedRoute>
               <WebLayout>
@@ -1299,10 +1311,12 @@ function App() {
 
       {/* Mobile Bottom Navigation */}
       {/* Offline Indicator */}
+      <ImpersonationBar />
       <OfflineIndicator />
       {isMobile() && <MobileBottomNav />}
       </NotificationHubProvider>
         </PortalProvider>
+      </ImpersonationProvider>
       </UserProvider>
     </AuthProvider>
   )
