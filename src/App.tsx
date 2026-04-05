@@ -115,6 +115,7 @@ import Customer360 from './pages/Customer360'
 import TeamManagement from './pages/TeamManagement'
 import StaffHub from './pages/StaffHub'
 import InternalChat from './pages/InternalChat'
+import CommandCenter from './pages/CommandCenter/CommandCenter'
 import PortalLogin from './pages/portal/PortalLogin'
 import PortalLayout from './pages/portal/PortalLayout'
 import PortalDashboardRouter from './pages/portal/PortalDashboardRouter'
@@ -1197,6 +1198,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <InternalChat />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/command-center" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <CommandCenter />
               </WebLayout>
             </ProtectedRoute>
           } />

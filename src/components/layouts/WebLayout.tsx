@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Outlet, Navigate } from 'react-router-dom'
 import Sidebar from '../navigation/Sidebar'
 import { useUser } from '../../contexts/UserContext'
+import BroadcastBanner from '../BroadcastBanner'
 
 interface WebLayoutProps {
   children?: React.ReactNode
@@ -25,12 +26,12 @@ const WebLayout: React.FC<WebLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar onCollapse={setSidebarCollapsed} />
-      <main
-        className="min-h-screen transition-all duration-300"
-        style={{ marginLeft: mainContentMargin }}
-      >
-        {children || <Outlet />}
-      </main>
+      <div className="transition-all duration-300 flex flex-col min-h-screen" style={{ marginLeft: mainContentMargin }}>
+        <BroadcastBanner />
+        <main className="flex-1">
+          {children || <Outlet />}
+        </main>
+      </div>
     </div>
   )
 }
