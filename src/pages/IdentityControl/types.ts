@@ -69,7 +69,7 @@ export const ROLE_COLORS: Record<string, { from: string; to: string; text: strin
   financial:   { from: '#312e0a', to: '#713f12', text: '#fde68a' },
   viewer:      { from: '#1f2937', to: '#374151', text: '#d1d5db' },
   cliente:     { from: '#1a2a3a', to: '#0e7490', text: '#67e8f9' },
-  parceiro:    { from: '#2d1a3a', to: '#7c3aed', text: '#c4b5fd' },
+  parceiro:    { from: '#0f3a2a', to: '#065f46', text: '#6ee7b7' },
 }
 
 export const MODULE_LIST = [
