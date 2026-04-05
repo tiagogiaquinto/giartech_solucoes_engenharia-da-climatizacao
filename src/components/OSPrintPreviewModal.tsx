@@ -149,11 +149,40 @@ export default function OSPrintPreviewModal({ orderId, onClose }: OSPrintPreview
   }
 
   const handlePrint = () => {
+    if (!printRef.current) return
     setPrinting(true)
-    setTimeout(() => {
-      window.print()
-      setPrinting(false)
-    }, 200)
+
+    const docHTML = printRef.current.innerHTML
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:none;'
+    document.body.appendChild(iframe)
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!iframeDoc) { setPrinting(false); return }
+
+    iframeDoc.open()
+    iframeDoc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: white; }
+        @media print {
+          @page { margin: 0; size: A4 portrait; }
+          body { margin: 0; }
+        }
+      </style>
+    </head><body>${docHTML}</body></html>`)
+    iframeDoc.close()
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow?.focus()
+        iframe.contentWindow?.print()
+        setTimeout(() => {
+          document.body.removeChild(iframe)
+          setPrinting(false)
+        }, 500)
+      }, 200)
+    }
   }
 
   return (
