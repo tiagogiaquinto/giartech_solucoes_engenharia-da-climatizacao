@@ -6,12 +6,13 @@ import {
   CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp,
   FileText, Settings, Wrench,
   QrCode, Copy, ExternalLink, Link2, CheckCircle2, Loader2,
-  RefreshCw, Scan, User, Package
+  RefreshCw, Scan, User, Package, Printer
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useUser } from '../contexts/UserContext'
 import { format, differenceInDays, isPast } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import AssetLabelPrint from '../components/AssetLabelPrint'
 
 /* ─────────────────────────── shared types ─────────────────────────── */
 
@@ -183,6 +184,7 @@ const Equipments = () => {
   const [linking, setLinking] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [qrToast, setQrToast] = useState<string | null>(null)
+  const [labelEq, setLabelEq] = useState<EquipmentWithQR | null>(null)
 
   /* ─── load data ─── */
 
@@ -824,6 +826,13 @@ const Equipments = () => {
                               {copiedId === eq.id ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                               {copiedId === eq.id ? 'Copiado!' : 'Copiar Link'}
                             </button>
+                            <button
+                              onClick={() => setLabelEq(eq)}
+                              className="text-gray-400 hover:text-slate-700 transition p-1.5 rounded-lg hover:bg-gray-50"
+                              title="Gerar Etiqueta de Identificação"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </button>
                             <a
                               href={`${BASE_URL}/care/${eq.qr_code_token}`}
                               target="_blank"
@@ -1108,6 +1117,22 @@ const Equipments = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {labelEq && labelEq.qr_code_token && (
+        <AssetLabelPrint
+          equipment={{
+            id: labelEq.id,
+            name: labelEq.name,
+            brand: labelEq.brand,
+            model: labelEq.model,
+            serial_number: labelEq.serial_number,
+            location: labelEq.location,
+            qr_code_token: labelEq.qr_code_token,
+            customer_name: labelEq.customer_name,
+          }}
+          onClose={() => setLabelEq(null)}
+        />
+      )}
     </div>
   )
 }
