@@ -109,6 +109,7 @@ import OSDistribution from './pages/OSDistribution'
 import GoalsAndRankings from './pages/GoalsAndRankings'
 import BudgetManagement from './pages/BudgetManagement'
 import DocumentCenter from './pages/DocumentCenter'
+import GiartechDocs from './pages/GiartechDocs'
 import ThomazDashboard from './pages/ThomazDashboard'
 import AIProvidersSettings from './pages/AIProvidersSettings'
 import Customer360 from './pages/Customer360'
@@ -802,13 +803,17 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/documents" element={
+          <Route path="/giartech-docs" element={
             <ProtectedRoute>
               <WebLayout>
-                <DocumentCenter />
+                <GiartechDocs />
               </WebLayout>
             </ProtectedRoute>
           } />
+
+          <Route path="/documents" element={<Navigate to="/giartech-docs" replace />} />
+
+          <Route path="/contract-templates" element={<Navigate to="/giartech-docs" replace />} />
 
           <Route path="/financial-analysis" element={
             <ProtectedRoute>
