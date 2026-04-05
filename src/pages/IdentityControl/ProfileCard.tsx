@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { FileEdit as Edit2, Power, Clock, ShieldCheck, Eye, Loader2, CheckCircle, AlertCircle, UserX } from 'lucide-react'
+import { FileEdit as Edit2, Power, Clock, ShieldCheck, Eye, Loader2, CheckCircle, AlertCircle, UserX, Monitor } from 'lucide-react'
 import { AnyProfile, ROLE_LABELS, ROLE_COLORS } from './types'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -10,6 +10,7 @@ interface Props {
   onEdit: (p: AnyProfile) => void
   onToggleActive: (p: AnyProfile) => void
   onImpersonate?: (p: AnyProfile) => void
+  onDevices?: (p: AnyProfile) => void
   impersonating?: boolean
   index: number
 }
@@ -25,6 +26,7 @@ export const ProfileCard: React.FC<Props> = ({
   onEdit,
   onToggleActive,
   onImpersonate,
+  onDevices,
   impersonating = false,
   index,
 }) => {
@@ -126,6 +128,22 @@ export const ProfileCard: React.FC<Props> = ({
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Devices button — portal accounts only */}
+        {isPortal && onDevices && (
+          <button
+            onClick={() => onDevices(profile)}
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-all hover:brightness-110"
+            style={{
+              background: 'rgba(30,58,138,0.35)',
+              border: '1px solid rgba(96,165,250,0.2)',
+              color: '#93c5fd',
+            }}
+          >
+            <Monitor size={11} />
+            Dispositivos ativos
+          </button>
+        )}
 
         {/* Impersonate button — portal accounts only */}
         {isPortal && onImpersonate && (
