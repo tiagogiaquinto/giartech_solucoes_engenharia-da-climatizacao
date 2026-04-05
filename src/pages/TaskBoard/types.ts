@@ -30,6 +30,8 @@ export interface Task {
   assignee_name?: string
   assignee_email?: string
   assignee_avatar?: string
+  assignee_cargo?: string
+  assignee_department?: string
   assigned_by_name?: string
   assigned_at?: string
   due_date?: string

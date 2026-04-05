@@ -96,6 +96,8 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete, currentU
       assignee_id: user?.id,
       assignee_name: user ? (user.full_name || user.email) : undefined,
       assignee_email: user?.email,
+      assignee_cargo: user?.cargo || user?.role || undefined,
+      assignee_department: user?.department || undefined,
       assigned_by_name: currentUserName,
       assigned_at: user ? new Date().toISOString() : undefined,
     }
@@ -210,6 +212,18 @@ export function TaskDetailDrawer({ taskId, onClose, onUpdate, onDelete, currentU
                     }
                     onChange={handleAssigneeChange}
                   />
+                  {(task?.assignee_cargo || task?.assignee_department) && (
+                    <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                      {task.assignee_cargo && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                          {task.assignee_cargo}
+                        </span>
+                      )}
+                      {task.assignee_department && (
+                        <span className="text-[10px] text-gray-400">{task.assignee_department}</span>
+                      )}
+                    </div>
+                  )}
                   {task?.assigned_by_name && task?.assigned_at && (
                     <div className="mt-1.5 flex items-center gap-1 text-[10px] text-gray-400">
                       <History className="h-3 w-3" />

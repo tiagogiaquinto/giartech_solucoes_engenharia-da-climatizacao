@@ -2,7 +2,7 @@ import React from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Calendar, CheckSquare, User, GripVertical } from 'lucide-react'
+import { AlertTriangle, Calendar, CheckSquare, User, GripVertical, Briefcase } from 'lucide-react'
 import { Task, PRIORITY_CONFIG } from './types'
 
 function isOverdue(dueDate?: string) {
@@ -100,19 +100,27 @@ export function TaskCard({ task, onClick, overlay = false }: TaskCardProps) {
             )}
 
             <div className="flex items-center justify-between mt-1">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 min-w-0">
                 {task.assignee_name ? (
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-[9px] font-bold text-white shadow-sm shrink-0">
                     {initials(task.assignee_name)}
                   </div>
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
                     <User className="h-3 w-3 text-gray-400" />
                   </div>
                 )}
-                {task.assignee_name && (
-                  <span className="text-xs text-gray-500 max-w-[80px] truncate">{task.assignee_name}</span>
-                )}
+                <div className="min-w-0">
+                  {task.assignee_name && (
+                    <span className="text-xs text-gray-500 block truncate max-w-[90px]">{task.assignee_name}</span>
+                  )}
+                  {task.assignee_cargo && (
+                    <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-blue-600 truncate max-w-[90px]">
+                      <Briefcase className="h-2 w-2 shrink-0" />
+                      {task.assignee_cargo}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
