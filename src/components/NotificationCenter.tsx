@@ -10,11 +10,11 @@ interface Notification {
   type: 'info' | 'warning' | 'error' | 'success'
   title: string
   message: string
-  link?: string
+  action_url?: string
   action_label?: string
   category?: string
-  priority: number
-  read: boolean
+  priority: string
+  is_read: boolean
   read_at?: string
   created_at: string
 }
@@ -41,13 +41,11 @@ export function NotificationCenter() {
       let query = supabase
         .from('notifications')
         .select('*')
-        .eq('archived', false)
-        .order('priority', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50)
 
       if (filter === 'unread') {
-        query = query.eq('read', false)
+        query = query.eq('is_read', false)
       }
 
       const { data, error } = await query
@@ -55,7 +53,7 @@ export function NotificationCenter() {
       if (error) throw error
 
       setNotifications(data || [])
-      setUnreadCount(data?.filter(n => !n.read).length || 0)
+      setUnreadCount(data?.filter(n => !n.is_read).length || 0)
     } catch (error) {
       console.error('Error loading notifications:', error)
     }
@@ -113,23 +111,15 @@ export function NotificationCenter() {
 
   const markAllAsRead = async () => {
     try {
-      // Get current user - using a simple approach
-      const { data: employees } = await supabase
-        .from('employees')
-        .select('id')
-        .limit(1)
-        .single()
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('is_read', false)
 
-      if (employees?.id) {
-        const { error } = await supabase.rpc('mark_all_notifications_as_read', {
-          p_user_id: employees.id
-        })
+      if (error) throw error
 
-        if (error) throw error
-
-        toast.success('Todas as notificações marcadas como lidas')
-        loadNotifications()
-      }
+      toast.success('Todas as notificações marcadas como lidas')
+      loadNotifications()
     } catch (error) {
       console.error('Error marking all as read:', error)
       toast.error('Erro ao marcar notificações como lidas')
@@ -140,7 +130,7 @@ export function NotificationCenter() {
     try {
       const { error } = await supabase
         .from('notifications')
-        .update({ archived: true })
+        .delete()
         .eq('id', notificationId)
 
       if (error) throw error
@@ -153,12 +143,12 @@ export function NotificationCenter() {
   }
 
   const handleNotificationClick = (notification: Notification) => {
-    if (!notification.read) {
+    if (!notification.is_read) {
       markAsRead(notification.id)
     }
 
-    if (notification.link) {
-      navigate(notification.link)
+    if (notification.action_url) {
+      navigate(notification.action_url)
       setIsOpen(false)
     }
   }
@@ -295,7 +285,7 @@ export function NotificationCenter() {
                     <div
                       key={notification.id}
                       className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
-                        !notification.read ? 'bg-blue-50' : ''
+                        !notification.is_read ? 'bg-blue-50' : ''
                       }`}
                       onClick={() => handleNotificationClick(notification)}
                     >
@@ -309,7 +299,7 @@ export function NotificationCenter() {
                             <h4 className="text-sm font-semibold text-gray-900">
                               {notification.title}
                             </h4>
-                            {!notification.read && (
+                            {!notification.is_read && (
                               <span className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-1.5" />
                             )}
                           </div>
@@ -324,7 +314,7 @@ export function NotificationCenter() {
                             </span>
 
                             <div className="flex items-center gap-2">
-                              {!notification.read && (
+                              {!notification.is_read && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
