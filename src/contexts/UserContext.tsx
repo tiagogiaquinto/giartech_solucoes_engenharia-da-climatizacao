@@ -88,10 +88,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const currentAuthUserRef = React.useRef<import('@supabase/supabase-js').User | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+        currentAuthUserRef.current = session.user
         loadUserProfile(session.user).finally(() => setIsLoading(false))
       } else {
         setIsLoading(false)
@@ -101,8 +103,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       (async () => {
         if (session?.user) {
+          currentAuthUserRef.current = session.user
           await loadUserProfile(session.user)
         } else {
+          currentAuthUserRef.current = null
           setUser(null)
           setProfile(null)
           setIsLoading(false)
@@ -114,6 +118,40 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       authListener?.subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!user || user.role === 'super_admin') return
+
+    const userId = user.id
+    const channel = supabase
+      .channel(`ctx-perms:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'module_permissions', filter: `user_id=eq.${userId}` },
+        () => {
+          if (currentAuthUserRef.current) loadUserProfile(currentAuthUserRef.current)
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'sensitive_permissions', filter: `user_id=eq.${userId}` },
+        () => {
+          if (currentAuthUserRef.current) loadUserProfile(currentAuthUserRef.current)
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'auth_accounts', filter: `id=eq.${userId}` },
+        () => {
+          if (currentAuthUserRef.current) loadUserProfile(currentAuthUserRef.current)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user?.id, user?.role])
 
   const loadUserProfile = async (authUser: SupabaseUser) => {
     try {
