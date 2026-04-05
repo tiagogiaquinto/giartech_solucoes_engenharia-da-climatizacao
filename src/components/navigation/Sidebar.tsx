@@ -94,7 +94,6 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'task-board', path: '/task-board', icon: LayoutGrid, label: 'Central de Tarefas', description: 'Quadro Kanban de tarefas administrativas', moduleCode: 'projetos' },
 
   { id: 'thomaz', path: '/thomaz', icon: Brain, label: 'Thomaz AI', description: 'Consultor Empresarial', moduleCode: 'thomaz' },
-  { id: 'thomaz-metrics', path: '/thomaz-metrics', icon: Brain, label: 'Métricas Thomaz', description: 'Performance da IA', moduleCode: 'thomaz' },
   { id: 'email', path: '/email/inbox', icon: Mail, label: 'Email Corporativo', description: 'Enviar e receber emails', moduleCode: 'email' },
   { id: 'library', path: '/digital-library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos', moduleCode: 'biblioteca' },
   { id: 'staff', path: '/staff', icon: Users, label: 'Hub de Equipe', description: 'Funcionários, permissões e engajamento', moduleCode: 'pessoas', superAdminOnly: true },
