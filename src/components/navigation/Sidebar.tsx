@@ -44,7 +44,8 @@ import {
   Box,
   Wind,
   LayoutGrid,
-  Fingerprint
+  Fingerprint,
+  Bell
 } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { supabase } from '../../lib/supabase'
