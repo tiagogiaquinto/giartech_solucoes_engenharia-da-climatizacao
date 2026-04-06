@@ -719,7 +719,7 @@ function App() {
           } />
 
           <Route path="/task-board" element={
-            <ProtectedRoute>
+            <ProtectedRoute moduleCode="projetos">
               <WebLayout>
                 <TaskBoard />
               </WebLayout>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, UserPlus, Search, Crown, Shield, RefreshCw, Briefcase, Mail, Phone, ToggleLeft, ToggleRight, FileEdit as Edit2, Trash2, AlertCircle, Check, Clock, Star, Lock, Eye, EyeOff } from 'lucide-react'
+import { Users, UserPlus, Search, Crown, Shield, RefreshCw, Briefcase, Mail, Phone, ToggleLeft, ToggleRight, FileEdit as Edit2, Trash2, AlertCircle, Check, Clock, Star, Lock, Eye, EyeOff, KeyRound } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useUser } from '../contexts/UserContext'
 import { useNavigate } from 'react-router-dom'
 import { EmployeeDetailDrawer } from '../components/EmployeeDetailDrawer'
+import { ModulePermissionsPanel } from './StaffHub/ModulePermissionsPanel'
 
 interface Employee {
   id: string
@@ -36,7 +37,7 @@ interface AuthUser {
   created_at: string
 }
 
-type MainView = 'employees' | 'users'
+type MainView = 'employees' | 'users' | 'permissions'
 type UserSubTab = 'list' | 'create'
 
 function generatePassword(length = 10): string {
@@ -352,6 +353,7 @@ const StaffHub: React.FC = () => {
           {([
             { id: 'employees', label: 'Funcionários', icon: Users },
             { id: 'users', label: 'Contas de Sistema', icon: Shield },
+            { id: 'permissions', label: 'Permissões de Acesso', icon: KeyRound },
           ] as const).map(v => {
             const Icon = v.icon
             return (
@@ -387,6 +389,12 @@ const StaffHub: React.FC = () => {
               className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
+        )}
+        {mainView === 'permissions' && (
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            <KeyRound className="h-4 w-4 text-amber-600 flex-shrink-0" />
+            <p className="text-xs text-amber-700 font-medium">Configure quais módulos cada usuário pode acessar</p>
           </div>
         )}
 
@@ -596,6 +604,9 @@ const StaffHub: React.FC = () => {
             </div>
           )}
         </div>
+      ) : mainView === 'permissions' ? (
+        /* MODULE PERMISSIONS PANEL */
+        <ModulePermissionsPanel authUsers={authUsers} />
       ) : mainView === 'users' && userSubTab === 'create' ? (
         /* CREATE ACCESS FORM */
         <div className="max-w-xl">
