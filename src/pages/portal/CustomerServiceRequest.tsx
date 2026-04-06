@@ -172,8 +172,21 @@ export default function CustomerServiceRequest() {
   const [selected, setSelected] = useState<ServiceRequest | null>(null)
 
   useEffect(() => {
+    if (!portalUser) return
     loadRequests()
-  }, [portalUser])
+
+    const ch = supabase
+      .channel(`portal-service-requests-${portalUser.account_id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'portal_service_requests',
+        filter: `portal_account_id=eq.${portalUser.account_id}`,
+      }, () => { loadRequests() })
+      .subscribe()
+
+    return () => { ch.unsubscribe() }
+  }, [portalUser?.account_id])
 
   const loadRequests = async () => {
     if (!portalUser) return
@@ -185,6 +198,8 @@ export default function CustomerServiceRequest() {
         .eq('portal_account_id', portalUser.account_id)
         .order('created_at', { ascending: false })
       setRequests(data || [])
+    } catch {
+      setRequests([])
     } finally {
       setLoading(false)
     }

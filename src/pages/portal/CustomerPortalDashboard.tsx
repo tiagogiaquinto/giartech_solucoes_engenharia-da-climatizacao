@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import {
   ClipboardList, CheckCircle2, Clock, AlertCircle, Calendar,
   FileSignature, RefreshCw, FileText, ChevronRight, TrendingUp,
-  Shield, ShieldAlert, ShieldOff, History, MapPin, Receipt
+  Shield, ShieldAlert, ShieldOff, History, MapPin, Receipt, MessageSquarePlus
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
@@ -72,6 +72,7 @@ export default function CustomerPortalDashboard() {
   const navigate = useNavigate()
   const [orders, setOrders] = useState<CustomerOrder[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
+  const [pendingRequests, setPendingRequests] = useState(0)
   const [loading, setLoading] = useState(true)
   const [budgetsLoading, setBudgetsLoading] = useState(true)
   const [signingOrder, setSigningOrder] = useState<CustomerOrder | null>(null)
@@ -79,12 +80,13 @@ export default function CustomerPortalDashboard() {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
-    if (!portalUser?.linked_customer_id) return
+    if (!portalUser?.account_id) return
     loadOrders()
     loadBudgets()
+    loadPendingRequests()
 
     const ch = supabase
-      .channel(`portal-dashboard-${portalUser.linked_customer_id}`)
+      .channel(`portal-dashboard-${portalUser.account_id}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -95,11 +97,17 @@ export default function CustomerPortalDashboard() {
         schema: 'public',
         table: 'budgets',
       }, () => { loadBudgets() })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'portal_service_requests',
+        filter: `portal_account_id=eq.${portalUser.account_id}`,
+      }, () => { loadPendingRequests() })
       .subscribe()
 
     channelRef.current = ch
     return () => { ch.unsubscribe() }
-  }, [portalUser?.linked_customer_id])
+  }, [portalUser?.account_id])
 
   const loadOrders = async () => {
     if (!portalUser?.linked_customer_id) return
@@ -131,9 +139,24 @@ export default function CustomerPortalDashboard() {
     }
   }
 
+  const loadPendingRequests = async () => {
+    if (!portalUser?.account_id) return
+    try {
+      const { count } = await supabase
+        .from('portal_service_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('portal_account_id', portalUser.account_id)
+        .in('status', ['aberto', 'em_analise'])
+      setPendingRequests(count || 0)
+    } catch {
+      setPendingRequests(0)
+    }
+  }
+
   const handleRefresh = () => {
     loadOrders()
     loadBudgets()
+    loadPendingRequests()
   }
 
   const osStats = {
@@ -175,7 +198,7 @@ export default function CustomerPortalDashboard() {
           { label: 'Total de OS', value: osStats.total, icon: ClipboardList, color: 'blue' },
           { label: 'Em Andamento', value: osStats.emAndamento, icon: Clock, color: 'yellow' },
           { label: 'Orçamentos Pendentes', value: budgetStats.pendentes, icon: FileText, color: 'orange' },
-          { label: 'Orçamentos Aprovados', value: budgetStats.aprovados, icon: CheckCircle2, color: 'green' },
+          { label: 'Solicitações Abertas', value: pendingRequests, icon: MessageSquarePlus, color: 'green' },
         ].map((stat, i) => {
           const Icon = stat.icon
           return (
@@ -264,6 +287,24 @@ export default function CustomerPortalDashboard() {
           <button
             onClick={() => setActiveTab('orcamentos')}
             className="flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900 shrink-0"
+          >
+            Ver <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+
+      {pendingRequests > 0 && (
+        <div className="p-4 bg-teal-50 border border-teal-200 rounded-2xl flex items-center gap-3">
+          <MessageSquarePlus size={20} className="text-teal-600 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-teal-800">
+              {pendingRequests} solicitação{pendingRequests > 1 ? 'ões' : ''} em análise pela equipe
+            </p>
+            <p className="text-xs text-teal-600">Em breve entraremos em contato. Acesse "Solicitar Serviço" para acompanhar.</p>
+          </div>
+          <button
+            onClick={() => navigate('/portal/solicitar-servico')}
+            className="flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-900 shrink-0"
           >
             Ver <ChevronRight size={14} />
           </button>
