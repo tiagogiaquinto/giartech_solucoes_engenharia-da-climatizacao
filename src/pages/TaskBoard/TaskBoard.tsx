@@ -32,6 +32,7 @@ import { AssignmentToast } from './AssignmentToast'
 import { ListView } from './ListView'
 import { CalendarView } from './CalendarView'
 import { GanttView } from './GanttView'
+import { PortalRequestAlerts } from './PortalRequestAlerts'
 
 type FilterType = 'all' | 'mine' | 'financial' | 'urgent'
 type ViewMode = 'kanban' | 'list' | 'calendar' | 'gantt'
@@ -251,6 +252,7 @@ export default function TaskBoard() {
   const [filterDueDateTo, setFilterDueDateTo] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [showStats, setShowStats] = useState(true)
+  const [portalRequestsCount, setPortalRequestsCount] = useState(0)
   const workloadPanelRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(
@@ -436,6 +438,12 @@ export default function TaskBoard() {
                     <span className="text-xs font-bold bg-orange-100 text-orange-700 border border-orange-300 rounded-full px-2 py-0.5 flex items-center gap-1">
                       <Clock className="h-2.5 w-2.5" />
                       {totalOverdue} atrasada{totalOverdue > 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {portalRequestsCount > 0 && (
+                    <span className="text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 rounded-full px-2 py-0.5 flex items-center gap-1">
+                      <ArrowRight className="h-2.5 w-2.5" />
+                      {portalRequestsCount} do portal
                     </span>
                   )}
                 </div>
@@ -634,6 +642,9 @@ export default function TaskBoard() {
               </button>
             </div>
           )}
+
+          {/* ── PORTAL REQUEST ALERTS ───────────────────── */}
+          <PortalRequestAlerts onRequestsCountChange={setPortalRequestsCount} />
 
           {/* ── STATS STRIP ─────────────────────────────── */}
           <AnimatePresence>
