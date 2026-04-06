@@ -156,6 +156,7 @@ import IdentityControl from './pages/IdentityControl/IdentityControl'
 import { ImpersonationProvider } from './contexts/ImpersonationContext'
 import { ImpersonationBar } from './components/ImpersonationBar'
 import AccessDenied403 from './pages/AccessDenied403'
+import NotificationRules from './pages/NotificationRules'
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
   const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
@@ -606,6 +607,14 @@ function App() {
             <ProtectedRoute>
               <WebLayout>
                 <Settings />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/settings/notification-rules" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <NotificationRules />
               </WebLayout>
             </ProtectedRoute>
           } />

@@ -101,6 +101,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'identity-control', path: '/identity-control', icon: Fingerprint, label: 'Hub IAM', description: 'Perfis, permissões, acessos ao portal e gestão de dispositivos', moduleCode: 'configuracoes', superAdminOnly: true },
   { id: 'portal-clientes', path: '/portal/login', icon: Building2, label: 'Portal Cliente/Parceiro', description: 'Acesso externo para clientes e parceiros', moduleCode: 'portal' },
   { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais', moduleCode: 'configuracoes' },
+  { id: 'notification-rules', path: '/settings/notification-rules', icon: Bell, label: 'Regras de Alertas', description: 'Configure tipos, prioridades e destinatários dos alertas', moduleCode: 'configuracoes' },
 ]
 
 const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {

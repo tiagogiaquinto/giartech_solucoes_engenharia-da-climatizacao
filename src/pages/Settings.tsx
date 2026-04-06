@@ -396,6 +396,23 @@ const NotificationSettings: React.FC<any> = ({ settings, onSave, saving }) => {
           </div>
         </div>
 
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Bell className="w-5 h-5 text-blue-600 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-blue-900">Regras de Alertas Avançadas</p>
+              <p className="text-xs text-blue-600">Configure quais alertas são gerados, o tipo, a prioridade e para quais perfis são enviados.</p>
+            </div>
+          </div>
+          <a
+            href="/settings/notification-rules"
+            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Gerenciar Regras
+          </a>
+        </div>
+
         <button
           onClick={() => onSave('notifications', formData)}
           disabled={saving}
