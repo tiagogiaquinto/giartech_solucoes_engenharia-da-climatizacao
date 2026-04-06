@@ -91,7 +91,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const currentAuthUserRef = React.useRef<import('@supabase/supabase-js').User | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        supabase.auth.signOut()
+        setIsLoading(false)
+        return
+      }
       if (session?.user) {
         currentAuthUserRef.current = session.user
         loadUserProfile(session.user).finally(() => setIsLoading(false))
@@ -100,8 +105,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       }
     })
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       (async () => {
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          await supabase.auth.signOut()
+          currentAuthUserRef.current = null
+          setUser(null)
+          setProfile(null)
+          setIsLoading(false)
+          return
+        }
         if (session?.user) {
           currentAuthUserRef.current = session.user
           await loadUserProfile(session.user)

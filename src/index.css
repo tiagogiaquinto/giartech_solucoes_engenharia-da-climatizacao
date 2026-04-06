@@ -1,13 +1,10 @@
+@import 'leaflet/dist/leaflet.css';
+@import url('https://fonts.googleapis.com/css2?family=Questrial&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import 'leaflet/dist/leaflet.css';
-
-/* ─── Giartech Brand Fonts ──────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Questrial&display=swap');
-
-/* Gilroy via CDN fallback (Google Fonts nao tem Gilroy, usamos Inter bold como substituto geometrico) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 /* ─── Technician Mobile Layout ────────────────────────────── */
 .mobile-container {
