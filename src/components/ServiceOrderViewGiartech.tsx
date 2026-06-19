@@ -121,24 +121,6 @@ export default function ServiceOrderViewGiartech({ isOpen, onClose, data }: Prop
 
   if (!isOpen || !data) return null
 
-  const handleDownloadPDF = async () => {
-    try {
-      await generateServiceOrderPDFGiartech(data)
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error)
-      alert('Erro ao gerar PDF.')
-    }
-  }
-
-  const handlePrint = async () => {
-    try {
-      await generateServiceOrderPDFGiartech(data)
-    } catch (error) {
-      console.error('Erro ao imprimir:', error)
-      window.print()
-    }
-  }
-
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -164,6 +146,55 @@ export default function ServiceOrderViewGiartech({ isOpen, onClose, data }: Prop
   const itemsSubtotal = items.reduce((acc, item) => acc + Number(item.total ?? (Number(item.quantity || 1) * Number(item.unit_price || 0))), 0)
   const discount = Number(data.discount || 0)
   const grandTotal = Number(data.net_value || data.total_value || itemsSubtotal - discount || 0)
+
+  const buildPDFData = () => ({
+    order_number: data.order_number || data.number || 'S/N',
+    date: data.created_at || new Date().toISOString(),
+    title: data.description,
+    client: {
+      name: data.customer_name || '—',
+      cnpj: data.customer_cpf_cnpj,
+      address: data.address,
+      city: data.city,
+      state: data.state,
+      email: data.customer_email,
+      phone: data.customer_phone,
+    },
+    items: (data.items || []).map(item => ({
+      service_name: item.name,
+      descricao: item.description,
+      unit: item.unit,
+      unit_price: item.unit_price,
+      quantity: item.quantity,
+      total_price: item.total,
+    })),
+    subtotal: itemsSubtotal,
+    discount,
+    total: grandTotal,
+    payment: {
+      methods: pmLabel(data.payment_method),
+      pix: data.pix_key,
+      conditions: data.payment_conditions || (data.payment_installments && data.payment_installments > 1 ? `${data.payment_installments}x parcelas` : 'À vista'),
+    },
+  })
+
+  const handleDownloadPDF = async () => {
+    try {
+      await generateServiceOrderPDFGiartech(buildPDFData())
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error)
+      alert('Erro ao gerar PDF.')
+    }
+  }
+
+  const handlePrint = async () => {
+    try {
+      await generateServiceOrderPDFGiartech(buildPDFData())
+    } catch (error) {
+      console.error('Erro ao imprimir:', error)
+      alert('Erro ao gerar PDF.')
+    }
+  }
 
   const hasPayment = !!(data.payment_method || data.payment_conditions)
 

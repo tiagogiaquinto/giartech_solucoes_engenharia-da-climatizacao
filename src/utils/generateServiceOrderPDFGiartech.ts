@@ -1,688 +1,183 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { GIARTECH_BRAND } from '../config/brandingConfig'
-import QRCode from 'qrcode'
+interface MaterialItem {
+  nome_material?: string
+  material_name?: string
+  quantidade?: number
+  quantity?: number
+  material_unit?: string
+  preco_venda?: number
+  unit_sale_price?: number
+  observacoes_tecnicas?: string
+}
 
-const B = GIARTECH_BRAND
-const MARGIN = B.margins.left
-const PAGE_WIDTH = 210
-const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
+interface ServiceItem {
+  service_name?: string
+  descricao?: string
+  description?: string
+  scope?: string
+  service_scope?: string
+  escopo_detalhado?: string
+  unit?: string
+  unit_price?: number
+  preco_unitario?: number
+  quantity?: number
+  quantidade?: number
+  total_price?: number
+  preco_total?: number
+  materials?: MaterialItem[]
+}
 
 interface ServiceOrderData {
-  order_number?: string
-  number?: string
-  status?: string
-  created_at?: string
-  scheduled_date?: string
-  execution_deadline?: string
-  description?: string
-  instructions?: string
-  report?: string
-  priority?: string
-  contract_type?: string
-  payment_method?: string
-  payment_installments?: number
-  payment_conditions?: string
-  pix_key?: string
-  total_value?: number
-  labor_value?: number
-  materials_value?: number
-  discount?: number
-  net_value?: number
-  customer_name?: string
-  customer_phone?: string
-  customer_email?: string
-  customer_cpf_cnpj?: string
-  address?: string
-  address_complement?: string
-  city?: string
-  state?: string
-  warranty_period?: number
-  warranty_type?: string
-  warranty_terms?: string
-  items?: Array<{
-    name?: string
-    description?: string
-    quantity?: number
-    unit_price?: number
-    total?: number
-    unit?: string
-  }>
-  materials?: Array<{
-    name?: string
-    quantity?: number
-    unit?: string
-    unit_cost?: number
-    total_cost?: number
-  }>
-  team?: Array<{
-    name?: string
-    role?: string
-  }>
-  checklist_items?: Array<{
-    description?: string
-    checked?: boolean
-  }>
-  signature_data?: string
-  installation_addresses?: any[]
-  installation_contacts?: any[]
-  track_token?: string
-  [key: string]: any
-}
-
-const fmt = (v: number | undefined | null) => {
-  if (v == null) return 'R$ 0,00'
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
-}
-
-const fmtDate = (d: string | undefined | null) => {
-  if (!d) return '—'
-  try {
-    return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  } catch { return d }
-}
-
-const fmtDateTime = () => {
-  return new Date().toLocaleString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  })
-}
-
-const statusLabel: Record<string, string> = {
-  pending: 'Pendente',
-  aberto: 'Aberto',
-  aberta: 'Aberta',
-  em_andamento: 'Em Andamento',
-  in_progress: 'Em Andamento',
-  concluido: 'Concluído',
-  concluida: 'Concluída',
-  completed: 'Concluído',
-  cancelado: 'Cancelado',
-  cancelled: 'Cancelado',
-  pausado: 'Pausado',
-  cotacao: 'Em Cotação',
-  aguardando_pecas: 'Aguardando Peças',
-}
-
-const statusColor = (status: string | undefined): [number, number, number] => {
-  const s = (status || '').toLowerCase()
-  if (s.includes('conclu') || s === 'completed') return [76, 175, 80]
-  if (s.includes('cancel')) return [244, 67, 54]
-  if (s.includes('amento') || s === 'in_progress') return [33, 150, 243]
-  if (s.includes('pausa')) return [255, 152, 0]
-  return [100, 116, 139]
-}
-
-const drawPageHeader = (doc: jsPDF, orderNum: string, pageNum: number, totalPages: number) => {
-  const [pr, pg, pb] = B.colors.primary
-
-  doc.setFillColor(pr, pg, pb)
-  doc.rect(0, 0, PAGE_WIDTH, 38, 'F')
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.setTextColor(255, 255, 255)
-  doc.text('GIARTECH SOLUÇÕES', MARGIN, 15)
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8.5)
-  doc.setTextColor(200, 220, 240)
-  doc.text('Excelência em Serviços Técnicos', MARGIN, 22)
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(14)
-  doc.setTextColor(255, 255, 255)
-  doc.text('ORDEM DE SERVIÇO', PAGE_WIDTH - MARGIN, 13, { align: 'right' })
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.setTextColor(200, 220, 240)
-  doc.text(`Nº ${orderNum}`, PAGE_WIDTH - MARGIN, 21, { align: 'right' })
-
-  if (pageNum > 1) {
-    doc.setFontSize(8)
-    doc.text(`Página ${pageNum} / ${totalPages}`, PAGE_WIDTH - MARGIN, 29, { align: 'right' })
+  order_number: string
+  date: string
+  title?: string
+  client: {
+    name: string
+    company_name?: string
+    cnpj?: string
+    cpf?: string
+    address?: string
+    city?: string
+    state?: string
+    cep?: string
+    email?: string
+    phone?: string
   }
-
-  doc.setFillColor(255, 193, 7)
-  doc.rect(0, 36, PAGE_WIDTH, 2.5, 'F')
-
-  return 44
-}
-
-const drawSection = (doc: jsPDF, title: string, y: number): number => {
-  const [pr, pg, pb] = B.colors.primary
-  doc.setFillColor(pr, pg, pb)
-  doc.roundedRect(MARGIN, y, CONTENT_WIDTH, 8, 1, 1, 'F')
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
-  doc.setTextColor(255, 255, 255)
-  doc.text(title.toUpperCase(), MARGIN + 4, y + 5.5)
-  return y + 11
-}
-
-const drawInfoBox = (
-  doc: jsPDF,
-  label: string,
-  value: string,
-  x: number,
-  y: number,
-  w: number,
-  h = 14,
-  bgColor?: [number, number, number],
-  borderColor?: [number, number, number]
-): number => {
-  const [br, bg, bb] = bgColor || (B.colors.secondary as [number, number, number])
-  doc.setFillColor(br, bg, bb)
-  doc.roundedRect(x, y, w, h, 1, 1, 'F')
-  if (borderColor) {
-    doc.setDrawColor(...borderColor)
-    doc.setLineWidth(0.3)
-    doc.roundedRect(x, y, w, h, 1, 1, 'S')
+  basic_info?: {
+    deadline: string
+    brand?: string
+    model?: string
+    equipment?: string
   }
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7)
-  doc.setTextColor(...(B.colors.textLight as [number, number, number]))
-  doc.text(label.toUpperCase(), x + 3, y + 4.5)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-  doc.setTextColor(...(B.colors.text as [number, number, number]))
-  doc.text(String(value || '—'), x + 3, y + 11, { maxWidth: w - 6 })
-  return y + h + 2
-}
-
-const drawStatusBadge = (doc: jsPDF, status: string, x: number, y: number) => {
-  const label = statusLabel[status?.toLowerCase()] || statusLabel[status] || status || 'Aberto'
-  const color = statusColor(status)
-  const tw = doc.getTextWidth(label) + 8
-  doc.setFillColor(...color)
-  doc.roundedRect(x, y - 5, tw, 7, 1.5, 1.5, 'F')
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7)
-  doc.setTextColor(255, 255, 255)
-  doc.text(label, x + 4, y)
-}
-
-const WARRANTY_90_DAYS = `GARANTIA TÉCNICA DE 90 DIAS: Os serviços executados possuem garantia de 90 (noventa) dias contra defeitos de mão de obra, conforme o Código de Defesa do Consumidor (CDC — Lei 8.078/90). A garantia cobre exclusivamente os serviços realizados pela Giartech Soluções, não se estendendo a peças/equipamentos de terceiros, danos causados por mau uso, quedas de energia, falta de manutenção preventiva ou intervenções realizadas por terceiros após a conclusão dos serviços. Equipamentos novos possuem garantia de fábrica (5 a 10 anos), válida somente com manutenção semestral comprovada por laudo técnico.`
-
-const drawPageFooter = (doc: jsPDF, pageNum: number, totalPages: number, qrDataUrl?: string) => {
-  const pageH = doc.internal.pageSize.height
-  const footerH = qrDataUrl && pageNum === 1 ? 30 : 18
-
-  doc.setFillColor(245, 247, 250)
-  doc.rect(0, pageH - footerH, PAGE_WIDTH, footerH, 'F')
-  doc.setFillColor(...(B.colors.primary as [number, number, number]))
-  doc.rect(0, pageH - footerH, PAGE_WIDTH, 0.5, 'F')
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7)
-  doc.setTextColor(...(B.colors.textMuted as [number, number, number]))
-  doc.text(`Giartech Soluções — Documento gerado em ${fmtDateTime()}`, MARGIN, pageH - 5)
-  doc.text(`Página ${pageNum} de ${totalPages}`, PAGE_WIDTH - MARGIN, pageH - 5, { align: 'right' })
-
-  if (qrDataUrl && pageNum === 1) {
-    const qrSize = 22
-    const qrX = PAGE_WIDTH - MARGIN - qrSize
-    const qrY = pageH - footerH + 3
-    try {
-      doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize)
-    } catch { /* ignore */ }
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(6.5)
-    doc.setTextColor(...(B.colors.primary as [number, number, number]))
-    doc.text('Acompanhe sua OS', qrX + qrSize / 2, qrY - 1.5, { align: 'center' })
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(6)
-    doc.setTextColor(...(B.colors.textMuted as [number, number, number]))
-    doc.text('Escaneie o QR Code', qrX + qrSize / 2, pageH - 5, { align: 'center' })
-  }
-}
-
-const checkPageBreak = (doc: jsPDF, y: number, orderNum: string, needed = 50): number => {
-  if (y > doc.internal.pageSize.height - needed) {
-    doc.addPage()
-    return drawPageHeader(doc, orderNum, doc.getNumberOfPages(), 1)
-  }
-  return y
-}
-
-export const generateServiceOrderPDFGiartech = async (data: ServiceOrderData): Promise<void> => {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-
-  const orderNum = data.order_number || data.number || 'S/N'
-  let y = drawPageHeader(doc, orderNum, 1, 1, 44)
-
-  const thirdW = (CONTENT_WIDTH - 8) / 3
-  const halfW = (CONTENT_WIDTH - 4) / 2
-
-  y = drawSection(doc, 'Informações da Ordem', y)
-
-  drawInfoBox(doc, 'Número', `OS-${orderNum}`, MARGIN, y, thirdW)
-  drawInfoBox(doc, 'Data de Abertura', fmtDate(data.created_at), MARGIN + thirdW + 4, y, thirdW)
-  drawInfoBox(doc, 'Status', '', MARGIN + (thirdW + 4) * 2, y, thirdW)
-  drawStatusBadge(doc, data.status || 'aberto', MARGIN + (thirdW + 4) * 2 + 3, y + 11)
-  y += 18
-
-  drawInfoBox(doc, 'Data Agendada', fmtDate(data.scheduled_date), MARGIN, y, thirdW)
-  drawInfoBox(doc, 'Prazo de Execução', fmtDate(data.execution_deadline), MARGIN + thirdW + 4, y, thirdW)
-  drawInfoBox(doc, 'Prioridade', data.priority || 'Normal', MARGIN + (thirdW + 4) * 2, y, thirdW)
-  y += 18
-
-  if (data.description) {
-    const descLines = doc.splitTextToSize(data.description, CONTENT_WIDTH - 8)
-    const descH = Math.max(14, descLines.length * 4.5 + 8)
-    const [br, bg, bb] = B.colors.secondary as [number, number, number]
-    doc.setFillColor(br, bg, bb)
-    doc.roundedRect(MARGIN, y, CONTENT_WIDTH, descH, 1, 1, 'F')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(7)
-    doc.setTextColor(...(B.colors.textLight as [number, number, number]))
-    doc.text('DESCRIÇÃO / PROBLEMA RELATADO', MARGIN + 3, y + 4.5)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(...(B.colors.text as [number, number, number]))
-    doc.text(descLines, MARGIN + 3, y + 11)
-    y += descH + 3
-  }
-
-  y += 2
-  y = drawSection(doc, 'Dados do Cliente', y)
-  drawInfoBox(doc, 'Nome / Razão Social', data.customer_name || '—', MARGIN, y, halfW)
-  drawInfoBox(doc, 'CPF / CNPJ', data.customer_cpf_cnpj || '—', MARGIN + halfW + 4, y, halfW)
-  y += 18
-  drawInfoBox(doc, 'Telefone', data.customer_phone || '—', MARGIN, y, thirdW)
-  drawInfoBox(doc, 'E-mail', data.customer_email || '—', MARGIN + thirdW + 4, y, thirdW * 2 + 4)
-  y += 18
-
-  const addrFull = [data.address, data.address_complement, data.city, data.state].filter(Boolean).join(', ')
-  if (addrFull) {
-    drawInfoBox(doc, 'Endereço Cadastrado', addrFull, MARGIN, y, CONTENT_WIDTH)
-    y += 18
-  }
-
-  const hasInstallAddrs = Array.isArray(data.installation_addresses) && data.installation_addresses.length > 0
-  const hasInstallContacts = Array.isArray(data.installation_contacts) && data.installation_contacts.length > 0
-
-  if (hasInstallAddrs || hasInstallContacts) {
-    y = checkPageBreak(doc, y, orderNum, 60)
-    y += 2
-    y = drawSection(doc, 'Local de Instalação / Execução', y)
-    if (hasInstallAddrs) {
-      for (const addr of data.installation_addresses!) {
-        const labelStr = addr.label ? `[${addr.label}] ` : ''
-        const parts = [addr.logradouro, addr.numero, addr.complemento].filter(Boolean).join(', ')
-        const cityState = [addr.cidade, addr.estado].filter(Boolean).join(' / ')
-        const cepStr = addr.cep ? `CEP ${addr.cep}` : ''
-        const isPrimary = addr.is_primary ? ' (Principal)' : ''
-        const full = [
-          `${labelStr}${parts}${addr.bairro ? ' — ' + addr.bairro : ''}${isPrimary}`,
-          [cityState, cepStr].filter(Boolean).join(' — '),
-          addr.referencia ? `Ref: ${addr.referencia}` : '',
-        ].filter(Boolean).join('\n')
-        drawInfoBox(doc, 'Endereço de Instalação', full, MARGIN, y, CONTENT_WIDTH, addr.referencia ? 26 : 20)
-        y += addr.referencia ? 28 : 22
-        y = checkPageBreak(doc, y, orderNum, 40)
-      }
+  items: ServiceItem[]
+  subtotal: number
+  discount: number
+  total: number
+  payment: {
+    methods: string
+    pix?: string
+    bank_details?: {
+      bank: string
+      agency: string
+      account: string
+      account_type: string
+      holder: string
     }
-    if (hasInstallContacts) {
-      autoTable(doc, {
-        startY: y,
-        margin: { left: MARGIN, right: MARGIN },
-        head: [['Nome', 'Cargo', 'Telefone', 'E-mail']],
-        body: data.installation_contacts!.map(c => [
-          (c.is_primary ? '★ ' : '') + (c.nome || '—'),
-          c.cargo || '—', c.telefone || '—', c.email || '—',
-        ]),
-        headStyles: { fillColor: [34, 197, 94], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
-        bodyStyles: { fontSize: 8, textColor: B.colors.text as [number, number, number] },
-        alternateRowStyles: { fillColor: B.colors.backgroundLight as [number, number, number] },
-        theme: 'grid',
-      })
-      y = (doc as any).lastAutoTable.finalY + 4
-    }
+    conditions: string
   }
+  warranty?: { period?: string; conditions: string | string[] }
+  contract_clauses?: Array<{ title: string; items: string[] }>
+  additional_info?: string
+}
 
-  const hasItems = Array.isArray(data.items) && data.items.length > 0
-  const hasMaterials = Array.isArray(data.materials) && data.materials.length > 0
-  const hasTeam = Array.isArray(data.team) && data.team.length > 0
-  const hasChecklist = Array.isArray(data.checklist_items) && data.checklist_items.length > 0
+const EMPRESA = {
+  nome: 'Giartech Soluções',
+  proprietario: 'TIAGO BRUNO GIAQUINTO',
+  cnpj: '37.509.897/0001-93',
+  endereco: 'Rua Quito, 14, comercial',
+  bairro: 'Nossa Senhora do Ó, São Paulo-SP',
+  cep: 'CEP 02734-010',
+  email: 'giartechsolucoes@gmail.com',
+  tel1: '+55 (35) 1511-9666',
+  tel2: '+351 511 943 985',
+  whatsapp: '11966617631',
+  instagram: '@tg.arconnection',
+  facebook: '@tgarconnection',
+  site: 'tgarconnection.com.br',
+  slogan: 'Sua satisfação é o que motiva a nossa dedicação.',
+  cargo: 'diretor técnico',
+  pix: '37.509.897/0001-93',
+  banco: 'Cora',
+  agencia: '0001',
+  conta: '1412009-3',
+  tipo_conta: 'Corrente',
+}
 
-  if (hasItems) {
-    y = checkPageBreak(doc, y, orderNum, 60)
-    y += 2
-    y = drawSection(doc, 'Bloco de Itens — Serviços / Materiais da Ordem', y)
+const GARANTIA = `Garantias referentes à sistemas de novo em tubulações antigas, só serão válidas, com os processos de descontaminação das tubulações antigas.
 
-    autoTable(doc, {
-      startY: y,
-      margin: { left: MARGIN, right: MARGIN },
-      head: [['Item', 'Descrição / Serviço', 'Qtd', 'Vl. Unit.', 'Subtotal']],
-      body: (data.items || []).map((item, idx) => {
-        const qty = item.quantity || 1
-        const price = item.unit_price || 0
-        const total = item.total ?? (qty * price)
-        return [
-          String(idx + 1).padStart(2, '0'),
-          [item.name || item.description || '—', item.description && item.name !== item.description ? item.description : ''].filter(Boolean).join('\n'),
-          String(qty),
-          fmt(price),
-          fmt(total),
-        ]
-      }),
-      headStyles: {
-        fillColor: B.colors.primary as [number, number, number],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 8,
-      },
-      bodyStyles: { fontSize: 9, textColor: B.colors.text as [number, number, number], minCellHeight: 10 },
-      alternateRowStyles: { fillColor: B.colors.backgroundLight as [number, number, number] },
-      columnStyles: {
-        0: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
-        1: { cellWidth: 'auto' },
-        2: { cellWidth: 14, halign: 'center' },
-        3: { cellWidth: 32, halign: 'right' },
-        4: { cellWidth: 32, halign: 'right', fontStyle: 'bold' },
-      },
-      theme: 'grid',
-      didParseCell: (h) => {
-        if (h.section === 'head') {
-          h.cell.styles.halign = h.column.index >= 3 ? 'right' : h.column.index === 1 ? 'left' : 'center'
-        }
-      },
-    })
-    y = (doc as any).lastAutoTable.finalY + 4
-  }
+Garantia de (EQUIPAMENTOS NOVOS) que podem ser de 5 a 10 anos, só são válidas com manutenção semestral comprovada COM LAUDO TÉCNICO.
 
-  if (hasMaterials) {
-    y = checkPageBreak(doc, y, orderNum, 60)
-    y += 2
-    y = drawSection(doc, 'Materiais Utilizados', y)
-    autoTable(doc, {
-      startY: y,
-      margin: { left: MARGIN, right: MARGIN },
-      head: [['Material', 'Qtd', 'Unidade', 'Vl. Unit.', 'Total']],
-      body: (data.materials || []).map(m => [
-        m.name || '—', String(m.quantity || 0), m.unit || 'un',
-        fmt(m.unit_cost), fmt(m.total_cost),
-      ]),
-      headStyles: { fillColor: [38, 120, 160], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
-      bodyStyles: { fontSize: 8.5, textColor: B.colors.text as [number, number, number] },
-      alternateRowStyles: { fillColor: B.colors.backgroundLight as [number, number, number] },
-      columnStyles: {
-        1: { cellWidth: 16, halign: 'center' },
-        2: { cellWidth: 20, halign: 'center' },
-        3: { cellWidth: 30, halign: 'right' },
-        4: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
-      },
-      theme: 'grid',
-    })
-    y = (doc as any).lastAutoTable.finalY + 4
-  }
+Garantias extendidas pela nossa empresa, são concedidas em caso de compra das máquinas conosco, as mesmas deixam de ter validade legal de 3 meses e podem ter até 12 meses de acordo com o tipo e capacidade do sistema, mediante a manutenção dos equipamentos realizadas conosco nos prazos estipulados pelo fabricante...`
 
-  if (hasTeam) {
-    y = checkPageBreak(doc, y, orderNum, 40)
-    y += 2
-    y = drawSection(doc, 'Equipe Responsável', y)
-    autoTable(doc, {
-      startY: y,
-      margin: { left: MARGIN, right: MARGIN },
-      head: [['Técnico / Responsável', 'Função']],
-      body: (data.team || []).map(t => [t.name || '—', t.role || '—']),
-      headStyles: { fillColor: [52, 73, 94], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
-      bodyStyles: { fontSize: 8.5, textColor: B.colors.text as [number, number, number] },
-      alternateRowStyles: { fillColor: B.colors.backgroundLight as [number, number, number] },
-      theme: 'grid',
-    })
-    y = (doc as any).lastAutoTable.finalY + 4
-  }
+const CLAUSULAS = [
+  { title: '1. Obrigações do Cliente', items: ['1.1. O cliente deve fornecer todas as informações necessárias para a execução adequada dos serviços contratados, incluindo especificações técnicas, localização e horários preferenciais, como também a planta do imóvel e projeto arquitetônico.', '1.2. O cliente deve garantir o acesso seguro e adequado às instalações onde os serviços serão realizados.', '1.3. O cliente deve comunicar prontamente qualquer problema ou defeito observado nos serviços prestados.', '1.4. É de responsabilidade do cliente o destelhamento e reinstalação do telhado.'] },
+  { title: '2. Obrigações do Contratante', items: ['2.1. O contratante deve realizar os serviços de acordo com as especificações técnicas fornecidas pelo cliente e com os padrões da indústria.', '2.2. O contratante deve cumprir todos os prazos acordados para a execução dos serviços.', '2.3. O contratante deve manter o cliente informado sobre o progresso dos serviços e quaisquer problemas ou atrasos que possam surgir.'] },
+  { title: '3. Regras de Rescisão', items: ['3.1. Ambas as partes têm o direito de rescindir o contrato a qualquer momento, com aviso prévio de 30 dias.', '3.2. Em caso de violação das obrigações, a parte não infratora pode rescindir imediatamente, sem aviso prévio.'] },
+  { title: '4. Regras Gerais', items: ['4.1. Este contrato não cria relação de parceria, joint venture, emprego ou agência entre as partes.', '4.2. Nenhuma das partes pode ceder seus direitos sem consentimento prévio por escrito da outra parte.', '4.3. Este contrato constitui o acordo completo entre as partes e substitui todos os acordos anteriores.'] },
+]
 
-  if (hasChecklist) {
-    y = checkPageBreak(doc, y, orderNum, 50)
-    y += 2
-    y = drawSection(doc, 'Checklist de Execução', y)
-    autoTable(doc, {
-      startY: y,
-      margin: { left: MARGIN, right: MARGIN },
-      head: [['', 'Item de Verificação']],
-      body: (data.checklist_items || []).map(c => [c.checked ? '✓' : '○', c.description || '—']),
-      headStyles: { fillColor: [60, 130, 90], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
-      bodyStyles: { fontSize: 8.5, textColor: B.colors.text as [number, number, number] },
-      alternateRowStyles: { fillColor: B.colors.backgroundLight as [number, number, number] },
-      columnStyles: { 0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' } },
-      theme: 'grid',
-    })
-    y = (doc as any).lastAutoTable.finalY + 4
-  }
+function fmt(v: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+}
 
-  if (data.instructions || data.report) {
-    y = checkPageBreak(doc, y, orderNum, 50)
-    y += 2
-    y = drawSection(doc, 'Instruções e Relatório Técnico', y)
-    for (const [label, text] of [['INSTRUÇÕES', data.instructions], ['RELATÓRIO DE EXECUÇÃO', data.report]] as [string, string | undefined][]) {
-      if (!text) continue
-      const lines = doc.splitTextToSize(text, CONTENT_WIDTH - 8)
-      const h = lines.length * 4.5 + 10
-      const [br, bg, bb] = B.colors.secondary as [number, number, number]
-      doc.setFillColor(br, bg, bb)
-      doc.roundedRect(MARGIN, y, CONTENT_WIDTH, h, 1, 1, 'F')
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(7)
-      doc.setTextColor(...(B.colors.textLight as [number, number, number]))
-      doc.text(label, MARGIN + 3, y + 5)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.setTextColor(...(B.colors.text as [number, number, number]))
-      doc.text(lines, MARGIN + 3, y + 11)
-      y += h + 4
-    }
-  }
+function fmtDate(d: string) {
+  try { return new Date(d).toLocaleDateString('pt-BR') } catch { return d }
+}
 
-  const itemsSubtotal = (data.items || []).reduce((acc, item) => {
-    return acc + Number(item.total ?? ((item.quantity || 1) * (item.unit_price || 0)))
-  }, 0)
-  const discount = Number(data.discount ?? 0)
-  const rawTotal = data.total_value && data.total_value > 0 ? data.total_value : itemsSubtotal
-  const grandTotal = data.net_value && data.net_value > 0 ? data.net_value : Math.max(rawTotal - discount, 0)
+export async function generateServiceOrderPDFGiartech(data: ServiceOrderData): Promise<void> {
+  const c = data.client
+  const p = data.payment
+  const bd = p.bank_details
+  const clauses = data.contract_clauses?.length ? data.contract_clauses : CLAUSULAS
 
-  y = checkPageBreak(doc, y, orderNum, 80)
-  y += 4
-  y = drawSection(doc, 'Bloco Financeiro — Resumo de Valores', y)
-  y += 3
+  const todosMateriais = data.items.flatMap(i => i.materials || [])
+  const totalMateriais = todosMateriais.reduce((a, m) => a + (m.quantidade || m.quantity || 1) * (m.preco_venda || m.unit_sale_price || 0), 0)
 
-  const boxW = CONTENT_WIDTH * 0.50
-  const boxX = MARGIN + CONTENT_WIDTH - boxW
+  const servicosRows = data.items.map(item => {
+    const nome = item.service_name || item.descricao || item.description || 'Serviço'
+    const escopo = item.scope || item.service_scope || item.escopo_detalhado || ''
+    const unit = item.unit || 'un.'
+    const qty = item.quantity || item.quantidade || 1
+    const pUn = item.unit_price || item.preco_unitario || 0
+    const total = item.total_price || item.preco_total || pUn * qty
+    const escopoHtml = escopo ? escopo.split('\n').map(l => `<div style="color:#666;font-size:10px;margin-top:1px;">${l}</div>`).join('') : ''
+    return `<tr style="border-bottom:1px solid #eee;"><td style="padding:8px;vertical-align:top;"><div style="font-weight:700;color:#1a1a2e;">${nome}</div>${escopoHtml}</td><td style="padding:8px;text-align:right;vertical-align:top;white-space:nowrap;">${unit}</td><td style="padding:8px;text-align:right;vertical-align:top;white-space:nowrap;">${fmt(pUn)}</td><td style="padding:8px;text-align:right;vertical-align:top;white-space:nowrap;">${qty > 1 ? qty : '—'}</td><td style="padding:8px;text-align:right;vertical-align:top;font-weight:700;white-space:nowrap;">${fmt(total)}</td></tr>`
+  }).join('')
 
-  const rows: [string, string][] = []
-  if (data.labor_value && data.labor_value > 0) rows.push(['Mão de Obra', fmt(data.labor_value)])
-  if (data.materials_value && data.materials_value > 0) rows.push(['Materiais', fmt(data.materials_value)])
-  if (!data.labor_value && !data.materials_value && itemsSubtotal > 0) {
-    rows.push(['Subtotal dos Itens', fmt(itemsSubtotal)])
-  }
-  if (discount > 0) rows.push(['Desconto', `- ${fmt(discount)}`])
+  const materiaisRows = todosMateriais.map(m => {
+    const nome = m.nome_material || m.material_name || 'Material'
+    const qty = m.quantidade || m.quantity || 1
+    const pUn = m.preco_venda || m.unit_sale_price || 0
+    const unit = m.material_unit || 'un.'
+    return `<tr style="border-bottom:1px solid #eee;"><td style="padding:8px;vertical-align:top;"><div style="font-weight:700;color:#1a1a2e;">${nome}</div>${m.observacoes_tecnicas ? `<div style="color:#666;font-size:10px;">${m.observacoes_tecnicas}</div>` : ''}</td><td style="padding:8px;text-align:right;vertical-align:top;">${unit}</td><td style="padding:8px;text-align:right;vertical-align:top;">${fmt(pUn)}</td><td style="padding:8px;text-align:right;vertical-align:top;">${qty}</td><td style="padding:8px;text-align:right;vertical-align:top;font-weight:700;">${fmt(qty * pUn)}</td></tr>`
+  }).join('')
 
-  const rowH = 8
-  const boxH = rows.length * rowH + 16
+  const clausulasHtml = clauses.map(cl => `<div style="margin-bottom:14px;"><div style="font-weight:700;font-size:11px;color:#1a1a2e;margin-bottom:4px;">${cl.title}</div>${cl.items.map(it => `<div style="font-size:11px;color:#444;line-height:1.8;">${it}</div>`).join('')}</div>`).join('')
 
-  let fy = y
-  doc.setFillColor(248, 250, 252)
-  doc.roundedRect(boxX, fy, boxW, boxH, 2, 2, 'F')
-  doc.setDrawColor(203, 213, 225)
-  doc.setLineWidth(0.3)
-  doc.roundedRect(boxX, fy, boxW, boxH, 2, 2, 'S')
+  const rodape = `<div style="border-top:1px solid #d0d7de;padding-top:10px;margin-top:28px;display:flex;justify-content:space-between;font-size:10px;color:#777;"><div style="line-height:1.8;"><div>${EMPRESA.proprietario} | CNPJ: ${EMPRESA.cnpj}</div><div>${EMPRESA.endereco} — ${EMPRESA.bairro} — ${EMPRESA.cep}</div><div style="color:#1a6fa8;margin-top:3px;">📷 ${EMPRESA.instagram} &nbsp; 👍 ${EMPRESA.facebook} &nbsp; 🌐 ${EMPRESA.site}</div></div><div style="text-align:right;line-height:1.8;"><div>✉ ${EMPRESA.email}</div><div>☎ ${EMPRESA.tel1} &nbsp; ☎ ${EMPRESA.tel2}</div><div>💬 ${EMPRESA.whatsapp}</div></div></div>`
 
-  rows.forEach(([label, val]) => {
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(100, 116, 139)
-    doc.text(label, boxX + 7, fy + 8)
-    doc.setTextColor(30, 41, 59)
-    doc.text(val, boxX + boxW - 7, fy + 8, { align: 'right' })
-    fy += rowH
-  })
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><title>OS ${data.order_number}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;background:#fff;padding:32px;font-size:12px;line-height:1.5;}table{border-collapse:collapse;width:100%;}@media print{body{padding:0;}@page{margin:12mm;size:A4;}}</style></head><body>
+<div style="border-bottom:2px solid #d0d7de;padding-bottom:14px;margin-bottom:18px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;"><div style="display:flex;gap:14px;align-items:flex-start;"><div style="width:70px;height:70px;background:#e4f0f9;border-radius:8px;border:2px solid #1a6fa8;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="color:#1a6fa8;font-weight:900;font-size:11px;text-align:center;line-height:1.3;">Giartech<br/>Soluções</div></div><div><div style="color:#1a6fa8;font-weight:800;font-size:17px;margin-bottom:3px;">${EMPRESA.nome}</div><div style="font-size:11px;color:#444;line-height:1.7;"><div>${EMPRESA.proprietario}</div><div>CNPJ: ${EMPRESA.cnpj}</div><div>${EMPRESA.endereco}</div><div>${EMPRESA.bairro}</div><div>${EMPRESA.cep}</div></div></div></div><div style="text-align:right;font-size:11px;color:#444;line-height:1.8;flex-shrink:0;"><div style="margin-bottom:4px;font-weight:600;">📅 ${fmtDate(data.date)}</div><div>✉ ${EMPRESA.email}</div><div>☎ ${EMPRESA.tel1}</div><div>☎ ${EMPRESA.tel2}</div><div>💬 ${EMPRESA.whatsapp}</div></div></div><div style="margin-top:10px;padding-top:8px;border-top:1px solid #d0d7de;"><div style="font-size:11px;color:#777;font-style:italic;margin-bottom:5px;">${EMPRESA.slogan}</div><div style="display:flex;gap:20px;font-size:11px;color:#1a6fa8;"><span>📷 ${EMPRESA.instagram}</span><span>👍 ${EMPRESA.facebook}</span><span>🌐 ${EMPRESA.site}</span></div></div></div>
 
-  const [pr, pg, pb] = B.colors.primary as [number, number, number]
-  doc.setFillColor(pr, pg, pb)
-  doc.roundedRect(boxX, fy, boxW, 14, 2, 2, 'F')
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.setTextColor(255, 255, 255)
-  doc.text('VALOR TOTAL', boxX + 7, fy + 9.5)
-  doc.text(fmt(grandTotal), boxX + boxW - 7, fy + 9.5, { align: 'right' })
+<div style="background:#1a6fa8;color:#fff;padding:10px 16px;border-radius:7px;margin-bottom:18px;"><div style="font-weight:800;font-size:17px;">Ordem de serviço ${data.order_number}</div>${data.title ? `<div style="font-size:12px;opacity:.88;margin-top:3px;">${data.title}</div>` : ''}</div>
 
-  y += boxH + 5
+<div style="margin-bottom:18px;"><div style="font-weight:700;font-size:13px;margin-bottom:6px;">Cliente: ${c.name}</div><div style="display:flex;gap:32px;"><div style="font-size:11px;color:#444;line-height:1.8;">${c.company_name ? `<div>${c.company_name}</div>` : ''}${c.cnpj ? `<div>CNPJ: ${c.cnpj}</div>` : ''}${c.cpf ? `<div>CPF: ${c.cpf}</div>` : ''}${c.address ? `<div>${c.address}</div>` : ''}${c.city ? `<div>${c.city}${c.state ? `, ${c.state}` : ''}</div>` : ''}${c.cep ? `<div>CEP ${c.cep}</div>` : ''}</div><div style="font-size:11px;color:#444;line-height:1.8;">${c.email ? `<div>✉ ${c.email}</div>` : ''}${c.phone ? `<div>☎ ${c.phone}</div>` : ''}</div></div></div>
 
-  const paymentMethod = data.payment_method
-  const installments = Number(data.payment_installments || 1)
-  const paymentConditions = data.payment_conditions || ''
-  const hasPayment = paymentMethod || paymentConditions || installments > 1
+${data.basic_info ? `<div style="margin-top:22px;"><div style="color:#1a6fa8;font-weight:700;font-size:14px;border-bottom:2px solid #1a6fa8;padding-bottom:4px;margin-bottom:12px;">Informações básicas</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 40px;">${[['Prazo de execução', data.basic_info.deadline], ['Marca', data.basic_info.brand], ['Modelo', data.basic_info.model], ['Aparelho', data.basic_info.equipment]].filter(([, v]) => v).map(([l, v]) => `<div><div style="font-weight:700;font-size:11px;color:#1a1a2e;">${l}</div><div style="font-size:11px;color:#555;">${v}</div></div>`).join('')}</div></div>` : ''}
 
-  if (hasPayment) {
-    const pmLabel =
-      paymentMethod === 'pix' ? 'PIX' :
-      paymentMethod === 'boleto' ? 'Boleto Bancário' :
-      paymentMethod === 'credito' || paymentMethod === 'cartao_credito' ? 'Cartão de Crédito' :
-      paymentMethod === 'debito' || paymentMethod === 'cartao_debito' ? 'Cartão de Débito' :
-      paymentMethod === 'dinheiro' ? 'Dinheiro' :
-      paymentMethod === 'transferencia' ? 'Transferência Bancária' :
-      paymentMethod || 'A Combinar'
+<div style="margin-top:22px;"><div style="color:#1a6fa8;font-weight:700;font-size:14px;border-bottom:2px solid #1a6fa8;padding-bottom:4px;margin-bottom:12px;">Serviços</div><table><thead><tr style="background:#f5f7fa;">${['Descrição','Unidade','Preço unitário','Qtd.','Preço'].map((h,i) => `<th style="padding:7px 8px;text-align:${i===0?'left':'right'};color:#1a6fa8;font-weight:700;border-bottom:1px solid #d0d7de;">${h}</th>`).join('')}</tr></thead><tbody>${servicosRows}</tbody></table></div>
 
-    const condLabel =
-      installments > 1 ? `${installments}x parcelas` :
-      paymentConditions || 'À vista'
+${materiaisRows ? `<div style="margin-top:22px;"><div style="color:#1a6fa8;font-weight:700;font-size:14px;border-bottom:2px solid #1a6fa8;padding-bottom:4px;margin-bottom:12px;">Materiais</div><table><thead><tr style="background:#f5f7fa;">${['Descrição','Unidade','Preço unitário','Qtd.','Preço'].map((h,i) => `<th style="padding:7px 8px;text-align:${i===0?'left':'right'};color:#1a6fa8;font-weight:700;border-bottom:1px solid #d0d7de;">${h}</th>`).join('')}</tr></thead><tbody>${materiaisRows}</tbody></table></div>` : ''}
 
-    const pmFields: { label: string; value: string }[] = [
-      { label: 'Forma de Pagamento', value: pmLabel },
-      { label: 'Condições', value: condLabel },
-    ]
-    if (data.pix_key && paymentMethod === 'pix') {
-      pmFields.push({ label: 'Chave PIX', value: data.pix_key })
-    }
+<div style="margin-top:16px;"><table style="margin-left:auto;font-size:12px;"><tbody><tr><td style="padding:4px 16px;color:#555;">Serviços</td><td style="padding:4px 16px;text-align:right;">${fmt(data.subtotal)}</td></tr>${totalMateriais > 0 ? `<tr><td style="padding:4px 16px;color:#555;">Materiais</td><td style="padding:4px 16px;text-align:right;">${fmt(totalMateriais)}</td></tr>` : ''}${data.discount > 0 ? `<tr><td style="padding:4px 16px;color:#555;">Desconto</td><td style="padding:4px 16px;text-align:right;">- ${fmt(data.discount)}</td></tr>` : ''}<tr style="border-top:2px solid #1a6fa8;"><td style="padding:7px 16px;font-weight:800;color:#1a1a2e;">Total</td><td style="padding:7px 16px;text-align:right;font-weight:800;color:#1a1a2e;font-size:15px;">${fmt(data.total)}</td></tr></tbody></table></div>
 
-    y = checkPageBreak(doc, y, orderNum, 40)
-    const pmColW = (CONTENT_WIDTH) / pmFields.length
-    let pmX = MARGIN
-    pmFields.forEach(({ label, value }) => {
-      doc.setFillColor(235, 248, 240)
-      doc.roundedRect(pmX, y, pmColW - 3, 18, 1, 1, 'F')
-      doc.setDrawColor(34, 197, 94)
-      doc.setLineWidth(0.4)
-      doc.roundedRect(pmX, y, pmColW - 3, 18, 1, 1, 'S')
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(7)
-      doc.setTextColor(21, 128, 61)
-      doc.text(label.toUpperCase(), pmX + 4, y + 5.5)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(10)
-      doc.setTextColor(15, 23, 42)
-      doc.text(value, pmX + 4, y + 14, { maxWidth: pmColW - 8 })
-      pmX += pmColW
-    })
-    y += 22
-  }
+<div style="margin-top:22px;"><div style="color:#1a6fa8;font-weight:700;font-size:14px;border-bottom:2px solid #1a6fa8;padding-bottom:4px;margin-bottom:12px;">Pagamento</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:11px;"><div><div style="font-weight:700;margin-bottom:4px;">Meios de pagamento</div><div style="color:#555;">${p.methods}</div>${p.conditions ? `<div style="margin-top:8px;"><span style="font-weight:700;">Condições: </span><span style="color:#555;">${p.conditions}</span></div>` : ''}</div><div><div style="font-weight:700;margin-bottom:4px;">PIX</div><div style="color:#555;margin-bottom:8px;">${p.pix || EMPRESA.pix}</div><div style="font-weight:700;margin-bottom:4px;">Dados bancários</div><div style="color:#555;line-height:1.8;"><div>Banco: ${bd?.bank || EMPRESA.banco}</div><div>Agência: ${bd?.agency || EMPRESA.agencia}</div><div>Conta: ${bd?.account || EMPRESA.conta}</div><div>Tipo de conta: ${bd?.account_type || EMPRESA.tipo_conta}</div><div>Titular (CPF/CNPJ): ${bd?.holder || EMPRESA.cnpj}</div></div></div></div></div>
 
-  y = checkPageBreak(doc, y, orderNum, 70)
-  y += 4
-  y = drawSection(doc, 'Bloco de Garantia Técnica', y)
-  y += 3
+<div style="margin-top:22px;"><div style="color:#1a6fa8;font-weight:700;font-size:14px;border-bottom:2px solid #1a6fa8;padding-bottom:4px;margin-bottom:12px;">Garantia</div><div style="font-weight:700;font-size:12px;margin-bottom:6px;">Condições da garantia</div><div style="font-size:11px;color:#444;line-height:1.8;white-space:pre-line;">${data.warranty?.conditions ? (Array.isArray(data.warranty.conditions) ? data.warranty.conditions.join('\n\n') : data.warranty.conditions) : GARANTIA}</div></div>
 
-  const gtLines = doc.splitTextToSize(WARRANTY_90_DAYS, CONTENT_WIDTH - 10)
-  const gtH = gtLines.length * 4.8 + 12
-  doc.setFillColor(254, 243, 199)
-  doc.roundedRect(MARGIN, y, CONTENT_WIDTH, gtH, 2, 2, 'F')
-  doc.setDrawColor(217, 119, 6)
-  doc.setLineWidth(0.4)
-  doc.roundedRect(MARGIN, y, CONTENT_WIDTH, gtH, 2, 2, 'S')
+<div style="margin-top:22px;"><div style="color:#1a6fa8;font-weight:700;font-size:14px;border-bottom:2px solid #1a6fa8;padding-bottom:4px;margin-bottom:12px;">Cláusulas contratuais</div>${clausulasHtml}</div>
 
-  doc.setFillColor(217, 119, 6)
-  doc.roundedRect(MARGIN, y, CONTENT_WIDTH, 8, 2, 2, 'F')
-  doc.rect(MARGIN, y + 4, CONTENT_WIDTH, 4, 'F')
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
-  doc.setTextColor(255, 255, 255)
-  doc.text('GARANTIA DE 90 DIAS — CONFORME CDC LEI 8.078/90', MARGIN + 5, y + 5.5)
+${data.additional_info ? `<div style="margin-top:22px;"><div style="color:#1a6fa8;font-weight:700;font-size:14px;border-bottom:2px solid #1a6fa8;padding-bottom:4px;margin-bottom:12px;">Informações adicionais</div><div style="font-size:11px;color:#444;line-height:1.8;">${data.additional_info}</div></div>` : ''}
 
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(120, 53, 15)
-  doc.text(gtLines, MARGIN + 5, y + 16)
-  y += gtH + 6
+<div style="margin-top:36px;"><div style="text-align:center;font-size:11px;color:#555;margin-bottom:6px;font-style:italic;">Trabalhamos para que seus projetos, se tornem realidade.. Obrigado pela confiança</div><div style="text-align:center;font-style:italic;font-size:11px;color:#555;margin-bottom:28px;">obrigado pela confiança, estaremos à disposição.</div><div style="text-align:center;font-weight:700;font-size:12px;margin-bottom:36px;">São Paulo, ${fmtDate(data.date)}</div><div style="display:flex;justify-content:space-around;"><div style="text-align:center;min-width:220px;"><div style="border-top:1px solid #555;padding-top:8px;"><div style="font-weight:700;font-size:12px;">${EMPRESA.nome}</div><div style="font-size:11px;color:#555;">${EMPRESA.proprietario}</div><div style="font-size:11px;color:#555;">${EMPRESA.cargo}</div></div></div><div style="text-align:center;min-width:220px;"><div style="border-top:1px solid #555;padding-top:8px;"><div style="font-weight:700;font-size:12px;">${c.name}</div>${c.cnpj ? `<div style="font-size:11px;color:#555;">CNPJ ${c.cnpj}</div>` : ''}${c.cpf ? `<div style="font-size:11px;color:#555;">CPF ${c.cpf}</div>` : ''}</div></div></div></div>
 
-  y = checkPageBreak(doc, y, orderNum, 75)
-  y += 4
-  y = drawSection(doc, 'Assinatura e Confirmação', y)
-  y += 6
+${rodape}
+</body></html>`
 
-  const sigDateTime = fmtDateTime()
-  const sigColW = (CONTENT_WIDTH - 8) / 2
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7.5)
-  doc.setTextColor(100, 116, 139)
-  doc.text('Data e Hora de Emissão:', MARGIN, y)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
-  doc.setTextColor(15, 23, 42)
-  doc.text(sigDateTime, MARGIN + 42, y)
-  y += 10
-
-  doc.setDrawColor(148, 163, 184)
-  doc.setLineWidth(0.5)
-  doc.line(MARGIN, y + 28, MARGIN + sigColW, y + 28)
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
-  doc.setTextColor(30, 41, 59)
-  doc.text('Assinatura do Técnico / Responsável', MARGIN + sigColW / 2, y + 32, { align: 'center' })
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7.5)
-  doc.setTextColor(100, 116, 139)
-  doc.text(data.team?.[0]?.name || data.assigned_to || '________________________________', MARGIN + sigColW / 2, y + 38, { align: 'center' })
-
-  doc.line(MARGIN + sigColW + 8, y + 28, MARGIN + sigColW * 2 + 8, y + 28)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
-  doc.setTextColor(30, 41, 59)
-  doc.text('Assinatura do Cliente / Responsável', MARGIN + sigColW + 8 + sigColW / 2, y + 32, { align: 'center' })
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7.5)
-  doc.setTextColor(100, 116, 139)
-  doc.text(data.customer_name || '________________________________', MARGIN + sigColW + 8 + sigColW / 2, y + 38, { align: 'center' })
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(30, 41, 59)
-  doc.text(`Data: _____ / _____ / _______`, MARGIN, y + 46)
-  doc.text(`Horário: _____ : _____`, MARGIN + sigColW + 8, y + 46)
-
-  if (data.signature_data) {
-    try {
-      doc.addImage(data.signature_data, 'PNG', MARGIN + sigColW + 8, y, sigColW, 25)
-    } catch { /* ignore invalid signature image */ }
-  }
-
-  let qrDataUrl: string | undefined
-  if (data.track_token) {
-    try {
-      const trackUrl = `${window.location.origin}/track/${data.track_token}`
-      qrDataUrl = await QRCode.toDataURL(trackUrl, {
-        width: 128,
-        margin: 1,
-        color: { dark: '#0F567D', light: '#F5F7FA' },
-        errorCorrectionLevel: 'M'
-      })
-    } catch { /* ignore */ }
-  }
-
-  const total = doc.getNumberOfPages()
-  for (let i = 1; i <= total; i++) {
-    doc.setPage(i)
-    drawPageHeader(doc, orderNum, i, total)
-    drawPageFooter(doc, i, total, qrDataUrl)
-  }
-
-  const safeName = (data.customer_name || 'cliente').replace(/[^a-zA-Z0-9]/g, '_')
-  doc.save(`OS-${orderNum}-${safeName}.pdf`)
+  const win = window.open('', '_blank', 'width=900,height=700')
+  if (!win) { alert('Permita pop-ups para este site e tente novamente.'); return }
+  win.document.write(html)
+  win.document.close()
+  win.onload = () => { setTimeout(() => { win.focus(); win.print() }, 500) }
 }
 
 export const generateServiceOrderPDF = generateServiceOrderPDFGiartech
