@@ -18,18 +18,18 @@ import DocumentGeneratorButton from '../components/DocumentGeneratorButton'
 import OSPrintPreviewModal from '../components/OSPrintPreviewModal'
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string; ring: string }> = {
-  cotacao:      { label: 'Cotação',      dot: 'bg-sky-400',     badge: 'bg-sky-50 text-sky-700 ring-sky-200',          ring: 'ring-sky-300' },
-  orcamento:    { label: 'Orçamento',    dot: 'bg-sky-400',     badge: 'bg-sky-50 text-sky-700 ring-sky-200',          ring: 'ring-sky-300' },
+  cotacao:      { label: 'Cotação',      dot: 'bg-[#0062f6]',   badge: 'bg-[#eef3ff] text-[#0052d6] ring-[rgba(0,98,246,0.2)]', ring: 'ring-[rgba(0,98,246,0.3)]' },
+  orcamento:    { label: 'Orçamento',    dot: 'bg-[#0062f6]',   badge: 'bg-[#eef3ff] text-[#0052d6] ring-[rgba(0,98,246,0.2)]', ring: 'ring-[rgba(0,98,246,0.3)]' },
   pending:      { label: 'Pendente',     dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700 ring-amber-200',    ring: 'ring-amber-300' },
   pendente:     { label: 'Pendente',     dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700 ring-amber-200',    ring: 'ring-amber-300' },
-  in_progress:  { label: 'Em Andamento', dot: 'bg-blue-500',    badge: 'bg-blue-50 text-blue-700 ring-blue-200',       ring: 'ring-blue-300' },
-  em_andamento: { label: 'Em Andamento', dot: 'bg-blue-500',    badge: 'bg-blue-50 text-blue-700 ring-blue-200',       ring: 'ring-blue-300' },
-  on_hold:      { label: 'Pausado',      dot: 'bg-orange-400',  badge: 'bg-orange-50 text-orange-700 ring-orange-200', ring: 'ring-orange-300' },
-  pausado:      { label: 'Pausado',      dot: 'bg-orange-400',  badge: 'bg-orange-50 text-orange-700 ring-orange-200', ring: 'ring-orange-300' },
-  completed:    { label: 'Concluída',    dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200', ring: 'ring-emerald-300' },
-  concluida:    { label: 'Concluída',    dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200', ring: 'ring-emerald-300' },
-  cancelled:    { label: 'Cancelada',    dot: 'bg-red-400',     badge: 'bg-red-50 text-red-700 ring-red-200',          ring: 'ring-red-300' },
-  cancelado:    { label: 'Cancelada',    dot: 'bg-red-400',     badge: 'bg-red-50 text-red-700 ring-red-200',          ring: 'ring-red-300' },
+  in_progress:  { label: 'Em Andamento', dot: 'bg-[#ff8149]',   badge: 'bg-[#fff3ee] text-[#cc5a2a] ring-[rgba(255,129,73,0.3)]', ring: 'ring-[rgba(255,129,73,0.4)]' },
+  em_andamento: { label: 'Em Andamento', dot: 'bg-[#ff8149]',   badge: 'bg-[#fff3ee] text-[#cc5a2a] ring-[rgba(255,129,73,0.3)]', ring: 'ring-[rgba(255,129,73,0.4)]' },
+  on_hold:      { label: 'Pausado',      dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700 ring-amber-200',    ring: 'ring-amber-300' },
+  pausado:      { label: 'Pausado',      dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700 ring-amber-200',    ring: 'ring-amber-300' },
+  completed:    { label: 'Concluída',    dot: 'bg-emerald-500', badge: 'bg-[#eafff8] text-[#0a6b4a] ring-[rgba(0,196,154,0.3)]', ring: 'ring-emerald-300' },
+  concluida:    { label: 'Concluída',    dot: 'bg-emerald-500', badge: 'bg-[#eafff8] text-[#0a6b4a] ring-[rgba(0,196,154,0.3)]', ring: 'ring-emerald-300' },
+  cancelled:    { label: 'Cancelada',    dot: 'bg-gray-400',    badge: 'bg-gray-100 text-gray-600 ring-gray-200',      ring: 'ring-gray-300' },
+  cancelado:    { label: 'Cancelada',    dot: 'bg-gray-400',    badge: 'bg-gray-100 text-gray-600 ring-gray-200',      ring: 'ring-gray-300' },
 }
 
 const PRIORITY_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -148,7 +148,7 @@ function SortButton({
   return (
     <button
       onClick={() => onChange(field)}
-      className={`flex items-center gap-1 text-xs font-medium transition ${active ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+      className={`flex items-center gap-1 text-xs font-medium transition ${active ? 'text-[#0062f6]' : 'text-[#8a95a8] hover:text-[#4a5568]'}`}
     >
       {label}
       <ArrowUpDown className={`h-3 w-3 ${active ? (sortDir === 'asc' ? 'rotate-180' : '') : 'opacity-40'}`} />
@@ -415,37 +415,37 @@ const ServiceOrders = () => {
       {/* ── PAGE HEADER ─────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Ordens de Serviço</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{orders.length} ordens cadastradas</p>
+          <h1 className="text-lg font-semibold text-[#191919] tracking-tight">Ordens de Serviço</h1>
+          <p className="text-xs text-[#8a95a8] mt-0.5">{orders.length} ordens cadastradas</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#0062f6] border border-[rgba(0,98,246,0.3)] rounded-lg hover:bg-[#eef3ff] transition-colors"
             title="Exportar CSV"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">CSV</span>
           </button>
           <button
             onClick={loadServiceOrders}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+            className="p-2 text-[#8a95a8] hover:text-[#0062f6] hover:bg-[#eef3ff] rounded-lg transition-colors"
             title="Atualizar"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={() => navigate('/service-orders-kanban')}
-            className="px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-1.5 shadow-sm"
+            className="px-3 py-2 text-xs font-medium text-[#0062f6] border border-[rgba(0,98,246,0.3)] rounded-lg hover:bg-[#eef3ff] transition-colors flex items-center gap-1.5"
           >
-            <BarChart2 className="h-4 w-4" />
+            <BarChart2 className="h-3.5 w-3.5" />
             Kanban
           </button>
           <button
             onClick={() => { setEditingOrderId(undefined); setShowOrderModal(true) }}
-            className="px-4 py-2 text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-gray-700 transition-colors flex items-center gap-2 shadow-sm"
+            className="px-4 py-2 text-xs font-medium text-white bg-[#0062f6] rounded-lg hover:bg-[#0052d6] transition-colors flex items-center gap-1.5"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             Nova OS
           </button>
         </div>
@@ -462,11 +462,11 @@ const ServiceOrders = () => {
           >
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
               {[
-                { label: 'Pendentes',     value: pending,    icon: <Clock className="h-4 w-4" />,          color: 'text-amber-600',  bg: 'bg-amber-50',  border: 'border-amber-100', onClick: () => setSelectedStatus('pending') },
-                { label: 'Em Andamento',  value: inProgress, icon: <PlayCircle className="h-4 w-4" />,     color: 'text-blue-600',   bg: 'bg-blue-50',   border: 'border-blue-100',  onClick: () => setSelectedStatus('in_progress') },
-                { label: 'Concluídas',    value: completed,  icon: <CheckCircle2 className="h-4 w-4" />,   color: 'text-emerald-600',bg: 'bg-emerald-50',border: 'border-emerald-100',onClick: () => setSelectedStatus('completed') },
-                { label: 'Atrasadas',     value: overdueCount, icon: <AlertTriangle className="h-4 w-4" />, color: overdueCount > 0 ? 'text-red-600' : 'text-gray-400', bg: overdueCount > 0 ? 'bg-red-50' : 'bg-gray-50', border: overdueCount > 0 ? 'border-red-100' : 'border-gray-100', onClick: () => setShowOverdueOnly(true) },
-                { label: 'Faturamento',   value: fmt(totalValue), icon: <DollarSign className="h-4 w-4" />, color: 'text-gray-700', bg: 'bg-white', border: 'border-gray-100', onClick: () => {} },
+                { label: 'Pendentes',     value: pending,    icon: <Clock className="h-4 w-4" />,          color: '#ff8149',  bg: '#fff3ee',   badge: '#fff3ee', badgeText: '#cc5a2a', onClick: () => setSelectedStatus('pending') },
+                { label: 'Em Andamento',  value: inProgress, icon: <PlayCircle className="h-4 w-4" />,     color: '#0062f6',  bg: '#eef3ff',   badge: '#eef3ff', badgeText: '#0052d6', onClick: () => setSelectedStatus('in_progress') },
+                { label: 'Concluídas',    value: completed,  icon: <CheckCircle2 className="h-4 w-4" />,   color: '#00a878',  bg: '#eafff8',   badge: '#eafff8', badgeText: '#0a6b4a', onClick: () => setSelectedStatus('completed') },
+                { label: 'Atrasadas',     value: overdueCount, icon: <AlertTriangle className="h-4 w-4" />, color: overdueCount > 0 ? '#e74c3c' : '#8a95a8', bg: overdueCount > 0 ? '#fff0ee' : '#f5f5f5', badge: '', badgeText: '', onClick: () => setShowOverdueOnly(true) },
+                { label: 'Faturamento',   value: fmt(totalValue), icon: <DollarSign className="h-4 w-4" />, color: '#191919', bg: '#ffffff', badge: '', badgeText: '', onClick: () => {} },
               ].map((k, i) => (
                 <motion.button
                   key={i}
@@ -474,13 +474,16 @@ const ServiceOrders = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.06 }}
                   onClick={k.onClick}
-                  className={`${k.bg} ${k.border} border rounded-xl p-3 text-left hover:shadow-md transition-all group`}
+                  className="bg-white rounded-xl border border-[rgba(0,98,246,0.12)] p-4 text-left hover:border-[rgba(0,98,246,0.25)] hover:shadow-sm transition-all group relative overflow-hidden"
                 >
-                  <div className={`${k.color} flex items-center gap-1.5 text-xs font-medium mb-1.5`}>
-                    {k.icon}
-                    {k.label}
+                  <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-xl" style={{ background: k.color }} />
+                  <div className="pl-1">
+                    <div className="flex items-center gap-1.5 mb-1.5" style={{ color: k.color }}>
+                      {k.icon}
+                      <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#8a95a8' }}>{k.label}</span>
+                    </div>
+                    <p className="text-xl font-semibold text-[#191919] leading-none">{k.value}</p>
                   </div>
-                  <p className={`text-xl font-bold ${k.color}`}>{k.value}</p>
                 </motion.button>
               ))}
             </div>
@@ -497,40 +500,40 @@ const ServiceOrders = () => {
       </button>
 
       {/* ── SEARCH & FILTERS ─────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
+      <div className="bg-white rounded-xl border border-[rgba(0,98,246,0.12)] px-4 py-3">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[160px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8a95a8]" />
             <input
               type="text"
               placeholder="Buscar por número, cliente, serviço..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-300 focus:border-transparent outline-none bg-gray-50"
+              className="w-full pl-9 pr-4 py-2 text-xs border border-[rgba(0,98,246,0.2)] rounded-lg focus:ring-1 focus:ring-[#0062f6]/20 focus:border-[#0062f6] outline-none bg-[#f4f7ff] placeholder:text-[#8a95a8] text-[#191919] transition-colors"
             />
             {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8a95a8] hover:text-[#191919]">
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
           {/* Sorting */}
-          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
-            <ArrowUpDown className="h-3.5 w-3.5 text-gray-400" />
+          <div className="flex items-center gap-1.5 bg-[#f4f7ff] border border-[rgba(0,98,246,0.15)] rounded-lg px-3 py-2">
+            <ArrowUpDown className="h-3.5 w-3.5 text-[#8a95a8]" />
             <SortButton field="created_at"   label="Data"         sortField={sortField} sortDir={sortDir} onChange={handleSortField} />
-            <span className="text-gray-200">|</span>
+            <span className="text-[#d0d7de]">|</span>
             <SortButton field="due_date"     label="Prazo"        sortField={sortField} sortDir={sortDir} onChange={handleSortField} />
-            <span className="text-gray-200">|</span>
+            <span className="text-[#d0d7de]">|</span>
             <SortButton field="total_value"  label="Valor"        sortField={sortField} sortDir={sortDir} onChange={handleSortField} />
-            <span className="text-gray-200">|</span>
+            <span className="text-[#d0d7de]">|</span>
             <SortButton field="client_name"  label="Cliente"      sortField={sortField} sortDir={sortDir} onChange={handleSortField} />
           </div>
 
           {showOverdueOnly && (
             <button
               onClick={() => setShowOverdueOnly(false)}
-              className="flex items-center gap-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-1.5"
+              className="flex items-center gap-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5"
             >
               <AlertTriangle className="h-3.5 w-3.5" />
               Só atrasadas
@@ -540,12 +543,12 @@ const ServiceOrders = () => {
 
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors ${showFilters || hasActiveFilters ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${showFilters || hasActiveFilters ? 'bg-[#0062f6] text-white border-[#0062f6]' : 'bg-white text-[#0062f6] border-[rgba(0,98,246,0.3)] hover:bg-[#eef3ff]'}`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
             Filtros
             {hasActiveFilters && (
-              <span className={`ml-1 w-2 h-2 rounded-full ${showFilters ? 'bg-white' : 'bg-blue-500'} shrink-0`} />
+              <span className={`ml-1 w-2 h-2 rounded-full ${showFilters ? 'bg-white' : 'bg-[#0062f6]'} shrink-0`} />
             )}
           </button>
         </div>
@@ -559,102 +562,68 @@ const ServiceOrders = () => {
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="pt-3 mt-3 border-t border-gray-100">
+              <div className="pt-3 mt-3 border-t border-[rgba(0,98,246,0.08)]">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Status</label>
-                    <select
-                      value={selectedStatus}
-                      onChange={(e) => setSelectedStatus(e.target.value)}
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-1.5 bg-white focus:ring-2 focus:ring-gray-300 outline-none"
-                    >
-                      <option value="all">Todos</option>
-                      <option value="cotacao">Cotação</option>
-                      <option value="pending">Pendente</option>
-                      <option value="in_progress">Em Andamento</option>
-                      <option value="on_hold">Pausado</option>
-                      <option value="completed">Concluída</option>
-                      <option value="cancelled">Cancelada</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Prioridade</label>
-                    <select
-                      value={selectedPriority}
-                      onChange={(e) => setSelectedPriority(e.target.value)}
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-1.5 bg-white focus:ring-2 focus:ring-gray-300 outline-none"
-                    >
-                      <option value="all">Todas</option>
-                      <option value="high">Alta</option>
-                      <option value="medium">Média</option>
-                      <option value="low">Baixa</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Responsável</label>
-                    <select
-                      value={selectedResponsible}
-                      onChange={(e) => setSelectedResponsible(e.target.value)}
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-1.5 bg-white focus:ring-2 focus:ring-gray-300 outline-none"
-                    >
-                      <option value="">Todos</option>
-                      {responsibles.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Prazo de</label>
-                    <input
-                      type="date"
-                      value={dueDateFrom}
-                      onChange={e => setDueDateFrom(e.target.value)}
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-1.5 bg-white focus:ring-2 focus:ring-gray-300 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Prazo até</label>
-                    <input
-                      type="date"
-                      value={dueDateTo}
-                      onChange={e => setDueDateTo(e.target.value)}
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-1.5 bg-white focus:ring-2 focus:ring-gray-300 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Valor mín. (R$)</label>
-                    <input
-                      type="number"
-                      value={valueMin}
-                      onChange={e => setValueMin(e.target.value)}
-                      placeholder="0"
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-1.5 bg-white focus:ring-2 focus:ring-gray-300 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Valor máx. (R$)</label>
-                    <input
-                      type="number"
-                      value={valueMax}
-                      onChange={e => setValueMax(e.target.value)}
-                      placeholder="Sem limite"
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-1.5 bg-white focus:ring-2 focus:ring-gray-300 outline-none"
-                    />
-                  </div>
+                  {[
+                    { label: 'Status', content: (
+                      <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="w-full text-xs border border-[rgba(0,98,246,0.2)] rounded-lg px-3 py-1.5 bg-white focus:ring-1 focus:ring-[#0062f6]/20 focus:border-[#0062f6] outline-none text-[#4a5568] appearance-none">
+                        <option value="all">Todos</option>
+                        <option value="cotacao">Cotação</option>
+                        <option value="pending">Pendente</option>
+                        <option value="in_progress">Em Andamento</option>
+                        <option value="on_hold">Pausado</option>
+                        <option value="completed">Concluída</option>
+                        <option value="cancelled">Cancelada</option>
+                      </select>
+                    )},
+                    { label: 'Prioridade', content: (
+                      <select value={selectedPriority} onChange={(e) => setSelectedPriority(e.target.value)} className="w-full text-xs border border-[rgba(0,98,246,0.2)] rounded-lg px-3 py-1.5 bg-white focus:ring-1 focus:ring-[#0062f6]/20 focus:border-[#0062f6] outline-none text-[#4a5568] appearance-none">
+                        <option value="all">Todas</option>
+                        <option value="high">Alta</option>
+                        <option value="medium">Média</option>
+                        <option value="low">Baixa</option>
+                      </select>
+                    )},
+                    { label: 'Responsável', content: (
+                      <select value={selectedResponsible} onChange={(e) => setSelectedResponsible(e.target.value)} className="w-full text-xs border border-[rgba(0,98,246,0.2)] rounded-lg px-3 py-1.5 bg-white focus:ring-1 focus:ring-[#0062f6]/20 focus:border-[#0062f6] outline-none text-[#4a5568] appearance-none">
+                        <option value="">Todos</option>
+                        {responsibles.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    )},
+                    { label: 'Prazo de', content: (
+                      <input type="date" value={dueDateFrom} onChange={e => setDueDateFrom(e.target.value)} className="w-full text-xs border border-[rgba(0,98,246,0.2)] rounded-lg px-3 py-1.5 bg-white focus:ring-1 focus:ring-[#0062f6]/20 focus:border-[#0062f6] outline-none" />
+                    )},
+                    { label: 'Prazo até', content: (
+                      <input type="date" value={dueDateTo} onChange={e => setDueDateTo(e.target.value)} className="w-full text-xs border border-[rgba(0,98,246,0.2)] rounded-lg px-3 py-1.5 bg-white focus:ring-1 focus:ring-[#0062f6]/20 focus:border-[#0062f6] outline-none" />
+                    )},
+                    { label: 'Valor mín. (R$)', content: (
+                      <input type="number" value={valueMin} onChange={e => setValueMin(e.target.value)} placeholder="0" className="w-full text-xs border border-[rgba(0,98,246,0.2)] rounded-lg px-3 py-1.5 bg-white focus:ring-1 focus:ring-[#0062f6]/20 focus:border-[#0062f6] outline-none" />
+                    )},
+                    { label: 'Valor máx. (R$)', content: (
+                      <input type="number" value={valueMax} onChange={e => setValueMax(e.target.value)} placeholder="Sem limite" className="w-full text-xs border border-[rgba(0,98,246,0.2)] rounded-lg px-3 py-1.5 bg-white focus:ring-1 focus:ring-[#0062f6]/20 focus:border-[#0062f6] outline-none" />
+                    )},
+                  ].map(({ label, content }) => (
+                    <div key={label}>
+                      <label className="block text-[9px] font-semibold uppercase tracking-widest text-[#0062f6] mb-1.5">{label}</label>
+                      {content}
+                    </div>
+                  ))}
                   <div className="flex items-end">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={showOverdueOnly}
                         onChange={e => setShowOverdueOnly(e.target.checked)}
-                        className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                        className="rounded border-[rgba(0,98,246,0.3)] text-[#0062f6] focus:ring-[#0062f6]"
                       />
-                      <span className="text-sm text-gray-700">Somente atrasadas</span>
+                      <span className="text-xs text-[#4a5568]">Somente atrasadas</span>
                     </label>
                   </div>
                 </div>
 
                 {hasActiveFilters && (
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                    <span className="text-xs text-gray-500">
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-[rgba(0,98,246,0.08)]">
+                    <span className="text-xs text-[#8a95a8]">
                       {filteredOrders.length} de {orders.length} ordens
                     </span>
                     <button
@@ -678,23 +647,23 @@ const ServiceOrders = () => {
             <button
               onClick={handleSelectAll}
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${
-                selectAll ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 hover:border-blue-400'
+                selectAll ? 'bg-[#0062f6] border-[#0062f6] text-white' : 'border-[rgba(0,98,246,0.3)] hover:border-[#0062f6]'
               }`}
             >
               {selectAll && <CheckSquare className="h-3 w-3" />}
             </button>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-[#8a95a8]">
               {selectAll ? `${filteredOrders.length} selecionadas` : 'Selecionar todas'}
             </span>
           </label>
           <div className="flex items-center gap-3">
             {filteredOrders.length !== orders.length && (
-              <span className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2.5 py-0.5 font-medium">
+              <span className="text-xs text-[#0062f6] bg-[#eef3ff] border border-[rgba(0,98,246,0.2)] rounded-full px-2.5 py-0.5 font-medium">
                 {filteredOrders.length} de {orders.length}
               </span>
             )}
             {selectedIds.size > 0 && (
-              <span className="text-xs text-gray-500 font-medium">
+              <span className="text-xs text-[#4a5568] font-medium">
                 {selectedIds.size} selecionada{selectedIds.size > 1 ? 's' : ''}
               </span>
             )}
@@ -713,30 +682,30 @@ const ServiceOrders = () => {
       {/* ── LIST ─────────────────────────────────────── */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-700 rounded-full animate-spin" />
-          <span className="text-sm text-gray-500">Carregando ordens...</span>
+          <div className="w-8 h-8 border-2 border-[rgba(0,98,246,0.15)] border-t-[#0062f6] rounded-full animate-spin" />
+          <span className="text-xs text-[#8a95a8]">Carregando ordens...</span>
         </div>
       ) : filteredOrders.length === 0 ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center"
+          className="bg-white rounded-xl border border-[rgba(0,98,246,0.12)] p-12 text-center"
         >
-          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <ClipboardList className="h-7 w-7 text-gray-400" />
+          <div className="w-14 h-14 bg-[#eef3ff] rounded-xl flex items-center justify-center mx-auto mb-4">
+            <ClipboardList className="h-7 w-7 text-[#0062f6]" />
           </div>
-          <h3 className="text-base font-semibold text-gray-800 mb-1">Nenhuma ordem encontrada</h3>
-          <p className="text-sm text-gray-500 mb-5">Tente ajustar os filtros ou criar uma nova OS.</p>
+          <h3 className="text-base font-semibold text-[#191919] mb-1">Nenhuma ordem encontrada</h3>
+          <p className="text-sm text-[#8a95a8] mb-5">Tente ajustar os filtros ou criar uma nova OS.</p>
           <div className="flex items-center justify-center gap-2">
             <button
               onClick={() => { setSearchTerm(''); clearFilters() }}
-              className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-sm text-[#0062f6] border border-[rgba(0,98,246,0.3)] rounded-lg hover:bg-[#eef3ff] transition-colors"
             >
               Limpar filtros
             </button>
             <button
               onClick={() => { setEditingOrderId(undefined); setShowOrderModal(true) }}
-              className="px-4 py-2 text-sm font-semibold bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 text-sm font-semibold bg-[#0062f6] text-white rounded-lg hover:bg-[#0052d6] transition-colors flex items-center gap-1.5"
             >
               <Plus className="h-3.5 w-3.5" />
               Nova OS
@@ -759,8 +728,8 @@ const ServiceOrders = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(index * 0.03, 0.3) }}
-                className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden ${
-                  isSelected ? 'border-blue-300 ring-2 ring-blue-200' : over ? 'border-red-200 hover:border-red-300' : 'border-gray-100 hover:border-gray-200'
+                className={`bg-white rounded-xl border transition-all duration-200 group overflow-hidden ${
+                  isSelected ? 'border-[rgba(0,98,246,0.4)] ring-1 ring-[rgba(0,98,246,0.15)]' : over ? 'border-red-200 hover:border-red-300' : 'border-[rgba(0,98,246,0.12)] hover:border-[rgba(0,98,246,0.25)]'
                 }`}
               >
                 <div className={`h-0.5 w-full ${over ? 'bg-red-400' : s.dot}`} />
@@ -772,18 +741,18 @@ const ServiceOrders = () => {
                       <button
                         onClick={() => toggleSelectId(order.id)}
                         className={`shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition ${
-                          isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 hover:border-blue-400 opacity-0 group-hover:opacity-100'
+                          isSelected ? 'bg-[#0062f6] border-[#0062f6] text-white' : 'border-[rgba(0,98,246,0.3)] hover:border-[#0062f6] opacity-0 group-hover:opacity-100'
                         }`}
                       >
                         {isSelected && <CheckSquare className="h-3 w-3" />}
                       </button>
 
-                      <div className="shrink-0 w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center">
+                      <div className="shrink-0 w-10 h-10 bg-[#191919] rounded-xl flex items-center justify-center">
                         <ClipboardList className="h-[18px] w-[18px] text-white" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-bold text-gray-900">OS-{order.order_number}</span>
+                          <span className="text-sm font-bold text-[#191919]">OS-{order.order_number}</span>
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${s.badge}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                             {s.label}
@@ -806,13 +775,13 @@ const ServiceOrders = () => {
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500 truncate mt-0.5">{order.service_type || 'Sem descrição'}</p>
+                        <p className="text-xs text-[#8a95a8] truncate mt-0.5">{order.service_type || 'Sem descrição'}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right hidden sm:block">
-                        <p className="text-base font-bold text-gray-900">{fmt(tv)}</p>
+                        <p className="text-base font-bold text-[#191919]">{fmt(tv)}</p>
                         {(order as any).lucro_total > 0 && (
                           <p className="text-xs text-emerald-600 flex items-center gap-0.5 justify-end">
                             <TrendingUp className="h-3 w-3" />
@@ -840,29 +809,29 @@ const ServiceOrders = () => {
                   {/* Row 2: metadata */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                     <div>
-                      <p className="text-xs text-gray-400 font-medium mb-0.5">Cliente</p>
+                      <p className="text-[10px] text-[#8a95a8] font-semibold uppercase tracking-widest mb-0.5">Cliente</p>
                       <div className="flex items-center gap-1.5">
-                        <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                        <p className="text-sm text-gray-800 font-medium truncate">{order.client_name || '—'}</p>
+                        <User className="h-3.5 w-3.5 text-[#8a95a8] shrink-0" />
+                        <p className="text-xs text-[#191919] font-medium truncate">{order.client_name || '—'}</p>
                       </div>
-                      {order.client_phone && <p className="text-xs text-gray-500 ml-5 truncate">{order.client_phone}</p>}
+                      {order.client_phone && <p className="text-xs text-[#8a95a8] ml-5 truncate">{order.client_phone}</p>}
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 font-medium mb-0.5">Responsável</p>
-                      <p className="text-sm text-gray-800 truncate">{order.assigned_to || '—'}</p>
+                      <p className="text-[10px] text-[#8a95a8] font-semibold uppercase tracking-widest mb-0.5">Responsável</p>
+                      <p className="text-xs text-[#4a5568] truncate">{order.assigned_to || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 font-medium mb-0.5">Prazo</p>
+                      <p className="text-[10px] text-[#8a95a8] font-semibold uppercase tracking-widest mb-0.5">Prazo</p>
                       <div className="flex items-center gap-1.5">
-                        <Calendar className={`h-3.5 w-3.5 shrink-0 ${over ? 'text-red-500' : 'text-gray-400'}`} />
-                        <p className={`text-sm ${over ? 'text-red-600 font-semibold' : 'text-gray-800'}`}>
+                        <Calendar className={`h-3.5 w-3.5 shrink-0 ${over ? 'text-red-500' : 'text-[#8a95a8]'}`} />
+                        <p className={`text-xs ${over ? 'text-red-600 font-semibold' : 'text-[#4a5568]'}`}>
                           {order.due_date ? formatDateSafe(order.due_date) : order.service_date ? formatDateSafe(order.service_date) : '—'}
                         </p>
                       </div>
                     </div>
                     <div className="sm:hidden">
-                      <p className="text-xs text-gray-400 font-medium mb-0.5">Valor</p>
-                      <p className="text-sm font-bold text-gray-900">{fmt(tv)}</p>
+                      <p className="text-[10px] text-[#8a95a8] font-semibold uppercase tracking-widest mb-0.5">Valor</p>
+                      <p className="text-xs font-bold text-[#191919]">{fmt(tv)}</p>
                     </div>
                   </div>
 
@@ -880,27 +849,27 @@ const ServiceOrders = () => {
                   </div>
 
                   {/* Row 3: description + action bar */}
-                  <div className="flex items-center justify-between gap-4 pt-3 border-t border-gray-50">
-                    <p className="text-xs text-gray-400 truncate flex-1">{order.description || ''}</p>
+                  <div className="flex items-center justify-between gap-4 pt-3 border-t border-[rgba(0,98,246,0.06)]">
+                    <p className="text-xs text-[#8a95a8] truncate flex-1">{order.description || ''}</p>
 
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => navigate(`/service-orders/${order.id}/view`)}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-1.5 text-[#8a95a8] hover:text-[#0062f6] hover:bg-[#eef3ff] rounded-lg transition-colors"
                         title="Visualizar"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => { setEditingOrderId(order.id); setShowOrderModal(true) }}
-                        className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-1.5 text-[#8a95a8] hover:text-[#191919] hover:bg-[#f4f7ff] rounded-lg transition-colors"
                         title="Editar"
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => setPrintOrderId(order.id)}
-                        className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-1.5 text-[#8a95a8] hover:text-[#191919] hover:bg-[#f4f7ff] rounded-lg transition-colors"
                         title="Imprimir OS"
                       >
                         <Printer className="h-4 w-4" />
@@ -908,14 +877,14 @@ const ServiceOrders = () => {
                       <button
                         onClick={() => handleExecute(order)}
                         disabled={order.status === 'completed'}
-                        className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-1.5 text-[#8a95a8] hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                         title={order.status === 'pending' ? 'Iniciar OS' : order.status === 'in_progress' ? 'Concluir OS' : 'Concluída'}
                       >
                         <PlayCircle className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => navigate(`/service-orders/${order.id}/mobile`)}
-                        className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                        className="p-1.5 text-[#8a95a8] hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                         title="App Técnico"
                       >
                         <Smartphone className="h-4 w-4" />
@@ -924,18 +893,18 @@ const ServiceOrders = () => {
                         templateType="service_order"
                         data={{ serviceOrder: order, customer: order.customer, company: { name: 'GiarTech' } }}
                         label=""
-                        className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-1.5 text-[#8a95a8] hover:text-[#191919] hover:bg-[#f4f7ff] rounded-lg transition-colors"
                       />
                       <button
                         onClick={() => handleDuplicate(order)}
-                        className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                        className="p-1.5 text-[#8a95a8] hover:text-[#ff8149] hover:bg-[#fff3ee] rounded-lg transition-colors"
                         title="Duplicar"
                       >
                         <Copy className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteClick(order)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 text-[#8a95a8] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Excluir"
                       >
                         <Trash2 className="h-4 w-4" />

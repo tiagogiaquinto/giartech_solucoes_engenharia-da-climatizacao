@@ -7,14 +7,23 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Gilroy', 'Inter', 'sans-serif'],
-        display: ['Gilroy', 'Inter', 'sans-serif'],
+        sans: ['Questrial', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Questrial', 'Inter', 'sans-serif'],
         logo: ['Questrial', 'Inter', 'sans-serif'],
       },
       colors: {
-        background: '#ffffff',
+        background: '#f4f7ff',
         foreground: '#191919',
         border: '#e2e8f0',
+        'g-black':   '#191919',
+        'g-blue':    '#0062f6',
+        'g-cyan':    '#00d1ff',
+        'g-orange':  '#ff8149',
+        'g-white':   '#FAFAFA',
+        'g-bg':      '#eef3ff',
+        'g-bg2':     '#f4f7ff',
+        'g-text2':   '#4a5568',
+        'g-text3':   '#8a95a8',
         brand: {
           black:  '#191919',
           blue:   '#0062f6',
@@ -116,6 +125,9 @@ export default {
     'text-yellow-800','text-red-800','text-gray-800',
     'bg-primary-500','text-primary-500','border-primary-500',
     'bg-brand-blue','bg-brand-cyan','bg-brand-orange',
+    'bg-g-blue','bg-g-cyan','bg-g-orange','bg-g-black','bg-g-bg','bg-g-bg2',
+    'text-g-blue','text-g-cyan','text-g-orange','text-g-black','text-g-text2','text-g-text3',
+    'border-g-blue','border-g-border',
   ],
   plugins: [],
 }
