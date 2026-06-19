@@ -224,7 +224,7 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId, budgetId }: Servi
         supabase.from('bank_accounts').select('*').eq('active', true).order('account_name'),
         supabase.from('contract_templates').select('*').order('name'),
         supabase.from('service_catalog').select('*, service_catalog_materials(*)').eq('active', true).order('name'),
-        supabase.from('company_settings').select('*').limit(1),
+        supabase.from('company_profile').select('*').limit(1),
         supabase.from('tax_rates').select('*').eq('is_active', true).order('name')
       ])
 
@@ -911,17 +911,25 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId, budgetId }: Servi
         notes: formData.notes,
         client_name: selectedCustomer?.nome_razao || '',
         client_company_name: selectedCustomer?.nome_fantasia || '',
-        client_cnpj: selectedCustomer?.cnpj || '',
-        client_cpf: selectedCustomer?.cpf || '',
-        client_phone: selectedCustomer?.telefone_1 || '',
+        client_cnpj: selectedCustomer?.cnpj || selectedCustomer?.cpf_cnpj || '',
+        client_cpf: selectedCustomer?.cpf || selectedCustomer?.cpf_cnpj || '',
+        client_phone: selectedCustomer?.telefone || selectedCustomer?.celular || selectedCustomer?.whatsapp || '',
         client_email: selectedCustomer?.email || '',
-        client_address: selectedCustomer?.endereco_logradouro ?
-          `${selectedCustomer.endereco_logradouro}${selectedCustomer.endereco_numero ? ', ' + selectedCustomer.endereco_numero : ''}${selectedCustomer.endereco_complemento ? ' - ' + selectedCustomer.endereco_complemento : ''}${selectedCustomer.endereco_bairro ? ', ' + selectedCustomer.endereco_bairro : ''}` : '',
-        client_city: selectedCustomer?.endereco_cidade || '',
-        client_state: selectedCustomer?.endereco_estado || '',
-        client_cep: selectedCustomer?.endereco_cep || '',
+        client_address: (() => {
+          const addr = selectedCustomer?.customer_addresses?.[0]
+          if (!addr) return ''
+          return [addr.logradouro, addr.numero, addr.complemento, addr.bairro].filter(Boolean).join(', ')
+        })(),
+        client_city: selectedCustomer?.customer_addresses?.[0]?.cidade || '',
+        client_state: selectedCustomer?.customer_addresses?.[0]?.estado || '',
+        client_cep: selectedCustomer?.customer_addresses?.[0]?.cep || '',
         payment_methods: 'Transferência bancária, dinheiro, cartão de crédito, cartão de débito ou pix',
-        payment_pix: companySettings?.cnpj || companySettings?.cpf || '00.000.000/0000-00',
+        payment_pix: companySettings?.pix_key || companySettings?.cnpj || '',
+        payment_bank: companySettings?.bank_name || '',
+        payment_agency: companySettings?.bank_agency || '',
+        payment_account: companySettings?.bank_account || '',
+        payment_account_type: companySettings?.bank_account_type || '',
+        payment_holder: companySettings?.bank_holder || companySettings?.company_name || '',
         title: (formData as any).title || '',
         brand: (formData as any).brand || '',
         model: (formData as any).model || '',
@@ -932,7 +940,9 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId, budgetId }: Servi
         escopo_detalhado: (formData as any).escopo_detalhado || '',
         additional_info: (formData as any).additional_info || 'Trabalhamos para que seus projetos, se tornem realidade.. Obrigado pela confiança',
         portal_account_id: portalAccountId || null,
-        partner_account_id: partnerAccountId || null
+        partner_account_id: partnerAccountId || null,
+        total_amount: totals.total,
+        service_date: formData.scheduled_at ? formData.scheduled_at.split('T')[0] : null,
       }
 
       let orderIdToUse = orderId
@@ -983,14 +993,25 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId, budgetId }: Servi
 
       for (const item of uniqueItems) {
         const itemAny = item as any
+        const descricaoItem = itemAny.descricao || ''
+        const escopoItem = itemAny.escopo || itemAny.escopo_detalhado || ''
+        const qtyItem = itemAny.quantity || 1
+        const precoUnit = itemAny.preco || itemAny.preco_unitario || 0
+        const precoTotal = qtyItem * precoUnit
         const itemData = {
           service_order_id: orderIdToUse,
           service_catalog_id: itemAny.service_catalog_id || null,
-          descricao: itemAny.descricao || '',
-          escopo_detalhado: itemAny.escopo || itemAny.escopo_detalhado || '',
-          quantity: itemAny.quantity || 1,
-          unit_price: itemAny.preco || itemAny.preco_unitario || 0,
-          total_price: (itemAny.quantity || 1) * (itemAny.preco || itemAny.preco_unitario || 0),
+          descricao: descricaoItem,
+          service_name: descricaoItem,
+          escopo_detalhado: escopoItem,
+          service_description: escopoItem,
+          service_scope: escopoItem,
+          quantity: qtyItem,
+          quantidade: qtyItem,
+          unit_price: precoUnit,
+          preco_unitario: precoUnit,
+          total_price: precoTotal,
+          preco_total: precoTotal,
           difficulty_level: typeof itemAny.difficulty_level === 'number' ? itemAny.difficulty_level : 1,
           complexity_level: typeof itemAny.difficulty_level === 'string' ? itemAny.difficulty_level : 'medium',
           notes: itemAny.notes || ''
@@ -1018,12 +1039,18 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId, budgetId }: Servi
               service_order_item_id: savedItem.id,
               material_id: matAny.material_id || null,
               material_name: matAny.nome || matAny.name || '',
+              nome_material: matAny.nome || matAny.name || '',
               material_unit: matAny.unidade_medida || matAny.unit || 'un',
               quantity: matAny.quantidade || matAny.quantity || 0,
+              quantidade: matAny.quantidade || matAny.quantity || 0,
               unit_cost: matAny.preco_compra_unitario || matAny.preco_custo || matAny.unit_cost || 0,
               unit_price: matAny.preco_venda_unitario || matAny.preco_unitario || matAny.unit_price || 0,
+              unit_sale_price: matAny.preco_venda_unitario || matAny.preco_unitario || matAny.unit_price || 0,
+              preco_venda: matAny.preco_venda_unitario || matAny.preco_unitario || matAny.unit_price || 0,
               total_cost: matAny.custo_total || matAny.total_cost || 0,
-              total_price: matAny.valor_total || matAny.total_price || 0
+              total_price: matAny.valor_total || matAny.total_price || 0,
+              total_sale_price: matAny.valor_total || matAny.total_price || 0,
+              valor_total: matAny.valor_total || matAny.total_price || 0
             }
 
             const { error: matError } = await supabase
@@ -1074,12 +1101,18 @@ const ServiceOrderModal = ({ isOpen, onClose, onSave, orderId, budgetId }: Servi
             service_order_item_id: null,
             material_id: matAny.material_id || null,
             material_name: matAny.nome || matAny.name || '',
+            nome_material: matAny.nome || matAny.name || '',
             material_unit: matAny.unidade_medida || matAny.unit || 'un',
             quantity: matAny.quantidade || matAny.quantity || 0,
+            quantidade: matAny.quantidade || matAny.quantity || 0,
             unit_cost: matAny.preco_compra_unitario || matAny.preco_custo || matAny.unit_cost || 0,
             unit_price: matAny.preco_venda_unitario || matAny.preco_unitario || matAny.unit_price || 0,
+            unit_sale_price: matAny.preco_venda_unitario || matAny.preco_unitario || matAny.unit_price || 0,
+            preco_venda: matAny.preco_venda_unitario || matAny.preco_unitario || matAny.unit_price || 0,
             total_cost: matAny.custo_total || matAny.total_cost || 0,
-            total_price: matAny.valor_total || matAny.total_price || 0
+            total_price: matAny.valor_total || matAny.total_price || 0,
+            total_sale_price: matAny.valor_total || matAny.total_price || 0,
+            valor_total: matAny.valor_total || matAny.total_price || 0
           }
 
           const { error: matError } = await supabase
