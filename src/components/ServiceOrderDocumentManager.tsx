@@ -49,7 +49,7 @@ const ServiceOrderDocumentManager = ({
     try {
       setLoading(true)
       const { data, error } = await supabase
-        .from('service_order_documents')
+        .from('service_order_attachments')
         .select('*')
         .eq('service_order_id', serviceOrderId)
         .order('created_at', { ascending: false })
@@ -76,7 +76,7 @@ const ServiceOrderDocumentManager = ({
 
     try {
       const { error } = await supabase
-        .from('service_order_documents')
+        .from('service_order_attachments')
         .insert([{
           service_order_id: serviceOrderId,
           template_id: template.id,
@@ -124,7 +124,7 @@ const ServiceOrderDocumentManager = ({
 
     try {
       const { error } = await supabase
-        .from('service_order_documents')
+        .from('service_order_attachments')
         .delete()
         .eq('id', docId)
 

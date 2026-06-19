@@ -76,7 +76,7 @@ const ServiceOrderDetails = () => {
           .order('created_at', { ascending: true }),
 
         supabase
-          .from('service_order_documents')
+          .from('service_order_attachments')
           .select('*')
           .eq('service_order_id', id)
           .order('created_at', { ascending: false })
@@ -145,7 +145,7 @@ const ServiceOrderDetails = () => {
       customer_address: order.client_address,
       customer_city: order.client_city,
       customer_phone: customer?.telefone || customer?.phone,
-      technician_name: team[0]?.employees?.nome || 'Técnico',
+      technician_name: team[0]?.employees?.name || 'Técnico',
       completed_at: order.completed_at || order.created_at,
       description: order.description,
       report: order.report,

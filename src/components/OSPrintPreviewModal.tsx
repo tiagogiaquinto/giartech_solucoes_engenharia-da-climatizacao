@@ -32,7 +32,7 @@ export default function OSPrintPreviewModal({ orderId, onClose }: OSPrintPreview
             *,
             service_order_items(*, service_catalog:service_catalog_id(name, unit)),
             service_order_materials(*, inventory_items(name, unit)),
-            service_order_labor(*, employees(nome, cargo))
+            service_order_labor(*, employees(name, cargo))
           `)
           .eq('id', orderId)
           .maybeSingle(),
@@ -89,7 +89,7 @@ export default function OSPrintPreviewModal({ orderId, onClose }: OSPrintPreview
       }))
 
       const team = (order.service_order_labor || []).map((l: any) => ({
-        name: l.employees?.nome || l.name || '—',
+        name: l.employees?.name || l.name || '—',
         role: l.employees?.cargo || l.role || '',
       }))
 

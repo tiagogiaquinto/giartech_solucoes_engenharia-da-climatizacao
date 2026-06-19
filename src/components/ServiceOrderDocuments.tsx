@@ -88,7 +88,7 @@ export function ServiceOrderDocuments({
   const loadDocuments = async () => {
     try {
       const { data, error } = await supabase
-        .from('service_order_documents')
+        .from('service_order_attachments')
         .select('*')
         .eq('service_order_id', serviceOrderId)
         .eq('status', 'active')
@@ -137,7 +137,7 @@ export function ServiceOrderDocuments({
 
         // Inserir no banco
         const { error } = await supabase
-          .from('service_order_documents')
+          .from('service_order_attachments')
           .insert({
             service_order_id: serviceOrderId,
             file_name: file.name,
@@ -180,7 +180,7 @@ export function ServiceOrderDocuments({
 
     try {
       const { error } = await supabase
-        .from('service_order_documents')
+        .from('service_order_attachments')
         .update({ status: 'deleted' })
         .eq('id', documentId)
 
@@ -199,7 +199,7 @@ export function ServiceOrderDocuments({
   const toggleVisibility = async (documentId: string, currentVisibility: boolean) => {
     try {
       const { error } = await supabase
-        .from('service_order_documents')
+        .from('service_order_attachments')
         .update({ is_visible_to_client: !currentVisibility })
         .eq('id', documentId)
 

@@ -51,8 +51,8 @@ export const TemplateSelector = ({ isOpen, onClose, onSelect }: TemplateSelector
 
   const handleSelectTemplate = async (template: Template) => {
     try {
-      await supabase.rpc('increment_template_usage', {
-        template_id: template.id
+      await supabase.rpc('increment_document_template_usage', {
+        template_uuid: template.id
       })
 
       onSelect(template.template_data)
