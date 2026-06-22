@@ -1,0 +1,5 @@
+import{j as e,s as u}from"./index-BzM8xyIu.js";import{f as m,u as f,r as s}from"./react-vendor-Cj2iOcZq.js";import{O as p}from"./OSExecutionDrawer-DzGnLacT.js";import"./ui-vendor-B0d6m9Wt.js";import"./supabase-WCvsMjdu.js";function v(){const{id:t}=m(),r=f(),[n,a]=s.useState(null),[i,o]=s.useState(!0);s.useEffect(()=>{if(!t)return;(async()=>{const{data:l}=await u.from("service_orders").select(`
+          id, order_number, status, priority, title, description,
+          client_name, client_phone, client_address, client_city,
+          scheduled_at, scheduled_time, equipment, brand, model, progress_percent
+        `).eq("id",t).maybeSingle();a(l),o(!1)})()},[t]);const c=()=>r("/tecnico",{replace:!0}),d=()=>r("/tecnico",{replace:!0});return i?e.jsx("div",{className:"min-h-screen bg-[#f0f4f8] flex items-center justify-center",children:e.jsx("div",{className:"w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"})}):e.jsx("div",{className:"min-h-screen bg-[#f0f4f8]",children:e.jsx(p,{order:n,onClose:c,onFinished:d})})}export{v as default};

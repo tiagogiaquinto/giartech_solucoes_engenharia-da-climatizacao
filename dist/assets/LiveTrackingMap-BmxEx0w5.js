@@ -1,0 +1,23 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/leaflet-src-BqDnTADM.js","assets/react-vendor-Cj2iOcZq.js"])))=>i.map(i=>d[i]);
+import{_ as w,j as R}from"./index-BzM8xyIu.js";import{r as c}from"./react-vendor-Cj2iOcZq.js";function M(n,p,s,d){const i=m=>m*Math.PI/180,f=i(s-n),o=i(d-p),l=Math.sin(f/2)**2+Math.cos(i(n))*Math.cos(i(s))*Math.sin(o/2)**2;return 6371*2*Math.atan2(Math.sqrt(l),Math.sqrt(1-l))}function I(n,p,s,d,g=30){const i=M(n,p,s,d);return Math.round(i/g*60)}function A({technicians:n,stops:p=[],center:s,zoom:d=13,height:g="100%",showGeofenceRings:i=!0}){const f=c.useRef(null),o=c.useRef(null),l=c.useRef(new Map),m=c.useRef([]),h=c.useRef([]);return c.useEffect(()=>{if(f.current&&!o.current)return w(()=>import("./leaflet-src-BqDnTADM.js").then(t=>t.l),__vite__mapDeps([0,1])).then(t=>{delete t.Icon.Default.prototype._getIconUrl,t.Icon.Default.mergeOptions({iconRetinaUrl:"https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",iconUrl:"https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",shadowUrl:"https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"});const u=s||(n.length>0?[n[0].lat,n[0].lng]:[-23.5505,-46.6333]),e=t.map(f.current,{center:u,zoom:d,zoomControl:!0,attributionControl:!1});t.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:19}).addTo(e),t.control.attribution({position:"bottomright",prefix:!1}).addTo(e),o.current=e}),()=>{o.current&&(o.current.remove(),o.current=null,l.current.clear(),m.current=[],h.current=[])}},[]),c.useEffect(()=>{o.current&&w(()=>import("./leaflet-src-BqDnTADM.js").then(t=>t.l),__vite__mapDeps([0,1])).then(t=>{const u=o.current;m.current.forEach(e=>e.remove()),m.current=[],h.current.forEach(e=>e.remove()),h.current=[],p.forEach((e,r)=>{const a=e.status==="completed"?"#16a34a":e.status==="in_progress"?"#2563eb":e.status==="skipped"?"#9ca3af":"#f59e0b",k=t.divIcon({className:"",html:`<div style="
+            width:32px;height:32px;border-radius:50% 50% 50% 0;
+            background:${a};border:2px solid white;
+            box-shadow:0 2px 8px rgba(0,0,0,.35);
+            display:flex;align-items:center;justify-content:center;
+            transform:rotate(-45deg);
+          ">
+            <span style="transform:rotate(45deg);color:white;font-weight:700;font-size:12px">${r+1}</span>
+          </div>`,iconSize:[32,32],iconAnchor:[16,32]}),b=e.eta_minutes!==void 0?`<br><span style="color:#2563eb;font-weight:600">ETA: ${e.eta_minutes} min</span>`:"",x=t.marker([e.lat,e.lng],{icon:k}).bindPopup(`<b>${e.label}</b>${b}<br><small style="color:#6b7280;text-transform:capitalize">${e.status}</small>`).addTo(u);if(m.current.push(x),i){const _=t.circle([e.lat,e.lng],{radius:100,color:a,fillColor:a,fillOpacity:.08,weight:1,dashArray:"6 4"}).addTo(u);h.current.push(_)}})})},[p,i]),c.useEffect(()=>{o.current&&w(()=>import("./leaflet-src-BqDnTADM.js").then(t=>t.l),__vite__mapDeps([0,1])).then(t=>{const u=o.current,e=new Set;n.forEach(r=>{var y;e.add(r.employeeId);const a=l.current.get(r.employeeId),k=r.name.split(" ").slice(0,2).map(v=>v[0]).join("").toUpperCase(),b=r.speed_kmh!==void 0&&r.speed_kmh>0?`${Math.round(r.speed_kmh)} km/h`:"parado",x=Math.floor((Date.now()-new Date(r.updated_at).getTime())/6e4),_=x<1?"agora":`${x} min atrás`;if(a)a.setLatLng([r.lat,r.lng]),(y=a.getPopup())==null||y.setContent(`<b>${r.name}</b><br><small>${b} · ${_}</small>`);else{const v=t.divIcon({className:"",html:`<div style="
+              width:36px;height:36px;border-radius:50%;
+              background:#1e3a5f;border:3px solid #fff;
+              box-shadow:0 3px 10px rgba(0,0,0,.4);
+              display:flex;align-items:center;justify-content:center;
+              position:relative;
+            ">
+              <span style="color:white;font-weight:700;font-size:12px">${k}</span>
+              <span style="
+                position:absolute;bottom:-4px;right:-4px;
+                width:10px;height:10px;border-radius:50%;
+                background:#22c55e;border:2px solid white;
+              "></span>
+            </div>`,iconSize:[36,36],iconAnchor:[18,18]}),E=t.marker([r.lat,r.lng],{icon:v,zIndexOffset:1e3}).bindPopup(`<b>${r.name}</b><br><small>${b} · ${_}</small>`).addTo(u);l.current.set(r.employeeId,E)}}),l.current.forEach((r,a)=>{e.has(a)||(r.remove(),l.current.delete(a))}),n.length===1&&!s&&u.setView([n[0].lat,n[0].lng],d)})},[n,s,d]),R.jsx("div",{style:{height:g,width:"100%",borderRadius:"inherit",overflow:"hidden"},children:R.jsx("div",{ref:f,style:{height:"100%",width:"100%"}})})}export{A as L,I as c};
