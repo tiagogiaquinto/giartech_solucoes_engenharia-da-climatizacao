@@ -1,12 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import {
-  Package, Plus, Search, Filter, AlertTriangle, TrendingUp, TrendingDown,
-  Edit, Trash2, Save, X, FileText, Loader, CheckCircle, Copy, ShoppingCart,
-  DollarSign, Percent, Box, BarChart2, AlertCircle, LayoutGrid, List,
-  ArrowUpRight, RefreshCw
-} from 'lucide-react'
+import { Package, Plus, Search, Filter, AlertTriangle, TrendingUp, TrendingDown, FileEdit as Edit, Trash2, Save, X, FileText, Loader, CheckCircle, Copy, ShoppingCart, DollarSign, Percent, Box, BarChart2, AlertCircle, LayoutGrid, List, ArrowUpRight, RefreshCw } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { getInventoryItems, createInventoryItem, updateInventoryItem, deleteInventoryItem, type InventoryItem } from '../lib/supabase'
 import { supabase } from '../lib/supabase'
