@@ -54,6 +54,11 @@ export interface OSPrintData {
   pix_key?: string
   warranty_period?: number
   warranty_terms?: string
+  // Informacoes tecnicas
+  title?: string
+  brand?: string
+  model?: string
+  equipment?: string
   company?: {
     name?: string
     cnpj?: string
@@ -332,7 +337,7 @@ const OSPrintDocument = forwardRef<HTMLDivElement, OSPrintDocumentProps>(({ data
           company={company}
           date={todayStr}
           orderNumber={orderNumber}
-          subtitle={data.description?.split('\n')[0]?.slice(0, 80) || ''}
+          subtitle={data.title || data.description?.split('\n')[0]?.slice(0, 80) || ''}
         />
 
         <div style={contentPad}>
@@ -341,6 +346,9 @@ const OSPrintDocument = forwardRef<HTMLDivElement, OSPrintDocumentProps>(({ data
             <div style={{ fontSize: '9pt', fontWeight: '700', color: TEXT_DARK, marginBottom: '3px' }}>
               Cliente: {data.customer_name}
             </div>
+            {data.customer_cpf_cnpj && (
+              <div style={{ fontSize: '8.5pt', color: GRAY_MUTED }}>{data.customer_cpf_cnpj.length > 14 ? 'CNPJ: ' : 'CPF: '}{data.customer_cpf_cnpj}</div>
+            )}
             {customerAddress && (
               <div style={{ fontSize: '8.5pt', color: GRAY_MUTED }}>{customerAddress}</div>
             )}
@@ -350,7 +358,43 @@ const OSPrintDocument = forwardRef<HTMLDivElement, OSPrintDocumentProps>(({ data
             {data.customer_phone && (
               <div style={{ fontSize: '8.5pt', color: GRAY_MUTED, marginTop: '2px' }}>{data.customer_phone}</div>
             )}
+            {data.customer_email && (
+              <div style={{ fontSize: '8.5pt', color: GRAY_MUTED }}>{data.customer_email}</div>
+            )}
           </div>
+
+          {/* Informacoes tecnicas do equipamento */}
+          {(data.brand || data.model || data.equipment || data.title) && (
+            <div style={{ marginTop: '4mm', marginBottom: '4mm' }}>
+              <SectionHeading title="Informacoes do Equipamento" />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '2mm' }}>
+                {data.execution_deadline && (
+                  <div style={{ background: ORANGE_LIGHT, borderLeft: `3px solid ${ORANGE}`, borderRadius: '4px', padding: '6px 8px' }}>
+                    <div style={{ fontSize: '7pt', fontWeight: '700', color: GRAY_LABEL, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prazo</div>
+                    <div style={{ fontSize: '9pt', fontWeight: '700', color: TEXT_DARK, marginTop: '2px' }}>{fmtDate(data.execution_deadline)}</div>
+                  </div>
+                )}
+                {data.brand && (
+                  <div style={{ background: ORANGE_LIGHT, borderLeft: `3px solid ${ORANGE}`, borderRadius: '4px', padding: '6px 8px' }}>
+                    <div style={{ fontSize: '7pt', fontWeight: '700', color: GRAY_LABEL, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Marca</div>
+                    <div style={{ fontSize: '9pt', fontWeight: '700', color: TEXT_DARK, marginTop: '2px' }}>{data.brand}</div>
+                  </div>
+                )}
+                {data.model && (
+                  <div style={{ background: ORANGE_LIGHT, borderLeft: `3px solid ${ORANGE}`, borderRadius: '4px', padding: '6px 8px' }}>
+                    <div style={{ fontSize: '7pt', fontWeight: '700', color: GRAY_LABEL, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Modelo</div>
+                    <div style={{ fontSize: '9pt', fontWeight: '700', color: TEXT_DARK, marginTop: '2px' }}>{data.model}</div>
+                  </div>
+                )}
+                {data.equipment && (
+                  <div style={{ background: ORANGE_LIGHT, borderLeft: `3px solid ${ORANGE}`, borderRadius: '4px', padding: '6px 8px' }}>
+                    <div style={{ fontSize: '7pt', fontWeight: '700', color: GRAY_LABEL, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Capacidade</div>
+                    <div style={{ fontSize: '9pt', fontWeight: '700', color: TEXT_DARK, marginTop: '2px' }}>{data.equipment}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Informações básicas */}
           <SectionHeading title="Informações básicas" />

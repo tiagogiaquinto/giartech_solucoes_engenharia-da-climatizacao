@@ -4,9 +4,10 @@ import type { BudgetDocumentData } from './types'
 import {
   PAGE_W, MARGIN, CONTENT_W,
   fmt, fmtDate, fmtNow,
-  primaryRgb, hexToRgb,
+  primaryRgb,
   drawSectionBar, drawInfoGrid, checkBreak,
 } from './pdfHelpers'
+import { hexToRgb } from './companyService'
 
 export async function generateOrcamentoPDF(data: BudgetDocumentData): Promise<Blob> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
@@ -32,46 +33,130 @@ export async function generateOrcamentoPDF(data: BudgetDocumentData): Promise<Bl
     ], y, 3)
   }
 
-  y = checkBreak(doc, y, 40, company, 'Orçamento', docNum)
-  y = drawSectionBar(doc, company, 'Descrição dos Serviços e Materiais', y)
+  // Separate services and materials
+  const services = data.items.filter(item =>
+    !item.description.toLowerCase().startsWith('material:') &&
+    !item.description.toLowerCase().includes('[material]')
+  )
+  const materials = data.items.filter(item =>
+    item.description.toLowerCase().startsWith('material:') ||
+    item.description.toLowerCase().includes('[material]')
+  )
 
-  autoTable(doc, {
-    startY: y,
-    head: [['#', 'Descrição do Serviço / Material', 'Qtd', 'Un.', 'Vl. Unit.', 'Total']],
-    body: data.items.map((item, i) => [
+  // Services table
+  if (services.length > 0) {
+    y = checkBreak(doc, y, 40, company, 'Orçamento', docNum)
+    y = drawSectionBar(doc, company, 'Serviços', y)
+
+    const serviceRows = services.map((item, i) => {
+      const desc = item.notes
+        ? `${item.description}\n${item.notes}`
+        : item.description
+      return [
+        String(i + 1),
+        desc,
+        item.quantity.toFixed(2),
+        item.unit || 'sv',
+        fmt(item.unit_price),
+        fmt(item.total),
+      ]
+    })
+
+    autoTable(doc, {
+      startY: y,
+      head: [['#', 'Descrição do Serviço', 'Qtd', 'Un.', 'Vl. Unit.', 'Total']],
+      body: serviceRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [pr, pg, pb] as [number, number, number],
+        textColor: [255, 255, 255],
+        fontSize: 8,
+        fontStyle: 'bold',
+      },
+      bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+      alternateRowStyles: { fillColor: [248, 250, 252] as [number, number, number] },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 'auto', cellPadding: 2 },
+        2: { cellWidth: 18, halign: 'center' },
+        3: { cellWidth: 12, halign: 'center' },
+        4: { cellWidth: 28, halign: 'right' },
+        5: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+      },
+      margin: { left: MARGIN, right: MARGIN },
+      styles: { cellPadding: 3 },
+      willDrawCell: (data) => {
+        // Multi-line text support for description column
+        if (data.column.index === 1 && data.cell.raw && data.cell.raw.includes('\n')) {
+          const lines = data.cell.raw.split('\n')
+          const lineHeight = 4
+          const neededHeight = lines.length * lineHeight + 4
+          if (data.row.height < neededHeight) {
+            data.row.height = neededHeight
+          }
+        }
+      }
+    })
+    y = (doc as any).lastAutoTable.finalY + 4
+  }
+
+  // Materials table
+  if (materials.length > 0) {
+    y = checkBreak(doc, y, 35, company, 'Orçamento', docNum)
+    y = drawSectionBar(doc, company, 'Materiais', y)
+
+    const materialRows = materials.map((item, i) => [
       String(i + 1),
-      item.description,
-      String(item.quantity),
+      item.description.replace(/^Material:\s*/i, '').replace(/\[material\]/i, '').trim(),
+      item.quantity.toFixed(2),
       item.unit || 'un',
       fmt(item.unit_price),
       fmt(item.total),
-    ]),
-    theme: 'grid',
-    headStyles: {
-      fillColor: [pr, pg, pb] as [number, number, number],
-      textColor: [255, 255, 255],
-      fontSize: 7.5,
-      fontStyle: 'bold',
-    },
-    bodyStyles: { fontSize: 8.5, textColor: [40, 40, 40] },
-    alternateRowStyles: { fillColor: [248, 250, 252] as [number, number, number] },
-    columnStyles: {
-      0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 'auto' },
-      2: { cellWidth: 14, halign: 'center' },
-      3: { cellWidth: 12, halign: 'center' },
-      4: { cellWidth: 26, halign: 'right' },
-      5: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
-    },
-    margin: { left: MARGIN, right: MARGIN },
-    styles: { cellPadding: 3 },
-  })
-  y = (doc as any).lastAutoTable.finalY + 4
+    ])
 
-  y = checkBreak(doc, y, 40, company, 'Orçamento', docNum)
+    autoTable(doc, {
+      startY: y,
+      head: [['#', 'Descrição do Material', 'Qtd', 'Un.', 'Vl. Unit.', 'Total']],
+      body: materialRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [16, 185, 129] as [number, number, number],
+        textColor: [255, 255, 255],
+        fontSize: 8,
+        fontStyle: 'bold',
+      },
+      bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+      alternateRowStyles: { fillColor: [240, 253, 244] as [number, number, number] },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 18, halign: 'center' },
+        3: { cellWidth: 12, halign: 'center' },
+        4: { cellWidth: 28, halign: 'right' },
+        5: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+      },
+      margin: { left: MARGIN, right: MARGIN },
+      styles: { cellPadding: 3 },
+    })
+    y = (doc as any).lastAutoTable.finalY + 4
+  }
+
+  // Financial summary
+  y = checkBreak(doc, y, 45, company, 'Orçamento', docNum)
   y = drawSectionBar(doc, company, 'Valores', y)
-  y = drawFinancialSummary(doc, company, data.financial, y)
 
+  // Calculate subtotals for services and materials
+  const servicesTotal = services.reduce((sum, item) => sum + item.total, 0)
+  const materialsTotal = materials.reduce((sum, item) => sum + item.total, 0)
+
+  const financialWithDetails = {
+    ...data.financial,
+    labor_value: servicesTotal > 0 ? servicesTotal : data.financial.labor_value,
+    materials_value: materialsTotal > 0 ? materialsTotal : data.financial.materials_value,
+  }
+  y = drawFinancialSummary(doc, company, financialWithDetails, y)
+
+  // Notes
   if (data.notes) {
     y = checkBreak(doc, y, 25, company, 'Orçamento', docNum)
     y = drawSectionBar(doc, company, 'Observações', y)
@@ -87,6 +172,40 @@ export async function generateOrcamentoPDF(data: BudgetDocumentData): Promise<Bl
     y += boxH + 3
   }
 
+  // Warranty info from notes if present
+  const warrantyInNotes = data.notes?.match(/Garantia:\s*(.+)/i)
+  if (warrantyInNotes && warrantyInNotes[1]) {
+    y = checkBreak(doc, y, 20, company, 'Orçamento', docNum)
+    y = drawSectionBar(doc, company, 'Garantia', y)
+    const warrantyText = warrantyInNotes[1].trim()
+    const lines = doc.splitTextToSize(warrantyText, CONTENT_W - 6)
+    const boxH = Math.max(10, lines.length * 4.5 + 6)
+    doc.setFillColor(255, 248, 220)
+    doc.roundedRect(MARGIN, y, CONTENT_W, boxH, 1, 1, 'F')
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    doc.setTextColor(80, 60, 20)
+    doc.text(lines, MARGIN + 3, y + 5)
+    y += boxH + 3
+  } else if (data.warranty_days || data.warranty_terms) {
+    y = checkBreak(doc, y, 20, company, 'Orçamento', docNum)
+    y = drawSectionBar(doc, company, 'Garantia', y)
+    const warrantyText = [
+      data.warranty_days ? `Garantia de ${data.warranty_days} dias` : '',
+      data.warranty_terms || ''
+    ].filter(Boolean).join('. ')
+    const lines = doc.splitTextToSize(warrantyText, CONTENT_W - 6)
+    const boxH = Math.max(10, lines.length * 4.5 + 6)
+    doc.setFillColor(255, 248, 220)
+    doc.roundedRect(MARGIN, y, CONTENT_W, boxH, 1, 1, 'F')
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    doc.setTextColor(80, 60, 20)
+    doc.text(lines, MARGIN + 3, y + 5)
+    y += boxH + 3
+  }
+
+  // Acceptance block
   y = checkBreak(doc, y, 50, company, 'Orçamento', docNum)
   y = drawSectionBar(doc, company, 'Aceite e Assinatura do Cliente', y)
   y = drawAceiteBlock(doc, company, data.customer.name, y)

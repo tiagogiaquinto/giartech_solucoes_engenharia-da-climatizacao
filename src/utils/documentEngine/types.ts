@@ -105,6 +105,8 @@ export interface BudgetDocumentData {
   financial: DocumentFinancial
   notes?: string
   os_reference?: string
+  warranty_days?: number
+  warranty_terms?: string
 }
 
 export interface ReciboDocumentData {

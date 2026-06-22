@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FileText, Download, Printer, Eye, FileEdit as Edit3, Plus, Trash2, Save, X, Settings, Copy, Send, Palette, CheckCircle2, Search, Package } from 'lucide-react'
+import { FileText, Download, Printer, Eye, FileEdit as Edit3, Plus, Trash2, Save, X, Settings, Copy, Send, Palette, CheckCircle2, Search, Package, Loader2 } from 'lucide-react'
 import {
   budgetPDFService,
   BudgetData,
@@ -12,19 +12,23 @@ import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import TemplateSelectorModal from './TemplateSelectorModal'
 import { fillTemplate, TemplateData } from '../services/templateFillService'
+import { generateOrcamentoPDF } from '../utils/documentEngine/generateOrcamento'
+import type { BudgetDocumentData, CompanyProfile, DocumentItem, DocumentFinancial, DocumentCustomer } from '../utils/documentEngine/types'
 
 interface BudgetPDFEditorProps {
   initialData?: Partial<BudgetData>
   onSave?: (data: BudgetData) => void
   onClose?: () => void
   readOnly?: boolean
+  serviceOrderId?: string
 }
 
 export default function BudgetPDFEditor({
   initialData,
   onSave,
   onClose,
-  readOnly = false
+  readOnly = false,
+  serviceOrderId
 }: BudgetPDFEditorProps) {
   const [budgetData, setBudgetData] = useState<BudgetData>({
     number: initialData?.number || `ORC-${Date.now()}`,
@@ -78,13 +82,164 @@ export default function BudgetPDFEditor({
     category: ''
   })
 
+  const [loadingCompany, setLoadingCompany] = useState(false)
+  const [useProfessionalPDF, setUseProfessionalPDF] = useState(true)
+
   useEffect(() => {
     calculateTotals()
   }, [budgetData.items, budgetData.discount, budgetData.discountType, budgetData.taxes])
 
   useEffect(() => {
     loadServiceCatalog()
+    loadCompanyData()
+    if (serviceOrderId) {
+      loadFromServiceOrder(serviceOrderId)
+    }
   }, [])
+
+  const loadFromServiceOrder = async (orderId: string) => {
+    try {
+      setLoadingCompany(true)
+
+      const { data: order, error } = await supabase
+        .from('service_orders')
+        .select(`
+          *,
+          service_order_items(
+            *,
+            service_catalog:service_catalog_id(name, unit, description)
+          ),
+          service_order_materials(
+            *,
+            inventory_items(name, unit)
+          ),
+          service_order_labor(
+            *,
+            employees(name, cargo)
+          ),
+          customer:customer_id(
+            *,
+            customer_addresses(*)
+          )
+        `)
+        .eq('id', orderId)
+        .maybeSingle()
+
+      if (error) throw error
+      if (!order) return
+
+      const customer = order.customer
+      const customerAddr = customer?.customer_addresses?.[0]
+
+      const items: BudgetItem[] = []
+
+      // Add service items
+      ;(order.service_order_items || []).forEach((item: any, idx: number) => {
+        const qty = Number(item.quantity || item.quantidade || 1)
+        const price = Number(item.unit_price || item.preco_unitario || item.base_price || 0)
+        const desc = item.service_catalog?.name || item.name || item.descricao || item.description || 'Servico'
+        const detailedScope = item.escopo_detalhado || item.service_catalog?.description || ''
+        const fullDesc = detailedScope ? `${desc}\n${detailedScope}` : desc
+
+        items.push({
+          id: `svc-${idx + 1}`,
+          description: fullDesc,
+          quantity: qty,
+          unit: item.unit || item.service_catalog?.unit || 'SV',
+          unitPrice: price,
+          total: Number(item.total_price || item.preco_total || qty * price),
+          category: 'Servico'
+        })
+      })
+
+      // Add materials as items
+      ;(order.service_order_materials || []).forEach((mat: any, idx: number) => {
+        const qty = Number(mat.quantity || mat.quantidade || 1)
+        const cost = Number(mat.unit_cost || mat.preco_unitario || 0)
+        items.push({
+          id: `mat-${idx + 1}`,
+          description: `Material: ${mat.inventory_items?.name || mat.name || 'Material'}`,
+          quantity: qty,
+          unit: mat.inventory_items?.unit || mat.unit || 'un',
+          unitPrice: cost,
+          total: Number(mat.total_cost || mat.valor_total || qty * cost),
+          category: 'Material'
+        })
+      })
+
+      const laborTotal = Number(order.labor_value || order.valor_mao_de_obra || 0)
+      const materialsTotal = Number(order.materials_value || order.valor_materiais || 0)
+      const discount = Number(order.discount_amount || order.desconto_valor || 0)
+      const subtotal = items.reduce((sum, it) => sum + it.total, 0)
+
+      const addressLine = customerAddr
+        ? [customerAddr.logradouro || customerAddr.street, customerAddr.numero || customerAddr.number, customerAddr.bairro || customerAddr.neighborhood].filter(Boolean).join(', ')
+        : order.client_address || ''
+      const cityState = customerAddr
+        ? [customerAddr.cidade || customerAddr.city, customerAddr.estado || customerAddr.state].filter(Boolean).join(' - ')
+        : ''
+
+      const team = (order.service_order_labor || []).map((l: any) => l.employees?.name || l.name).filter(Boolean)
+      const teamInfo = team.length > 0 ? `Equipe: ${team.join(', ')}` : ''
+
+      const obsParts = [order.description, order.instructions, teamInfo].filter(Boolean)
+      if (order.warranty_terms) {
+        obsParts.push(`Garantia: ${order.warranty_terms}`)
+      }
+
+      setBudgetData(prev => ({
+        ...prev,
+        number: `ORC-${order.order_number || Date.now()}`,
+        customer: {
+          name: order.client_name || customer?.nome_razao || customer?.name || '',
+          document: order.client_cnpj || order.client_cpf || customer?.cnpj || customer?.cpf || '',
+          email: order.client_email || customer?.email || '',
+          phone: order.client_phone || customer?.telefone || customer?.phone || '',
+          address: addressLine + (cityState ? `, ${cityState}` : '')
+        },
+        items,
+        observations: obsParts.join('\n\n'),
+        paymentTerms: order.payment_conditions || order.condicoes_pagamento || order.payment_terms || '',
+        discount: discount,
+        discountType: 'fixed'
+      }))
+
+    } catch (error) {
+      console.error('Erro ao carregar dados da OS:', error)
+    } finally {
+      setLoadingCompany(false)
+    }
+  }
+
+  const loadCompanyData = async () => {
+    try {
+      setLoadingCompany(true)
+      const { data, error } = await supabase
+        .from('company_profile')
+        .select('*')
+        .maybeSingle()
+
+      if (error) throw error
+
+      if (data) {
+        setBudgetData(prev => ({
+          ...prev,
+          company: {
+            name: data.company_name || prev.company.name,
+            document: data.cnpj || prev.company.document,
+            email: data.email || prev.company.email,
+            phone: data.phone || prev.company.phone,
+            address: [data.address, data.city, data.state].filter(Boolean).join(', ') || prev.company.address,
+            logo: data.logo_url || prev.company.logo
+          }
+        }))
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados da empresa:', error)
+    } finally {
+      setLoadingCompany(false)
+    }
+  }
 
   useEffect(() => {
     if (serviceSearch.length >= 2) {
@@ -241,21 +396,130 @@ export default function BudgetPDFEditor({
 
   const generatePreview = async () => {
     try {
-      const url = await budgetPDFService.previewPDF(budgetData, selectedTemplate)
-      setPreviewUrl(url)
-      setShowPreview(true)
+      if (useProfessionalPDF) {
+        const docData = convertToDocumentData()
+        const blob = await generateOrcamentoPDF(docData)
+        const url = URL.createObjectURL(blob)
+        setPreviewUrl(url)
+        setShowPreview(true)
+      } else {
+        const url = await budgetPDFService.previewPDF(budgetData, selectedTemplate)
+        setPreviewUrl(url)
+        setShowPreview(true)
+      }
     } catch (error) {
       console.error('Error generating preview:', error)
       alert('Erro ao gerar preview do PDF')
     }
   }
 
-  const handleDownload = () => {
-    budgetPDFService.downloadPDF(budgetData, selectedTemplate)
+  const convertToDocumentData = (): BudgetDocumentData => {
+    const items: DocumentItem[] = budgetData.items.map(item => ({
+      description: item.description,
+      quantity: item.quantity,
+      unit: item.unit,
+      unit_price: item.unitPrice,
+      total: item.total
+    }))
+
+    let discountAmount = 0
+    if (budgetData.discountType === 'percentage') {
+      discountAmount = (budgetData.subtotal * (budgetData.discount || 0)) / 100
+    } else {
+      discountAmount = budgetData.discount || 0
+    }
+
+    const financial: DocumentFinancial = {
+      subtotal: budgetData.subtotal,
+      discount: discountAmount > 0 ? discountAmount : undefined,
+      net_value: budgetData.total,
+      payment_method: budgetData.paymentTerms?.split(',')[0]?.trim() || undefined,
+      payment_conditions: budgetData.paymentTerms || undefined
+    }
+
+    const customer: DocumentCustomer = {
+      name: budgetData.customer.name,
+      cpf_cnpj: budgetData.customer.document,
+      phone: budgetData.customer.phone,
+      email: budgetData.customer.email,
+      address: budgetData.customer.address
+    }
+
+    const company: CompanyProfile = {
+      company_name: budgetData.company.name,
+      cnpj: budgetData.company.document,
+      email: budgetData.company.email,
+      phone: budgetData.company.phone,
+      address: budgetData.company.address,
+      logo_url: budgetData.company.logo
+    }
+
+    return {
+      type: 'orcamento',
+      company,
+      budget_number: budgetData.number,
+      valid_until: budgetData.validUntil,
+      created_at: budgetData.date,
+      customer,
+      items,
+      financial,
+      notes: budgetData.observations
+    }
   }
 
-  const handlePrint = () => {
-    budgetPDFService.printPDF(budgetData, selectedTemplate)
+  const handleDownload = async () => {
+    try {
+      if (useProfessionalPDF) {
+        const docData = convertToDocumentData()
+        const blob = await generateOrcamentoPDF(docData)
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `Orcamento_${budgetData.number}_${format(new Date(), 'ddMMyyyy')}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } else {
+        budgetPDFService.downloadPDF(budgetData, selectedTemplate)
+      }
+    } catch (error) {
+      console.error('Erro ao baixar PDF:', error)
+      alert('Erro ao baixar PDF')
+    }
+  }
+
+  const handlePrint = async () => {
+    try {
+      if (useProfessionalPDF) {
+        const docData = convertToDocumentData()
+        const blob = await generateOrcamentoPDF(docData)
+        const url = URL.createObjectURL(blob)
+
+        // Create an iframe for printing
+        const iframe = document.createElement('iframe')
+        iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:none;'
+        document.body.appendChild(iframe)
+
+        iframe.onload = () => {
+          setTimeout(() => {
+            iframe.contentWindow?.focus()
+            iframe.contentWindow?.print()
+            setTimeout(() => {
+              document.body.removeChild(iframe)
+              URL.revokeObjectURL(url)
+            }, 1000)
+          }, 250)
+        }
+
+        iframe.src = url
+      } else {
+        budgetPDFService.printPDF(budgetData, selectedTemplate)
+      }
+    } catch (error) {
+      console.error('Erro ao imprimir:', error)
+      alert('Erro ao imprimir')
+    }
   }
 
   const handleLoadTemplate = (filledHtml: string, template: any) => {
@@ -315,13 +579,30 @@ export default function BudgetPDFEditor({
               <h2 className="text-xl font-bold text-white">
                 {readOnly ? 'Visualizar Orçamento' : 'Editor de Orçamento'}
               </h2>
-              <p className="text-blue-100 text-sm">Nº {budgetData.number}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-blue-100 text-sm">Nº {budgetData.number}</p>
+                {loadingCompany && (
+                  <span className="flex items-center gap-1 text-xs text-blue-200">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Carregando empresa...
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             {!readOnly && (
               <>
+                <label className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg cursor-pointer hover:bg-white/20 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={useProfessionalPDF}
+                    onChange={e => setUseProfessionalPDF(e.target.checked)}
+                    className="w-4 h-4 rounded border-white/30 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-white font-medium">PDF Profissional</span>
+                </label>
                 <button
                   onClick={() => setShowTemplateSelector(true)}
                   className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2"
@@ -497,6 +778,23 @@ export default function BudgetPDFEditor({
                   }))}
                   disabled={readOnly}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                />
+              </div>
+
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Endereço
+                </label>
+                <input
+                  type="text"
+                  value={budgetData.customer.address || ''}
+                  onChange={e => setBudgetData(prev => ({
+                    ...prev,
+                    customer: { ...prev.customer, address: e.target.value }
+                  }))}
+                  disabled={readOnly}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  placeholder="Rua, número, bairro, cidade - UF"
                 />
               </div>
             </div>
