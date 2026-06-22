@@ -68,7 +68,7 @@ interface MenuItem {
 const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'inicio', path: '/', icon: BarChart3, label: 'Dashboard CFO', description: '20+ KPIs executivos em tempo real para decisões estratégicas', moduleCode: 'dashboard' },
   { id: 'agenda', path: '/agenda-hub', icon: Calendar, label: 'Agenda & Tarefas', description: 'Agenda de compromissos e central de tarefas unificadas', moduleCode: 'agenda' },
-  { id: 'cadastro-clientes-parceiros', path: '/cadastro-clientes-parceiros', icon: UserCog, label: 'Clientes e Parceiros', description: 'Cadastro de clientes PF/PJ e parceiros comerciais', moduleCode: 'clientes' },
+  { id: 'clientes-hub', path: '/clientes-hub', icon: UserCog, label: 'Clientes & Parceiros', description: 'Cadastro completo de clientes PF/PJ e parceiros comerciais', moduleCode: 'clientes' },
   { id: 'crm-hub', path: '/crm-hub', icon: Target, label: 'CRM & Relacionamento', description: 'Pipeline, leads, RFM, pós-venda e WhatsApp em um só lugar', moduleCode: 'crm' },
   { id: 'gamification', path: '/gamification', icon: Trophy, label: 'Gamificação', description: 'Clientes, parceiros, rankings, badges e gerenciamento', moduleCode: 'gamificacao' },
   { id: 'service-orders', path: '/service-orders', icon: ClipboardList, label: 'Ordens de Serviço', description: 'Gestão de OS', moduleCode: 'service_orders' },
@@ -83,7 +83,6 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'relatorios-hub', path: '/relatorios-hub', icon: BarChart2, label: 'Relatórios & Dashboards', description: 'Relatórios, painel semanal e dashboard executivo', moduleCode: 'relatorios' },
   { id: 'giartech-docs', path: '/giartech-docs', icon: FileText, label: 'Giartech Docs', description: 'Repositório, modelos, contratos e configurações de documentos', moduleCode: 'documentos' },
   { id: 'thomaz-hub', path: '/thomaz-hub', icon: Brain, label: 'Thomaz AI', description: 'Consultor empresarial IA + métricas de performance', moduleCode: 'thomaz' },
-  { id: 'email-hub', path: '/email-hub', icon: Mail, label: 'Email Corporativo', description: 'Caixa de entrada e configurações de email', moduleCode: 'email' },
   { id: 'library', path: '/digital-library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos', moduleCode: 'biblioteca' },
   { id: 'staff', path: '/staff', icon: Users, label: 'Hub de Equipe', description: 'Funcionários, permissões e engajamento', moduleCode: 'pessoas', superAdminOnly: true },
   { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações', moduleCode: 'auditoria' },

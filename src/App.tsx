@@ -45,6 +45,7 @@ const CRMHub = lazy(() => import('./pages/CRMHub'))
 const ComprasHub = lazy(() => import('./pages/ComprasHub'))
 const EmailHub = lazy(() => import('./pages/EmailHub'))
 const ThomazHub = lazy(() => import('./pages/ThomazHub'))
+const ClientesHub = lazy(() => import('./pages/ClientesHub'))
 const Reports = lazy(() => import('./pages/Reports'))
 const Settings = lazy(() => import('./pages/Settings'))
 const ServiceCatalog = lazy(() => import('./pages/ServiceCatalog'))
@@ -643,21 +644,9 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/client-management" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <ClientManagement />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/client-management" element={<Navigate to="/clientes-hub" replace />} />
 
-          <Route path="/cadastro-clientes-parceiros" element={
-            <StaffRoute moduleCode="clientes">
-              <WebLayout>
-                <CadastroClientesParceiros />
-              </WebLayout>
-            </StaffRoute>
-          } />
+          <Route path="/cadastro-clientes-parceiros" element={<Navigate to="/clientes-hub" replace />} />
 
           <Route path="/clientes/:id/360" element={
             <ProtectedRoute>
@@ -757,12 +746,14 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/email-hub" element={
-            <ProtectedRoute moduleCode="email">
+          <Route path="/email-hub" element={<Navigate to="/relatorios-hub" replace />} />
+
+          <Route path="/clientes-hub" element={
+            <StaffRoute moduleCode="clientes">
               <WebLayout>
-                <EmailHub />
+                <ClientesHub />
               </WebLayout>
-            </ProtectedRoute>
+            </StaffRoute>
           } />
 
           <Route path="/thomaz-hub" element={
@@ -971,16 +962,6 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-
-          <Route path="/email/settings" element={<Navigate to="/email-hub" replace />} />
-
-          <Route path="/email/compose" element={
-            <ProtectedRoute>
-              <EmailCompose />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/email/inbox" element={<Navigate to="/email-hub" replace />} />
 
           <Route path="/audit-logs" element={
             <ProtectedRoute>
