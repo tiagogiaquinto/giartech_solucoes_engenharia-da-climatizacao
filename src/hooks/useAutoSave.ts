@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
+async function getCurrentUserId(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.id ?? null
+}
+
 interface AutoSaveOptions {
   key: string
   data: any
@@ -50,12 +55,13 @@ export const useAutoSave = ({
 
         if (updateError) throw updateError
       } else {
+        const userId = await getCurrentUserId()
         const { error: insertError } = await supabase
           .from('service_order_drafts')
           .insert({
             draft_name: key,
             draft_data: dataRef.current,
-            user_id: null
+            user_id: userId
           })
 
         if (insertError) throw insertError
