@@ -3,10 +3,10 @@ import type { ReciboDocumentData } from './types'
 import {
   PAGE_W, MARGIN, CONTENT_W,
   fmt, fmtDate, fmtNow,
-  primaryRgb, hexToRgb,
+  primaryRgb,
   drawSectionBar, drawInfoGrid,
 } from './pdfHelpers'
-import { valorPorExtenso } from './companyService'
+import { valorPorExtenso, hexToRgb } from './companyService'
 
 export async function generateReciboPDF(data: ReciboDocumentData): Promise<Blob> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })

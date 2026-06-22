@@ -69,30 +69,21 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'inicio', path: '/', icon: BarChart3, label: 'Dashboard CFO', description: '20+ KPIs executivos em tempo real para decisões estratégicas', moduleCode: 'dashboard' },
   { id: 'agenda', path: '/agenda-hub', icon: Calendar, label: 'Agenda & Tarefas', description: 'Agenda de compromissos e central de tarefas unificadas', moduleCode: 'agenda' },
   { id: 'cadastro-clientes-parceiros', path: '/cadastro-clientes-parceiros', icon: UserCog, label: 'Clientes e Parceiros', description: 'Cadastro de clientes PF/PJ e parceiros comerciais', moduleCode: 'clientes' },
-  { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes (legado)', description: 'Gestão de clientes PF/PJ', moduleCode: 'clientes' },
-  { id: 'crm-professional', path: '/crm-professional', icon: Target, label: 'CRM Profissional', description: 'Pipeline de vendas e pós-venda completo', moduleCode: 'crm' },
-  { id: 'crm-templates', path: '/crm-templates', icon: MessageSquare, label: 'Mensagens do CRM', description: 'Configure mensagens personalizadas para WhatsApp, Email e SMS', moduleCode: 'mensagens_crm' },
+  { id: 'crm-hub', path: '/crm-hub', icon: Target, label: 'CRM & Relacionamento', description: 'Pipeline, leads, RFM, pós-venda e WhatsApp em um só lugar', moduleCode: 'crm' },
   { id: 'gamification', path: '/gamification', icon: Trophy, label: 'Gamificação', description: 'Clientes, parceiros, rankings, badges e gerenciamento', moduleCode: 'gamificacao' },
-  { id: 'customer-rfm', path: '/customer-rfm', icon: BarChart2, label: 'Análise RFM', description: 'Segmentação de clientes por recência, frequência e valor', moduleCode: 'clientes' },
-  { id: 'pos-venda', path: '/pos-venda', icon: Heart, label: 'Pós-Venda', description: 'Acompanhamento pós-atendimento e fidelização', moduleCode: 'crm' },
-  { id: 'whatsapp-crm', path: '/whatsapp-crm', icon: Smartphone, label: 'WhatsApp CRM', description: 'Gestão de conversas e contatos no WhatsApp', moduleCode: 'crm' },
-  { id: 'executive-dashboard', path: '/executive-dashboard', icon: TrendingUp, label: 'Dashboard Executivo', description: 'Visão executiva completa com DRE e análises', moduleCode: 'dashboard' },
-  { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores', moduleCode: 'fornecedores' },
-  { id: 'compras', path: '/purchasing', icon: ShoppingCart, label: 'Compras', description: 'Pedidos e alertas de estoque', moduleCode: 'compras' },
   { id: 'service-orders', path: '/service-orders', icon: ClipboardList, label: 'Ordens de Serviço', description: 'Gestão de OS', moduleCode: 'service_orders' },
   { id: 'rotas', path: '/rotas', icon: Navigation, label: 'Rotas', description: 'Rastreamento e gestão de rotas', moduleCode: 'rotas' },
   { id: 'financeiro', path: '/financeiro', icon: DollarSign, label: 'Financeiro', description: 'Centro financeiro completo', moduleCode: 'financeiro' },
   { id: 'salarios', path: '/salary-management', icon: DollarSign, label: 'Gestão de Salários', description: 'Controle de pagamentos de salários', moduleCode: 'salarios' },
   { id: 'metas-rankings', path: '/goals-rankings', icon: Trophy, label: 'Metas & Rankings', description: 'Metas individuais, supermetas, bônus, rankings', moduleCode: 'metas' },
-  { id: 'giartech-docs', path: '/giartech-docs', icon: FileText, label: 'Giartech Docs', description: 'Repositório, modelos, contratos e configurações de documentos', moduleCode: 'documentos' },
-  { id: 'relatorios', path: '/relatorios', icon: FileText, label: 'Relatórios', description: 'Dashboards interativos, PDFs e análises', moduleCode: 'relatorios' },
-  { id: 'weekly-report', path: '/weekly-report', icon: BarChart2, label: 'Relatório Semanal', description: 'Resumo automático semanal com insight do Thomaz AI', moduleCode: 'relatorios' },
-  { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis', moduleCode: 'catalogo' },
+  { id: 'compras-hub', path: '/compras-hub', icon: ShoppingCart, label: 'Compras & Fornecedores', description: 'Pedidos de compra e gestão de fornecedores', moduleCode: 'compras' },
   { id: 'inventory', path: '/estoque-hub', icon: Package, label: 'Estoque & Materiais', description: 'Controle unificado de itens, insumos e precificação', moduleCode: 'estoque' },
   { id: 'equipments', path: '/equipments', icon: Wind, label: 'Equipamentos HVAC', description: 'Climatização, refrigeração — manutenção e garantia', moduleCode: 'estoque' },
-
-  { id: 'thomaz', path: '/thomaz', icon: Brain, label: 'Thomaz AI', description: 'Consultor Empresarial', moduleCode: 'thomaz' },
-  { id: 'email', path: '/email/inbox', icon: Mail, label: 'Email Corporativo', description: 'Enviar e receber emails', moduleCode: 'email' },
+  { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis', moduleCode: 'catalogo' },
+  { id: 'relatorios-hub', path: '/relatorios-hub', icon: BarChart2, label: 'Relatórios & Dashboards', description: 'Relatórios, painel semanal e dashboard executivo', moduleCode: 'relatorios' },
+  { id: 'giartech-docs', path: '/giartech-docs', icon: FileText, label: 'Giartech Docs', description: 'Repositório, modelos, contratos e configurações de documentos', moduleCode: 'documentos' },
+  { id: 'thomaz-hub', path: '/thomaz-hub', icon: Brain, label: 'Thomaz AI', description: 'Consultor empresarial IA + métricas de performance', moduleCode: 'thomaz' },
+  { id: 'email-hub', path: '/email-hub', icon: Mail, label: 'Email Corporativo', description: 'Caixa de entrada e configurações de email', moduleCode: 'email' },
   { id: 'library', path: '/digital-library', icon: Library, label: 'Biblioteca Digital', description: 'Documentos e arquivos', moduleCode: 'biblioteca' },
   { id: 'staff', path: '/staff', icon: Users, label: 'Hub de Equipe', description: 'Funcionários, permissões e engajamento', moduleCode: 'pessoas', superAdminOnly: true },
   { id: 'audit', path: '/audit-logs', icon: Shield, label: 'Auditoria', description: 'Rastreamento de operações', moduleCode: 'auditoria' },
@@ -382,7 +373,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="font-medium truncate">{item.label}</p>
-                    {item.id === 'compras' && stockAlerts > 0 && (
+                    {item.id === 'compras-hub' && stockAlerts > 0 && (
                       <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
                         {stockAlerts}
                       </span>
@@ -420,7 +411,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
                   <p className="text-xs opacity-75 truncate">{item.description}</p>
                 </div>
               )}
-              {item.id === 'compras' && stockAlerts > 0 && isCollapsed && (
+              {item.id === 'compras-hub' && stockAlerts > 0 && isCollapsed && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse min-w-[20px] text-center">
                   {stockAlerts}
                 </span>

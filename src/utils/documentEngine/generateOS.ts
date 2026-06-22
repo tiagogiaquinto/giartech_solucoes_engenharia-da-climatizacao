@@ -4,9 +4,10 @@ import type { OSDocumentData } from './types'
 import {
   PAGE_W, MARGIN, CONTENT_W,
   fmt, fmtDate, fmtNow,
-  primaryRgb, hexToRgb,
+  primaryRgb,
   drawLetterhead, drawSectionBar, drawInfoGrid, checkBreak,
 } from './pdfHelpers'
+import { hexToRgb } from './companyService'
 
 const WARRANTY_TEXT = (days: number) =>
   `GARANTIA TÉCNICA DE ${days} DIAS: Os serviços executados possuem garantia de ${days} (${days === 90 ? 'noventa' : String(days)}) dias contra defeitos de mão de obra, conforme o Código de Defesa do Consumidor (CDC — Lei 8.078/90). A garantia cobre exclusivamente os serviços realizados, não se estendendo a peças/equipamentos de terceiros, danos por mau uso, quedas de energia, falta de manutenção preventiva ou intervenções de terceiros após a conclusão.`

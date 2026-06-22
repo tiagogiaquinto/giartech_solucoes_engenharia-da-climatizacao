@@ -5,7 +5,7 @@ import { useUser } from '../../contexts/UserContext'
 import { Link } from 'react-router-dom'
 import { useDashboardData } from '../../hooks/useDashboardData'
 import ThomazContextualAssistant from '../ThomazContextualAssistant'
-import { formatDateSafe } from '../utils/format'
+import { formatDateSafe } from '../../utils/format'
 import { GoalsProgressWidget } from '../GoalsProgressWidget'
 
 interface WebDashboardProps {

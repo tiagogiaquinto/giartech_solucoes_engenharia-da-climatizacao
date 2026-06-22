@@ -40,6 +40,11 @@ const InventoryDetail = lazy(() => import('./pages/InventoryDetail'))
 const InventoryCreate = lazy(() => import('./pages/InventoryCreate'))
 import AgendaHub from './pages/AgendaHub'
 import EstoqueHub from './pages/EstoqueHub'
+const RelatoriosHub = lazy(() => import('./pages/RelatoriosHub'))
+const CRMHub = lazy(() => import('./pages/CRMHub'))
+const ComprasHub = lazy(() => import('./pages/ComprasHub'))
+const EmailHub = lazy(() => import('./pages/EmailHub'))
+const ThomazHub = lazy(() => import('./pages/ThomazHub'))
 const Reports = lazy(() => import('./pages/Reports'))
 const Settings = lazy(() => import('./pages/Settings'))
 const ServiceCatalog = lazy(() => import('./pages/ServiceCatalog'))
@@ -727,6 +732,47 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
+
+          <Route path="/relatorios-hub" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <RelatoriosHub />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/crm-hub" element={
+            <ProtectedRoute moduleCode="crm">
+              <WebLayout>
+                <CRMHub />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/compras-hub" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <ComprasHub />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/email-hub" element={
+            <ProtectedRoute moduleCode="email">
+              <WebLayout>
+                <EmailHub />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/thomaz-hub" element={
+            <ProtectedRoute moduleCode="thomaz">
+              <WebLayout>
+                <ThomazHub />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/profile" element={
             <ProtectedRoute>
               <WebLayout>
@@ -759,27 +805,11 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/thomaz-metrics" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <ThomazMetrics />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/thomaz-metrics" element={<Navigate to="/thomaz-hub" replace />} />
 
-          <Route path="/thomaz-ultra" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <ThomazDashboard />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/thomaz-ultra" element={<Navigate to="/thomaz-hub" replace />} />
 
-          <Route path="/thomaz" element={
-            <ProtectedRoute>
-              <ThomazChat />
-            </ProtectedRoute>
-          } />
+          <Route path="/thomaz" element={<Navigate to="/thomaz-hub" replace />} />
 
           <Route path="/financial-management" element={
             <ProtectedRoute>
@@ -841,13 +871,7 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/weekly-report" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <WeeklyReport />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/weekly-report" element={<Navigate to="/relatorios-hub" replace />} />
 
           <Route path="/reports-advanced" element={
             <ProtectedRoute>
@@ -866,13 +890,7 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/relatorios" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <RelatoriosConsolidado />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/relatorios" element={<Navigate to="/relatorios-hub" replace />} />
 
           <Route path="/credit-scoring" element={
             <ProtectedRoute>
@@ -954,13 +972,7 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/email/settings" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <EmailSettings />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/email/settings" element={<Navigate to="/email-hub" replace />} />
 
           <Route path="/email/compose" element={
             <ProtectedRoute>
@@ -968,11 +980,7 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/email/inbox" element={
-            <ProtectedRoute>
-              <EmailInbox />
-            </ProtectedRoute>
-          } />
+          <Route path="/email/inbox" element={<Navigate to="/email-hub" replace />} />
 
           <Route path="/audit-logs" element={
             <ProtectedRoute>
@@ -1050,29 +1058,11 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/crm-leads" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <CRMLeads />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/crm-leads" element={<Navigate to="/crm-hub" replace />} />
 
-          <Route path="/crm-esteira" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <CRMEsteiraIntegrada />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/crm-esteira" element={<Navigate to="/crm-hub" replace />} />
 
-          <Route path="/crm-professional" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <CRMEsteiraIntegrada />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/crm-professional" element={<Navigate to="/crm-hub" replace />} />
 
           <Route path="/crm-templates" element={
             <ProtectedRoute>
@@ -1123,21 +1113,9 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/suppliers" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <Suppliers />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/suppliers" element={<Navigate to="/compras-hub" replace />} />
 
-          <Route path="/purchasing" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <Purchasing />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/purchasing" element={<Navigate to="/compras-hub" replace />} />
 
           <Route path="/rotas" element={
             <ProtectedRoute>
@@ -1155,29 +1133,11 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/customer-rfm" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <CustomerRFM />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/customer-rfm" element={<Navigate to="/crm-hub" replace />} />
 
-          <Route path="/pos-venda" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <PosVenda />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/pos-venda" element={<Navigate to="/crm-hub" replace />} />
 
-          <Route path="/executive-dashboard" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <ExecutiveDashboard />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/executive-dashboard" element={<Navigate to="/relatorios-hub" replace />} />
 
           <Route path="/materials" element={
             <ProtectedRoute>
@@ -1187,13 +1147,7 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/whatsapp-crm" element={
-            <ProtectedRoute>
-              <WebLayout>
-                <WhatsAppCRM />
-              </WebLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/whatsapp-crm" element={<Navigate to="/crm-hub" replace />} />
 
           <Route path="/staff-management" element={
             <ProtectedRoute>
