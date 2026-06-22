@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ClipboardList, Plus, Search, SlidersHorizontal, Clock, CheckCircle2, AlertCircle,
   X, User, Calendar, FileEdit as Edit2, Eye, Copy, PlayCircle, Trash2, Smartphone,
-  FileText, Printer, ChevronDown, TrendingUp, DollarSign, BarChart2, Filter,
+  FileText, ChevronDown, TrendingUp, DollarSign, BarChart2, Filter,
   RefreshCw, ArrowUpRight, Download, CheckSquare, ArrowRight, ArrowUpDown,
   AlertTriangle, XCircle, PauseCircle, FileQuestion, Target, Zap, ChevronUp
 } from 'lucide-react'
@@ -14,7 +14,6 @@ import { ServiceOrderModalOptimized } from '../components/ServiceOrderModalOptim
 import { cache } from '../utils/cache'
 import { GamificationToggle } from '../components/ServiceOrder/GamificationToggle'
 import { formatDateSafe } from '../utils/format'
-import DocumentGeneratorButton from '../components/DocumentGeneratorButton'
 import OSPrintPreviewModal from '../components/OSPrintPreviewModal'
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string; ring: string }> = {
@@ -868,13 +867,6 @@ const ServiceOrders = () => {
                         <Edit2 className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => setPrintOrderId(order.id)}
-                        className="p-1.5 text-[#8a95a8] hover:text-[#191919] hover:bg-[#f4f7ff] rounded-lg transition-colors"
-                        title="Imprimir OS"
-                      >
-                        <Printer className="h-4 w-4" />
-                      </button>
-                      <button
                         onClick={() => handleExecute(order)}
                         disabled={order.status === 'completed'}
                         className="p-1.5 text-[#8a95a8] hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
@@ -889,12 +881,6 @@ const ServiceOrders = () => {
                       >
                         <Smartphone className="h-4 w-4" />
                       </button>
-                      <DocumentGeneratorButton
-                        templateType="service_order"
-                        data={{ serviceOrder: order, customer: order.customer, company: { name: 'GiarTech' } }}
-                        label=""
-                        className="p-1.5 text-[#8a95a8] hover:text-[#191919] hover:bg-[#f4f7ff] rounded-lg transition-colors"
-                      />
                       <button
                         onClick={() => handleDuplicate(order)}
                         className="p-1.5 text-[#8a95a8] hover:text-[#ff8149] hover:bg-[#fff3ee] rounded-lg transition-colors"
