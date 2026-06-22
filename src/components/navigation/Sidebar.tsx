@@ -67,7 +67,7 @@ interface MenuItem {
 
 const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'inicio', path: '/', icon: BarChart3, label: 'Dashboard CFO', description: '20+ KPIs executivos em tempo real para decisões estratégicas', moduleCode: 'dashboard' },
-  { id: 'agenda', path: '/calendar', icon: Calendar, label: 'Agenda', description: 'Compromissos e eventos', moduleCode: 'agenda' },
+  { id: 'agenda', path: '/agenda-hub', icon: Calendar, label: 'Agenda & Tarefas', description: 'Agenda de compromissos e central de tarefas unificadas', moduleCode: 'agenda' },
   { id: 'cadastro-clientes-parceiros', path: '/cadastro-clientes-parceiros', icon: UserCog, label: 'Clientes e Parceiros', description: 'Cadastro de clientes PF/PJ e parceiros comerciais', moduleCode: 'clientes' },
   { id: 'clients', path: '/client-management', icon: Users, label: 'Clientes (legado)', description: 'Gestão de clientes PF/PJ', moduleCode: 'clientes' },
   { id: 'crm-professional', path: '/crm-professional', icon: Target, label: 'CRM Profissional', description: 'Pipeline de vendas e pós-venda completo', moduleCode: 'crm' },
@@ -76,7 +76,6 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'customer-rfm', path: '/customer-rfm', icon: BarChart2, label: 'Análise RFM', description: 'Segmentação de clientes por recência, frequência e valor', moduleCode: 'clientes' },
   { id: 'pos-venda', path: '/pos-venda', icon: Heart, label: 'Pós-Venda', description: 'Acompanhamento pós-atendimento e fidelização', moduleCode: 'crm' },
   { id: 'whatsapp-crm', path: '/whatsapp-crm', icon: Smartphone, label: 'WhatsApp CRM', description: 'Gestão de conversas e contatos no WhatsApp', moduleCode: 'crm' },
-  { id: 'materials', path: '/materials', icon: Box, label: 'Materiais', description: 'Cadastro e preços de materiais', moduleCode: 'estoque' },
   { id: 'executive-dashboard', path: '/executive-dashboard', icon: TrendingUp, label: 'Dashboard Executivo', description: 'Visão executiva completa com DRE e análises', moduleCode: 'dashboard' },
   { id: 'fornecedores', path: '/suppliers', icon: Building2, label: 'Fornecedores', description: 'Gestão de fornecedores', moduleCode: 'fornecedores' },
   { id: 'compras', path: '/purchasing', icon: ShoppingCart, label: 'Compras', description: 'Pedidos e alertas de estoque', moduleCode: 'compras' },
@@ -89,9 +88,8 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'relatorios', path: '/relatorios', icon: FileText, label: 'Relatórios', description: 'Dashboards interativos, PDFs e análises', moduleCode: 'relatorios' },
   { id: 'weekly-report', path: '/weekly-report', icon: BarChart2, label: 'Relatório Semanal', description: 'Resumo automático semanal com insight do Thomaz AI', moduleCode: 'relatorios' },
   { id: 'catalogo', path: '/service-catalog', icon: Wrench, label: 'Catálogo de Serviços', description: 'Serviços disponíveis', moduleCode: 'catalogo' },
-  { id: 'inventory', path: '/inventory', icon: Package, label: 'Estoque', description: 'Controle de materiais', moduleCode: 'estoque' },
+  { id: 'inventory', path: '/estoque-hub', icon: Package, label: 'Estoque & Materiais', description: 'Controle unificado de itens, insumos e precificação', moduleCode: 'estoque' },
   { id: 'equipments', path: '/equipments', icon: Wind, label: 'Equipamentos HVAC', description: 'Climatização, refrigeração — manutenção e garantia', moduleCode: 'estoque' },
-  { id: 'task-board', path: '/task-board', icon: LayoutGrid, label: 'Central de Tarefas', description: 'Quadro Kanban de tarefas administrativas', moduleCode: 'projetos' },
 
   { id: 'thomaz', path: '/thomaz', icon: Brain, label: 'Thomaz AI', description: 'Consultor Empresarial', moduleCode: 'thomaz' },
   { id: 'email', path: '/email/inbox', icon: Mail, label: 'Email Corporativo', description: 'Enviar e receber emails', moduleCode: 'email' },

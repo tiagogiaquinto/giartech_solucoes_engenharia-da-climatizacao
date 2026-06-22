@@ -38,6 +38,8 @@ const TechnicianMobileView = lazy(() => import('./pages/TechnicianMobileView'))
 const Inventory = lazy(() => import('./pages/Inventory'))
 const InventoryDetail = lazy(() => import('./pages/InventoryDetail'))
 const InventoryCreate = lazy(() => import('./pages/InventoryCreate'))
+import AgendaHub from './pages/AgendaHub'
+import EstoqueHub from './pages/EstoqueHub'
 const Reports = lazy(() => import('./pages/Reports'))
 const Settings = lazy(() => import('./pages/Settings'))
 const ServiceCatalog = lazy(() => import('./pages/ServiceCatalog'))
@@ -706,6 +708,25 @@ function App() {
             </ProtectedRoute>
           } />
 
+
+          <Route path="/agenda-hub" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <AgendaHub
+                  onPremiumFeature={handlePremiumFeature}
+                  onEnterpriseFeature={handleEnterpriseFeature}
+                />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/estoque-hub" element={
+            <ProtectedRoute>
+              <WebLayout>
+                <EstoqueHub />
+              </WebLayout>
+            </ProtectedRoute>
+          } />
           <Route path="/profile" element={
             <ProtectedRoute>
               <WebLayout>
