@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import { AnimatePresence } from 'framer-motion'
 import LoadingScreen from './components/LoadingScreen'
 import UpdateBanner from './components/UpdateBanner'
 import { autoInitialize } from './utils/thomazInitializer'
@@ -12,162 +11,165 @@ import { registerServiceWorker, isMobile } from './utils/pwa'
 import WebLayout from './components/layouts/WebLayout'
 import GlobalSearchModal from './components/GlobalSearchModal'
 import OfflineIndicator from './components/OfflineIndicator'
-import Dashboard from './pages/Dashboard'
-import ServiceOrders from './pages/ServiceOrders'
-import ServiceOrderCreate from './pages/ServiceOrderCreate'
-import ServiceOrderView from './pages/ServiceOrderView'
-import ServiceOrderDetails from './pages/ServiceOrderDetails'
-import TechnicianMobileView from './pages/TechnicianMobileView'
-import Inventory from './pages/Inventory'
-import InventoryDetail from './pages/InventoryDetail'
-import InventoryCreate from './pages/InventoryCreate'
-import Reports from './pages/Reports'
-import Settings from './pages/Settings'
-import ServiceCatalog from './pages/ServiceCatalog'
-import ServiceCatalogDetail from './pages/ServiceCatalogDetail'
-import ServiceCatalogCreate from './pages/ServiceCatalogCreate'
-import Tutorial from './components/Tutorial'
 import { UserProvider, useUser } from './contexts/UserContext'
 import { AuthProvider } from './contexts/AuthContext'
-import LoginPage from './pages/LoginPage'
-import UserAccessManagement from './pages/UserAccessManagement'
-import PortalAccessManager from './pages/PortalAccessManager'
-import AuditDashboard from './pages/AuditDashboard'
-import FinancialIntegration from './pages/FinancialIntegration'
-import ClientManagement from './pages/ClientManagement'
-import VisualCustomization from './pages/VisualCustomization'
-import MonitoringConfig from './pages/MonitoringConfig'
-import Calendar from './pages/Calendar'
-import Projects from './pages/Projects'
-import Profile from './pages/Profile'
-import CFODashboard from './pages/CFODashboard'
-import WeeklyReport from './pages/WeeklyReport'
-import ServiceOrdersKanban from './pages/ServiceOrdersKanban'
-import Homepage from './pages/Homepage'
-import Home from './pages/Home'
-import About from './pages/About'
-import Services from './pages/Services'
-import Contact from './pages/Contact'
 import PremiumModal from './components/PremiumModal'
 import PremiumBanner from './components/PremiumBanner'
 import EnterpriseFeatureModal from './components/EnterpriseFeatureModal'
-import Login from './pages/Login'
-import AdminAccessCodes from './pages/AdminAccessCodes'
-import PricingPlans from './pages/PricingPlans'
 import AccessRestrictionModal from './components/AccessRestrictionModal'
-import DepartmentalDashboard from './pages/DepartmentalDashboard'
-import DigitalLibrary from './pages/DigitalLibrary'
-import Chat from './components/Chat'
-import ThomazMetrics from './pages/ThomazMetrics'
-import FinancialManagement from './pages/FinancialManagement'
-import FinancialAnalysis from './pages/FinancialAnalysis'
-import BankAccounts from './pages/BankAccounts'
-import PeopleManagement from './pages/PeopleManagement'
-import UserInvitations from './pages/UserInvitations'
-import FinancialCategories from './pages/FinancialCategories'
-import AuditLogs from './pages/AuditLogs'
-import CRMLeads from './pages/CRMLeads'
-import CRMProfessional from './pages/CRMProfessional'
-import CRMEsteiraIntegrada from './pages/CRMEsteiraIntegrada'
-import CRMMessageTemplates from './pages/CRMMessageTemplates'
-import Contracts from './pages/Contracts'
-import ContractTemplates from './pages/ContractTemplates'
-import Invoices from './pages/Invoices'
-import CompanySettings from './pages/CompanySettings'
-import Equipments from './pages/Equipments'
-import Suppliers from './pages/Suppliers'
-import Purchasing from './pages/Purchasing'
-import RouteTracking from './pages/RouteTracking'
-import Documents from './pages/Documents'
-import EmailSettings from './pages/EmailSettings'
-import EmailInbox from './pages/EmailInbox'
-import EmailCompose from './pages/EmailCompose'
-import ThomazChat from './pages/ThomazChat'
-import ReportsAdvanced from './pages/ReportsAdvanced'
-
-import CreditScoring from './pages/CreditScoring'
-import FinanceiroConsolidado from './pages/FinanceiroConsolidado'
-import RelatoriosConsolidado from './pages/RelatoriosConsolidado'
-import CustomerReferrals from './pages/CustomerReferrals'
-import CustomerCredits from './pages/CustomerCredits'
-import CustomerGamification from './pages/CustomerGamification'
-import CustomerGamificationManager from './pages/CustomerGamificationManager'
-import PartnerGamification from './pages/PartnerGamification'
-import GamificationHub from './pages/GamificationHub'
-import TechnicianPerformance from './pages/TechnicianPerformance'
-import MobileLayout from './components/layouts/MobileLayout'
-import MobileHome from './pages/mobile/MobileHome'
-import MobileOrders from './pages/mobile/MobileOrders'
-import MobileAgenda from './pages/mobile/MobileAgenda'
-import MobileLibrary from './pages/mobile/MobileLibrary'
-import MobileRoutes from './pages/mobile/MobileRoutes'
-import MobilePurchases from './pages/mobile/MobilePurchases'
-import MobileOSExecution from './pages/mobile/MobileOSExecution'
-import SalaryManagement from './pages/SalaryManagement'
-import MobileLogin from './pages/mobile/MobileLogin'
-import OSDistribution from './pages/OSDistribution'
-import GoalsAndRankings from './pages/GoalsAndRankings'
-import BudgetManagement from './pages/BudgetManagement'
-import DocumentCenter from './pages/DocumentCenter'
-import GiartechDocs from './pages/GiartechDocs'
-import ThomazDashboard from './pages/ThomazDashboard'
-import AIProvidersSettings from './pages/AIProvidersSettings'
-import Customer360 from './pages/Customer360'
-import TeamManagement from './pages/TeamManagement'
-import StaffHub from './pages/StaffHub'
-import InternalChat from './pages/InternalChat'
-import CommandCenter from './pages/CommandCenter/CommandCenter'
-import PortalLogin from './pages/portal/PortalLogin'
-import PortalLayout from './pages/portal/PortalLayout'
-import PortalDashboardRouter from './pages/portal/PortalDashboardRouter'
-import CustomerPortalDocuments from './pages/portal/CustomerPortalDocuments'
-import CustomerPortalInventory from './pages/portal/CustomerPortalInventory'
-import CustomerServiceRequest from './pages/portal/CustomerServiceRequest'
-import CustomerPortalHistory from './pages/portal/CustomerPortalHistory'
-import CustomerPortalAddresses from './pages/portal/CustomerPortalAddresses'
-import CustomerPortalBudgets from './pages/portal/CustomerPortalBudgets'
-import PartnerPortalDashboard from './pages/portal/PartnerPortalDashboard'
-import PartnerPortalHistory from './pages/portal/PartnerPortalHistory'
 import { PortalProvider } from './contexts/PortalContext'
-import TechnicianLayout from './components/technician/TechnicianLayout'
-import TechnicianRoteiro from './pages/technician/TechnicianRoteiro'
-import TechnicianChat from './pages/technician/TechnicianChat'
-import TechnicianAgenda from './pages/technician/TechnicianAgenda'
-import TechnicianPerfil from './pages/technician/TechnicianPerfil'
-import TechnicianOSPage from './pages/technician/TechnicianOSPage'
-import TechnicianHistorico from './pages/technician/TechnicianHistorico'
-import CustomerRFM from './pages/CustomerRFM'
-import PosVenda from './pages/PosVenda'
-import ExecutiveDashboard from './pages/ExecutiveDashboard'
-import Materials from './pages/Materials'
-import WhatsAppCRM from './pages/WhatsAppCRM'
-import StaffManagement from './pages/StaffManagement'
-import CadastroClientesParceiros from './pages/CadastroClientesParceiros'
-import GiartechCare from './pages/care/GiartechCare'
-import OSTrackPage from './pages/track/OSTrackPage'
-import QRCodeManager from './pages/QRCodeManager'
 import { NotificationHubProvider } from './contexts/NotificationHubContext'
 import { GiartechNotificationHub } from './components/GiartechNotificationHub'
 import { useThomazInterrupt } from './hooks/useThomazInterrupt'
 import { useDailyAutomations } from './hooks/useDailyAutomations'
-import TaskBoard from './pages/TaskBoard/TaskBoard'
 import { ThomazOrchestrator } from './components/ThomazOrchestrator'
-import IdentityControl from './pages/IdentityControl/IdentityControl'
 import { ImpersonationProvider } from './contexts/ImpersonationContext'
 import { ImpersonationBar } from './components/ImpersonationBar'
-import AccessDenied403 from './pages/AccessDenied403'
-import NotificationRules from './pages/NotificationRules'
+import MobileLayout from './components/layouts/MobileLayout'
+import TechnicianLayout from './components/technician/TechnicianLayout'
+
+// Lazy-loaded pages
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const ServiceOrders = lazy(() => import('./pages/ServiceOrders'))
+const ServiceOrderCreate = lazy(() => import('./pages/ServiceOrderCreate'))
+const ServiceOrderView = lazy(() => import('./pages/ServiceOrderView'))
+const ServiceOrderDetails = lazy(() => import('./pages/ServiceOrderDetails'))
+const TechnicianMobileView = lazy(() => import('./pages/TechnicianMobileView'))
+const Inventory = lazy(() => import('./pages/Inventory'))
+const InventoryDetail = lazy(() => import('./pages/InventoryDetail'))
+const InventoryCreate = lazy(() => import('./pages/InventoryCreate'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Settings = lazy(() => import('./pages/Settings'))
+const ServiceCatalog = lazy(() => import('./pages/ServiceCatalog'))
+const ServiceCatalogDetail = lazy(() => import('./pages/ServiceCatalogDetail'))
+const ServiceCatalogCreate = lazy(() => import('./pages/ServiceCatalogCreate'))
+const Tutorial = lazy(() => import('./components/Tutorial'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const UserAccessManagement = lazy(() => import('./pages/UserAccessManagement'))
+const PortalAccessManager = lazy(() => import('./pages/PortalAccessManager'))
+const AuditDashboard = lazy(() => import('./pages/AuditDashboard'))
+const FinancialIntegration = lazy(() => import('./pages/FinancialIntegration'))
+const ClientManagement = lazy(() => import('./pages/ClientManagement'))
+const VisualCustomization = lazy(() => import('./pages/VisualCustomization'))
+const MonitoringConfig = lazy(() => import('./pages/MonitoringConfig'))
+const Calendar = lazy(() => import('./pages/Calendar'))
+const Projects = lazy(() => import('./pages/Projects'))
+const Profile = lazy(() => import('./pages/Profile'))
+const CFODashboard = lazy(() => import('./pages/CFODashboard'))
+const WeeklyReport = lazy(() => import('./pages/WeeklyReport'))
+const ServiceOrdersKanban = lazy(() => import('./pages/ServiceOrdersKanban'))
+const Homepage = lazy(() => import('./pages/Homepage'))
+const Home = lazy(() => import('./pages/Home'))
+const About = lazy(() => import('./pages/About'))
+const Services = lazy(() => import('./pages/Services'))
+const Contact = lazy(() => import('./pages/Contact'))
+const Login = lazy(() => import('./pages/Login'))
+const AdminAccessCodes = lazy(() => import('./pages/AdminAccessCodes'))
+const PricingPlans = lazy(() => import('./pages/PricingPlans'))
+const DepartmentalDashboard = lazy(() => import('./pages/DepartmentalDashboard'))
+const DigitalLibrary = lazy(() => import('./pages/DigitalLibrary'))
+const Chat = lazy(() => import('./components/Chat'))
+const ThomazMetrics = lazy(() => import('./pages/ThomazMetrics'))
+const FinancialManagement = lazy(() => import('./pages/FinancialManagement'))
+const FinancialAnalysis = lazy(() => import('./pages/FinancialAnalysis'))
+const BankAccounts = lazy(() => import('./pages/BankAccounts'))
+const PeopleManagement = lazy(() => import('./pages/PeopleManagement'))
+const UserInvitations = lazy(() => import('./pages/UserInvitations'))
+const FinancialCategories = lazy(() => import('./pages/FinancialCategories'))
+const AuditLogs = lazy(() => import('./pages/AuditLogs'))
+const CRMLeads = lazy(() => import('./pages/CRMLeads'))
+const CRMProfessional = lazy(() => import('./pages/CRMProfessional'))
+const CRMEsteiraIntegrada = lazy(() => import('./pages/CRMEsteiraIntegrada'))
+const CRMMessageTemplates = lazy(() => import('./pages/CRMMessageTemplates'))
+const Contracts = lazy(() => import('./pages/Contracts'))
+const ContractTemplates = lazy(() => import('./pages/ContractTemplates'))
+const Invoices = lazy(() => import('./pages/Invoices'))
+const CompanySettings = lazy(() => import('./pages/CompanySettings'))
+const Equipments = lazy(() => import('./pages/Equipments'))
+const Suppliers = lazy(() => import('./pages/Suppliers'))
+const Purchasing = lazy(() => import('./pages/Purchasing'))
+const RouteTracking = lazy(() => import('./pages/RouteTracking'))
+const Documents = lazy(() => import('./pages/Documents'))
+const EmailSettings = lazy(() => import('./pages/EmailSettings'))
+const EmailInbox = lazy(() => import('./pages/EmailInbox'))
+const EmailCompose = lazy(() => import('./pages/EmailCompose'))
+const ThomazChat = lazy(() => import('./pages/ThomazChat'))
+const ReportsAdvanced = lazy(() => import('./pages/ReportsAdvanced'))
+const CreditScoring = lazy(() => import('./pages/CreditScoring'))
+const FinanceiroConsolidado = lazy(() => import('./pages/FinanceiroConsolidado'))
+const RelatoriosConsolidado = lazy(() => import('./pages/RelatoriosConsolidado'))
+const CustomerReferrals = lazy(() => import('./pages/CustomerReferrals'))
+const CustomerCredits = lazy(() => import('./pages/CustomerCredits'))
+const CustomerGamification = lazy(() => import('./pages/CustomerGamification'))
+const CustomerGamificationManager = lazy(() => import('./pages/CustomerGamificationManager'))
+const PartnerGamification = lazy(() => import('./pages/PartnerGamification'))
+const GamificationHub = lazy(() => import('./pages/GamificationHub'))
+const TechnicianPerformance = lazy(() => import('./pages/TechnicianPerformance'))
+const MobileHome = lazy(() => import('./pages/mobile/MobileHome'))
+const MobileOrders = lazy(() => import('./pages/mobile/MobileOrders'))
+const MobileAgenda = lazy(() => import('./pages/mobile/MobileAgenda'))
+const MobileLibrary = lazy(() => import('./pages/mobile/MobileLibrary'))
+const MobileRoutes = lazy(() => import('./pages/mobile/MobileRoutes'))
+const MobilePurchases = lazy(() => import('./pages/mobile/MobilePurchases'))
+const MobileOSExecution = lazy(() => import('./pages/mobile/MobileOSExecution'))
+const SalaryManagement = lazy(() => import('./pages/SalaryManagement'))
+const MobileLogin = lazy(() => import('./pages/mobile/MobileLogin'))
+const OSDistribution = lazy(() => import('./pages/OSDistribution'))
+const GoalsAndRankings = lazy(() => import('./pages/GoalsAndRankings'))
+const BudgetManagement = lazy(() => import('./pages/BudgetManagement'))
+const DocumentCenter = lazy(() => import('./pages/DocumentCenter'))
+const GiartechDocs = lazy(() => import('./pages/GiartechDocs'))
+const ThomazDashboard = lazy(() => import('./pages/ThomazDashboard'))
+const AIProvidersSettings = lazy(() => import('./pages/AIProvidersSettings'))
+const Customer360 = lazy(() => import('./pages/Customer360'))
+const TeamManagement = lazy(() => import('./pages/TeamManagement'))
+const StaffHub = lazy(() => import('./pages/StaffHub'))
+const InternalChat = lazy(() => import('./pages/InternalChat'))
+const CommandCenter = lazy(() => import('./pages/CommandCenter/CommandCenter'))
+const PortalLogin = lazy(() => import('./pages/portal/PortalLogin'))
+const PortalLayout = lazy(() => import('./pages/portal/PortalLayout'))
+const PortalDashboardRouter = lazy(() => import('./pages/portal/PortalDashboardRouter'))
+const CustomerPortalDocuments = lazy(() => import('./pages/portal/CustomerPortalDocuments'))
+const CustomerPortalInventory = lazy(() => import('./pages/portal/CustomerPortalInventory'))
+const CustomerServiceRequest = lazy(() => import('./pages/portal/CustomerServiceRequest'))
+const CustomerPortalHistory = lazy(() => import('./pages/portal/CustomerPortalHistory'))
+const CustomerPortalAddresses = lazy(() => import('./pages/portal/CustomerPortalAddresses'))
+const CustomerPortalBudgets = lazy(() => import('./pages/portal/CustomerPortalBudgets'))
+const PartnerPortalDashboard = lazy(() => import('./pages/portal/PartnerPortalDashboard'))
+const PartnerPortalHistory = lazy(() => import('./pages/portal/PartnerPortalHistory'))
+const TechnicianRoteiro = lazy(() => import('./pages/technician/TechnicianRoteiro'))
+const TechnicianChat = lazy(() => import('./pages/technician/TechnicianChat'))
+const TechnicianAgenda = lazy(() => import('./pages/technician/TechnicianAgenda'))
+const TechnicianPerfil = lazy(() => import('./pages/technician/TechnicianPerfil'))
+const TechnicianOSPage = lazy(() => import('./pages/technician/TechnicianOSPage'))
+const TechnicianHistorico = lazy(() => import('./pages/technician/TechnicianHistorico'))
+const CustomerRFM = lazy(() => import('./pages/CustomerRFM'))
+const PosVenda = lazy(() => import('./pages/PosVenda'))
+const ExecutiveDashboard = lazy(() => import('./pages/ExecutiveDashboard'))
+const Materials = lazy(() => import('./pages/Materials'))
+const WhatsAppCRM = lazy(() => import('./pages/WhatsAppCRM'))
+const StaffManagement = lazy(() => import('./pages/StaffManagement'))
+const CadastroClientesParceiros = lazy(() => import('./pages/CadastroClientesParceiros'))
+const GiartechCare = lazy(() => import('./pages/care/GiartechCare'))
+const OSTrackPage = lazy(() => import('./pages/track/OSTrackPage'))
+const QRCodeManager = lazy(() => import('./pages/QRCodeManager'))
+const TaskBoard = lazy(() => import('./pages/TaskBoard/TaskBoard'))
+const IdentityControl = lazy(() => import('./pages/IdentityControl/IdentityControl'))
+const AccessDenied403 = lazy(() => import('./pages/AccessDenied403'))
+const NotificationRules = lazy(() => import('./pages/NotificationRules'))
+
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+  </div>
+)
 
 const ProtectedRoute = ({ children, moduleCode }: { children: React.ReactNode; moduleCode?: string }) => {
   const { user, isLoading, hasModuleAccess, isSuperAdmin } = useUser()
   const location = useLocation()
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
-      </div>
-    )
+    return <PageLoader />
   }
 
   if (!user) {
@@ -228,11 +230,7 @@ const StaffRoute = ({ children, moduleCode }: { children: React.ReactNode; modul
   const location = useLocation()
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
-      </div>
-    )
+    return <PageLoader />
   }
 
   if (!user) {
@@ -259,11 +257,7 @@ const RoleBasedHome = () => {
   const location = useLocation()
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
-      </div>
-    )
+    return <PageLoader />
   }
 
   if (!user) {
@@ -299,11 +293,9 @@ function App() {
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
 
   useEffect(() => {
-    // Registrar Service Worker para PWA
     registerServiceWorker()
   }, [])
 
-  // Atalho global Cmd+K para busca
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -317,7 +309,6 @@ function App() {
   }, [])
 
   useEffect(() => {
-    // Inicializar ThomazAI primeiro
     const initializeThomazAI = async () => {
       try {
         console.log('🤖 Inicializando ThomazAI...')
@@ -329,20 +320,18 @@ function App() {
           setThomazInitialized(true)
         } else {
           console.warn('⚠️ ThomazAI iniciado com avisos:', result.errors)
-          setThomazInitialized(true) // Continuar mesmo com avisos
+          setThomazInitialized(true)
         }
       } catch (error) {
         console.error('❌ Erro ao inicializar ThomazAI:', error)
-        setThomazInitialized(true) // Continuar mesmo com erro
+        setThomazInitialized(true)
       }
     }
 
     initializeThomazAI()
 
-    // Simular carregamento inicial
     const timer = setTimeout(() => {
       setIsLoading(false)
-      // Verificar se é primeira utilização
       const isFirstTime = !localStorage.getItem('os_system_tutorial_completed')
       if (isFirstTime) {
         setShowTutorial(true)
@@ -352,26 +341,16 @@ function App() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Verificação de versão gerenciada pelo hook useAppUpdate via Supabase Realtime
-
-  // Notificações desabilitadas - podem ser habilitadas nas configurações
-  // useEffect(() => {
-  //   if ('Notification' in window && Notification.permission === 'default') {
-  //     Notification.requestPermission()
-  //   }
-  // }, [])
-
   const handlePremiumFeature = (feature: string) => {
     setPremiumFeature(feature)
     setShowPremiumModal(true)
     setShowPremiumBanner(true)
-    
-    // Auto-hide banner after 10 seconds
+
     setTimeout(() => {
       setShowPremiumBanner(false)
     }, 10000)
   }
-  
+
   const handleEnterpriseFeature = (feature: string) => {
     setEnterpriseFeature(feature)
     setShowEnterpriseModal(true)
@@ -391,12 +370,13 @@ function App() {
         <GiartechNotificationHub />
         <ThomazOrchestrator />
         <UpdateBanner />
+        <Suspense fallback={<PageLoader />}>
         <Routes location={location}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/mobile/login" element={<MobileLogin />} />
             <Route path="/access-denied" element={<AccessDenied403 />} />
           <Route path="/pricing" element={<PricingPlans />} />
-          
+
           <Route path="/" element={
             <RoleBasedHome />
           } />
@@ -432,7 +412,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/departmental-dashboard" element={
             <ProtectedRoute>
               <WebLayout>
@@ -440,7 +420,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/service-orders" element={
             <ProtectedRoute>
               <WebLayout>
@@ -448,7 +428,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/service-orders/create" element={
             <ProtectedRoute>
               <WebLayout>
@@ -578,7 +558,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/inventory/:id" element={
             <ProtectedRoute>
               <WebLayout>
@@ -586,7 +566,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/inventory/create" element={
             <ProtectedRoute>
               <WebLayout>
@@ -594,7 +574,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/reports" element={
             <ProtectedRoute>
               <WebLayout>
@@ -602,7 +582,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/settings" element={
             <ProtectedRoute>
               <WebLayout>
@@ -639,7 +619,7 @@ function App() {
 
           <Route path="/people" element={<Navigate to="/staff" replace />} />
           <Route path="/users" element={<Navigate to="/staff" replace />} />
-          
+
           <Route path="/service-catalog" element={
             <ProtectedRoute>
               <WebLayout>
@@ -647,7 +627,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/financial" element={
             <ProtectedRoute>
               <WebLayout>
@@ -655,7 +635,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/client-management" element={
             <ProtectedRoute>
               <WebLayout>
@@ -687,18 +667,18 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/monitoring" element={
             <ProtectedRoute>
               <WebLayout>
-                <MonitoringConfig 
+                <MonitoringConfig
                   onPremiumFeature={handlePremiumFeature}
                   onEnterpriseFeature={handleEnterpriseFeature}
                 />
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/calendar" element={
             <ProtectedRoute>
               <WebLayout>
@@ -706,7 +686,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/projects" element={
             <ProtectedRoute>
               <WebLayout>
@@ -725,7 +705,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/profile" element={
             <ProtectedRoute>
               <WebLayout>
@@ -733,7 +713,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/access-codes" element={
             <ProtectedRoute>
               <WebLayout>
@@ -741,7 +721,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/digital-library" element={
             <ProtectedRoute>
               <WebLayout>
@@ -749,7 +729,7 @@ function App() {
               </WebLayout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/chat" element={
             <ProtectedRoute>
               <WebLayout>
@@ -1249,15 +1229,18 @@ function App() {
             </PortalLayout>
           } />
         </Routes>
+        </Suspense>
 
         {/* Tutorial Interativo */}
-        <Tutorial
-          isOpen={showTutorial}
-          onComplete={() => {
-            setShowTutorial(false)
-            localStorage.setItem('os_system_tutorial_completed', 'true')
-          }}
-        />
+        <Suspense fallback={null}>
+          <Tutorial
+            isOpen={showTutorial}
+            onComplete={() => {
+              setShowTutorial(false)
+              localStorage.setItem('os_system_tutorial_completed', 'true')
+            }}
+          />
+        </Suspense>
 
         {/* Modal Premium */}
         <PremiumModal
