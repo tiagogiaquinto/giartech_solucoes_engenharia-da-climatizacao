@@ -1,76 +1,79 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ClipboardList, Clock, User, DollarSign, Calendar, AlertCircle, CheckCircle2, PlayCircle, XCircle, Plus, Search, FileEdit as Edit2, MoreVertical, GripVertical, RefreshCw, Pause, ChevronRight, FileQuestion } from 'lucide-react'
-import { getServiceOrders, updateServiceOrder, type ServiceOrder } from '../lib/database-services'
+import { ClipboardList, Clock, User, DollarSign, Calendar, AlertCircle, CheckCircle2, PlayCircle, Circle as XCircle, Plus, Search, FileEdit as Edit2, MoreVertical, GripVertical, RefreshCw, Pause, ChevronRight } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import ServiceOrderModal from '../components/ServiceOrderModal'
 
-// Maps any DB status variant to a canonical kanban column id
-const normalizeStatus = (status?: string): string => {
-  if (!status) return 'pending'
-  const s = status.toLowerCase()
-  if (s === 'cotacao' || s === 'cotação' || s === 'orcamento' || s === 'orçamento') return 'cotacao'
-  if (s === 'pending' || s === 'pendente' || s === 'aberta' || s === 'open') return 'pending'
-  if (s === 'in_progress' || s === 'em_andamento' || s === 'em andamento') return 'in_progress'
-  if (s === 'on_hold' || s === 'pausado' || s === 'pausada') return 'on_hold'
-  if (s === 'completed' || s === 'concluida' || s === 'concluído' || s === 'concluída' || s === 'done') return 'completed'
-  if (s === 'cancelled' || s === 'cancelada' || s === 'cancelado') return 'cancelled'
-  return s
+interface ServiceOrder {
+  id: string
+  order_number?: string
+  customer_id?: string
+  status?: string
+  description?: string
+  scheduled_at?: string
+  opened_at: string
+  closed_at?: string
+  total_value?: number
+  customer?: {
+    nome_razao: string
+    telefone?: string
+  }
 }
 
 const COLUMNS = [
   {
     id: 'cotacao',
     title: 'Cotações',
-    dbValues: ['cotacao', 'cotação', 'orcamento', 'orçamento'],
-    icon: FileQuestion,
+    icon: ClipboardList,
     accent: '#8b5cf6',
     bg: '#f5f3ff',
     border: '#c4b5fd',
+    dot: 'bg-violet-500',
   },
   {
-    id: 'pending',
-    title: 'Pendentes',
-    dbValues: ['pending', 'pendente', 'aberta', 'open'],
+    id: 'aberta',
+    title: 'Abertas',
     icon: AlertCircle,
     accent: '#f59e0b',
     bg: '#fffbeb',
     border: '#fcd34d',
+    dot: 'bg-amber-500',
   },
   {
-    id: 'in_progress',
+    id: 'em_andamento',
     title: 'Em Andamento',
-    dbValues: ['in_progress', 'em_andamento', 'em andamento'],
     icon: PlayCircle,
     accent: '#3b82f6',
     bg: '#eff6ff',
     border: '#93c5fd',
+    dot: 'bg-blue-500',
   },
   {
-    id: 'on_hold',
+    id: 'pausada',
     title: 'Pausadas',
-    dbValues: ['on_hold', 'pausado', 'pausada'],
     icon: Pause,
     accent: '#6b7280',
     bg: '#f9fafb',
     border: '#d1d5db',
+    dot: 'bg-gray-400',
   },
   {
-    id: 'completed',
+    id: 'concluida',
     title: 'Concluídas',
-    dbValues: ['completed', 'concluida', 'concluído', 'concluída', 'done'],
     icon: CheckCircle2,
     accent: '#10b981',
     bg: '#ecfdf5',
     border: '#6ee7b7',
+    dot: 'bg-emerald-500',
   },
   {
-    id: 'cancelled',
+    id: 'cancelada',
     title: 'Canceladas',
-    dbValues: ['cancelled', 'cancelada', 'cancelado'],
     icon: XCircle,
     accent: '#ef4444',
     bg: '#fef2f2',
     border: '#fca5a5',
+    dot: 'bg-red-400',
   },
 ]
 
@@ -81,12 +84,13 @@ const formatCurrency = (value?: number) =>
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return null
-  return new Date(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  const d = new Date(dateString)
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-const getDaysOpen = (createdAt?: string) => {
-  if (!createdAt) return 0
-  return Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000)
+const getDaysOpen = (openedAt: string) => {
+  const diff = Math.floor((Date.now() - new Date(openedAt).getTime()) / 86400000)
+  return diff
 }
 
 const ServiceOrdersKanban = () => {
@@ -95,6 +99,7 @@ const ServiceOrdersKanban = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [creatingNew, setCreatingNew] = useState(false)
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverCol, setDragOverCol] = useState<string | null>(null)
@@ -117,10 +122,14 @@ const ServiceOrdersKanban = () => {
   const loadServiceOrders = async () => {
     try {
       setLoading(true)
-      const data = await getServiceOrders()
+      const { data, error } = await supabase
+        .from('service_orders')
+        .select('id, order_number, customer_id, status, description, scheduled_at, opened_at, closed_at, total_value, customer:customers(nome_razao, telefone)')
+        .order('opened_at', { ascending: false })
+      if (error) throw error
       setServiceOrders(data || [])
     } catch (err) {
-      console.error('Kanban load error:', err)
+      console.error(err)
       setServiceOrders([])
     } finally {
       setLoading(false)
@@ -129,18 +138,21 @@ const ServiceOrdersKanban = () => {
 
   const handleEdit = (id: string) => {
     setEditingId(id)
+    setCreatingNew(false)
     setModalOpen(true)
     setMenuOpen(null)
   }
 
   const handleNew = () => {
     setEditingId(null)
+    setCreatingNew(true)
     setModalOpen(true)
   }
 
   const handleModalClose = () => {
     setModalOpen(false)
     setEditingId(null)
+    setCreatingNew(false)
   }
 
   const handleModalSave = () => {
@@ -154,26 +166,23 @@ const ServiceOrdersKanban = () => {
     )
     setMenuOpen(null)
     try {
-      await updateServiceOrder(orderId, { status: newStatus, updated_at: new Date().toISOString() })
+      await supabase.from('service_orders').update({ status: newStatus }).eq('id', orderId)
     } catch (err) {
       console.error(err)
       loadServiceOrders()
     }
   }
 
-  const getOrdersByColumn = (colId: string) => {
-    const col = COLUMNS.find(c => c.id === colId)
-    if (!col) return []
-    return serviceOrders.filter(o => {
-      const canonical = normalizeStatus(o.status)
-      const matchStatus = canonical === colId
+  const getOrdersByStatus = (status: string) =>
+    serviceOrders.filter(o => {
+      const s = o.status || 'aberta'
+      const matchStatus = s === status
       const matchSearch = !searchTerm ||
         o.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        o.customer?.nome_razao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         o.order_number?.toLowerCase().includes(searchTerm.toLowerCase())
       return matchStatus && matchSearch
     })
-  }
 
   const handleDragStart = (id: string) => setDraggingId(id)
   const handleDragEnd = () => { setDraggingId(null); setDragOverCol(null) }
@@ -199,6 +208,8 @@ const ServiceOrdersKanban = () => {
     )
   }
 
+  const totalOrders = serviceOrders.length
+
   return (
     <div className="p-4 space-y-4 min-h-screen bg-gray-50">
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -208,7 +219,7 @@ const ServiceOrdersKanban = () => {
               <ClipboardList className="h-5 w-5 text-blue-500" />
               Kanban — Ordens de Serviço
             </h1>
-            <p className="text-xs text-gray-500 mt-0.5">{serviceOrders.length} ordens cadastradas</p>
+            <p className="text-xs text-gray-500 mt-0.5">{totalOrders} ordens cadastradas</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -242,7 +253,7 @@ const ServiceOrdersKanban = () => {
 
       <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: 560 }}>
         {COLUMNS.map(col => {
-          const orders = getOrdersByColumn(col.id)
+          const orders = getOrdersByStatus(col.id)
           const Icon = col.icon
           const isDragTarget = dragOverCol === col.id
 
@@ -282,9 +293,8 @@ const ServiceOrdersKanban = () => {
                 ) : (
                   <AnimatePresence>
                     {orders.map(order => {
-                      const days = getDaysOpen(order.created_at)
-                      const isUrgent = days > 3 && col.id !== 'completed' && col.id !== 'cancelled'
-                      const value = order.final_total || order.total_value
+                      const days = getDaysOpen(order.opened_at)
+                      const isUrgent = days > 3 && col.id !== 'concluida' && col.id !== 'cancelada'
 
                       return (
                         <motion.div
@@ -307,7 +317,7 @@ const ServiceOrdersKanban = () => {
                                     <span className="text-[10px] font-mono text-gray-400 block">#{order.order_number}</span>
                                   )}
                                   <p className="font-semibold text-gray-900 text-sm leading-tight truncate">
-                                    {order.client_name || 'Cliente não informado'}
+                                    {order.customer?.nome_razao || 'Cliente não informado'}
                                   </p>
                                 </div>
                               </div>
@@ -364,22 +374,22 @@ const ServiceOrdersKanban = () => {
                             )}
 
                             <div className="space-y-1">
-                              {(order.due_date || order.service_date) && (
+                              {order.scheduled_at && (
                                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
                                   <Calendar className="h-3 w-3 flex-shrink-0" />
-                                  <span>{formatDate(order.due_date || order.service_date)}</span>
+                                  <span>{formatDate(order.scheduled_at)}</span>
                                 </div>
                               )}
-                              {order.client_phone && (
+                              {order.customer?.telefone && (
                                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
                                   <User className="h-3 w-3 flex-shrink-0" />
-                                  <span>{order.client_phone}</span>
+                                  <span>{order.customer.telefone}</span>
                                 </div>
                               )}
-                              {formatCurrency(value) && (
+                              {formatCurrency(order.total_value) && (
                                 <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
                                   <DollarSign className="h-3 w-3 flex-shrink-0" />
-                                  <span>{formatCurrency(value)}</span>
+                                  <span>{formatCurrency(order.total_value)}</span>
                                 </div>
                               )}
                             </div>
@@ -412,8 +422,8 @@ const ServiceOrdersKanban = () => {
       <div className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100">
         <div className="flex flex-wrap gap-6 justify-center">
           {COLUMNS.map(col => {
-            const orders = getOrdersByColumn(col.id)
-            const total = orders.reduce((s, o) => s + (o.final_total || o.total_value || 0), 0)
+            const orders = getOrdersByStatus(col.id)
+            const total = orders.reduce((s, o) => s + (o.total_value || 0), 0)
             return (
               <div key={col.id} className="text-center min-w-[80px]">
                 <div className="text-2xl font-bold" style={{ color: col.accent }}>{orders.length}</div>
@@ -429,7 +439,7 @@ const ServiceOrdersKanban = () => {
         </div>
       </div>
 
-      {modalOpen && (
+      {(modalOpen) && (
         <ServiceOrderModal
           isOpen={modalOpen}
           onClose={handleModalClose}
