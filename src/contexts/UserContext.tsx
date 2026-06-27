@@ -70,6 +70,9 @@ interface UserContextType {
 
 const SUPER_ADMIN_EMAIL = 'diretor.giartechsolucoes@gmail.com'
 
+// Acesso temporário sem login — ativo até este timestamp (0 = desativado)
+const BYPASS_AUTH_UNTIL = Date.now() + 10 * 60 * 1000 // 10 minutos a partir do deploy
+
 const UserContext = createContext<UserContextType | undefined>(undefined)
 
 export const useUser = () => {
@@ -100,6 +103,20 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       if (session?.user) {
         currentAuthUserRef.current = session.user
         loadUserProfile(session.user).finally(() => setIsLoading(false))
+      } else if (Date.now() < BYPASS_AUTH_UNTIL) {
+        // Acesso temporário sem autenticação
+        setUser({
+          id: 'bypass-user',
+          email: 'acesso-temporario@giartech.com',
+          name: 'Acesso Temporário',
+          full_name: 'Acesso Temporário',
+          role: 'admin',
+          is_active: true,
+          permissions: [],
+          sensitive: { can_view_profit: true, can_apply_discount: true, can_adjust_stock: true },
+          authUser: {} as any
+        })
+        setIsLoading(false)
       } else {
         setIsLoading(false)
       }
