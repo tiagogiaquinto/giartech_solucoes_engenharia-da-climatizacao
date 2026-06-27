@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, Users, MapPin, X, Save, CheckCircle, AlertCircle, CreditCard as Edit, Trash2, ArrowRight, Flag, List, LayoutGrid, GitBranch, Search, User, FileText, Phone, Mail } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
-import { getAgendaEvents, createAgendaEvent, updateAgendaEvent, deleteAgendaEvent, type AgendaEvent } from '../lib/supabase'
+import { getAgendaEvents, createAgendaEvent, updateAgendaEvent, deleteAgendaEvent, type AgendaEvent, supabase } from '../lib/supabase'
 import { mapAgendaEventToCalendarEvent, mapCalendarEventToAgendaEvent, expandMultiDayEvents, type CalendarEvent } from '../utils/calendarHelpers'
 import { formatDateSafe } from '../utils/format'
 

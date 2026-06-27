@@ -4,8 +4,6 @@ import Sidebar from '../navigation/Sidebar'
 import { useUser } from '../../contexts/UserContext'
 import BroadcastBanner from '../BroadcastBanner'
 
-const BYPASS_AUTH_UNTIL = Date.now() + 10 * 60 * 1000
-
 interface WebLayoutProps {
   children?: React.ReactNode
 }
@@ -21,7 +19,7 @@ const WebLayout: React.FC<WebLayoutProps> = ({ children }) => {
 
   if (isLoading) return null
 
-  if (isTechnician && Date.now() >= BYPASS_AUTH_UNTIL) {
+  if (isTechnician) {
     return <Navigate to="/tecnico" replace />
   }
 

@@ -1,12 +1,4 @@
-import { supabase } from './supabase'
-
-const withRetry = async <T>(fn: () => Promise<T>, retries = 3): Promise<T> => {
-  let lastError: Error | null = null
-  for (let i = 0; i < retries; i++) {
-    try { return await fn() } catch (e) { lastError = e as Error }
-  }
-  throw lastError
-}
+import { supabase, withRetry } from './supabase'
 
 export interface ServiceOrderItem {
   id?: string

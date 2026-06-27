@@ -28,15 +28,16 @@ interface FinanceEntry {
   tipo: 'receita' | 'despesa'
   status: 'recebido' | 'pago' | 'a_receber' | 'a_pagar'
   data: string
-  category_id?: string
+  categoria_id?: string
   customer_id?: string
   created_at: string
 }
 
 interface Category {
   id: string
-  name: string
-  type: 'receita' | 'despesa' | string
+  nome: string
+  natureza: 'receita' | 'despesa'
+  dre_grupo: string
 }
 
 interface DREData {
@@ -123,7 +124,7 @@ const FinancialIntegration = () => {
 
       const [entriesResult, categoriesResult, staffResult, materialsResult, bankAccountsResult] = await Promise.all([
         supabase.from('finance_entries').select('*').order('data', { ascending: false }),
-        supabase.from('financial_categories').select('id, name, type'),
+        supabase.from('financial_categories').select('*'),
         supabase.from('employees').select('id, name, salary'),
         supabase.from('inventory_items').select('unit_cost, unit_price, quantity').eq('active', true),
         supabase.rpc('get_bank_accounts_with_transactions')
@@ -229,27 +230,33 @@ const FinancialIntegration = () => {
   }
 
   const calculateDRE = (data: FinanceEntry[], categoriesData: Category[], staffData: any[]) => {
-    const receitasPorCategoria: Record<string, { valor: number }> = {}
-    const despesasPorCategoria: Record<string, { valor: number }> = {}
+    const receitasPorCategoria: Record<string, { valor: number; grupo: string }> = {}
+    const despesasPorCategoria: Record<string, { valor: number; grupo: string }> = {}
 
     data.forEach(entry => {
-      const categoria = entry.category_id
-        ? categoriesData.find(c => c.id === entry.category_id)
-        : null
-      const key = categoria?.name || 'Sem Categoria'
-
-      if (entry.tipo === 'receita' && entry.status === 'recebido') {
-        if (!receitasPorCategoria[key]) receitasPorCategoria[key] = { valor: 0 }
-        receitasPorCategoria[key].valor += Number(entry.valor)
-      } else if (entry.tipo === 'despesa' && entry.status === 'pago') {
-        if (!despesasPorCategoria[key]) despesasPorCategoria[key] = { valor: 0 }
-        despesasPorCategoria[key].valor += Number(entry.valor)
+      if (entry.categoria_id) {
+        const categoria = categoriesData.find(c => c.id === entry.categoria_id)
+        if (categoria) {
+          if (entry.tipo === 'receita' && entry.status === 'recebido') {
+            const key = categoria.dre_grupo || categoria.nome
+            if (!receitasPorCategoria[key]) {
+              receitasPorCategoria[key] = { valor: 0, grupo: categoria.dre_grupo }
+            }
+            receitasPorCategoria[key].valor += Number(entry.valor)
+          } else if (entry.tipo === 'despesa' && entry.status === 'pago') {
+            const key = categoria.dre_grupo || categoria.nome
+            if (!despesasPorCategoria[key]) {
+              despesasPorCategoria[key] = { valor: 0, grupo: categoria.dre_grupo }
+            }
+            despesasPorCategoria[key].valor += Number(entry.valor)
+          }
+        }
       }
     })
 
     const custoFolha = staffData.reduce((sum, s) => sum + Number(s.salary || 0), 0)
     if (custoFolha > 0) {
-      despesasPorCategoria['Folha de Pagamento'] = { valor: custoFolha }
+      despesasPorCategoria['Folha de Pagamento'] = { valor: custoFolha, grupo: 'Despesas Operacionais' }
     }
 
     const totalReceitas = Object.values(receitasPorCategoria).reduce((sum, v) => sum + v.valor, 0)

@@ -21,7 +21,7 @@ import {
 import { useUser } from '../contexts/UserContext'
 
 const Home = () => {
-  const { user, isPremium, isAdmin, isSuperAdmin } = useUser()
+  const { user, isPremium } = useUser()
 
   const quickActions = [
     {
@@ -345,17 +345,6 @@ const Home = () => {
           </div>
         </div>
       </motion.div>
-
-      {(isAdmin || isSuperAdmin) && (
-        <a
-          href="/tecnico"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="fixed bottom-24 right-4 z-40 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-2 rounded-full shadow-lg transition-colors"
-        >
-          Testar Portal Tecnico
-        </a>
-      )}
     </div>
   )
 }
