@@ -2,6 +2,25 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { supabase } from '../lib/supabase'
 import { useUser } from './UserContext'
 
+// ─── Thomaz quick-ask via thomaz_raciocinar ─────────────────────────────────
+export async function thomazRaciocinar(pergunta: string, userId?: string): Promise<{
+  resposta_direta: string
+  alertas?: any[]
+  acoes?: any[]
+  confianca_final?: number
+}> {
+  const sessionId = `overlay_${Date.now()}`
+  const { data, error } = await supabase.rpc('thomaz_raciocinar', {
+    pergunta,
+    p_session: sessionId,
+    p_user_id: userId || null
+  })
+  if (error) throw error
+  return data || { resposta_direta: 'Não foi possível analisar.' }
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 export type AlertSeverity = 'info' | 'warning' | 'critical' | 'chat' | 'agenda' | 'success'
 
 export interface HubAlert {
@@ -113,7 +132,15 @@ export function NotificationHubProvider({ children }: { children: React.ReactNod
     readIds.current.add(id)
     setUnread(n => Math.max(0, n - 1))
     if (!id.startsWith('local_')) {
-      supabase.rpc('mark_notification_as_read', { p_notification_id: id }).then(() => {})
+      if (id.startsWith('thomaz_')) {
+        const realId = id.replace('thomaz_', '')
+        supabase.from('thomaz_alerts').update({
+          status: 'visto',
+          acknowledged_at: new Date().toISOString()
+        }).eq('id', realId).then(() => {})
+      } else {
+        supabase.rpc('mark_notification_as_read', { p_notification_id: id }).then(() => {})
+      }
     }
   }, [])
 
@@ -178,8 +205,52 @@ export function NotificationHubProvider({ children }: { children: React.ReactNod
       }
     }
 
+    const loadThomazAlerts = async () => {
+      try {
+        await supabase.rpc('thomaz_atualizar_alertas')
+        const { data } = await supabase
+          .from('thomaz_alerts')
+          .select('*')
+          .eq('is_active', true)
+          .eq('status', 'novo')
+          .order('prioridade', { ascending: true })
+          .limit(10)
+
+        if (data && data.length > 0) {
+          const mapped: HubAlert[] = data.map((a: any) => {
+            const sev: AlertSeverity =
+              a.nivel_risco === 'critico' ? 'critical' :
+              a.nivel_risco === 'atencao' ? 'warning' : 'info'
+            return {
+              id: `thomaz_${a.id}`,
+              severity: sev,
+              title: a.title || a.area || 'Thomaz',
+              message: a.mensagem_humana || a.description || '',
+              sticky: sev === 'critical',
+              created_at: a.created_at,
+              source: 'thomaz' as const,
+              link: undefined,
+              action_label: a.recommended_action ? 'Ver Recomendação' : undefined,
+            }
+          })
+          setAlerts(prev => {
+            const existingIds = new Set(prev.map(a => a.id))
+            const fresh = mapped.filter(a => !existingIds.has(a.id))
+            if (fresh.length === 0) return prev
+            setUnread(n => n + fresh.length)
+            return [...fresh, ...prev].slice(0, 20)
+          })
+        }
+      } catch (err) {
+        console.warn('Thomaz alerts load error:', err)
+      }
+    }
+
     checkAgenda()
     checkOverdueOS()
+    loadThomazAlerts()
+
+    const thomazInterval = setInterval(loadThomazAlerts, 5 * 60 * 1000)
 
     const channel = supabase
       .channel('notification_hub_global')
@@ -199,6 +270,7 @@ export function NotificationHubProvider({ children }: { children: React.ReactNod
     channelRef.current = channel
 
     return () => {
+      clearInterval(thomazInterval)
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
       }
