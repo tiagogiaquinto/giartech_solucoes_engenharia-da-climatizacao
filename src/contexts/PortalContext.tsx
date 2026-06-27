@@ -22,6 +22,7 @@ interface PortalContextType {
 const PortalContext = createContext<PortalContextType | undefined>(undefined)
 
 const STORAGE_KEY = 'portal_session_token'
+const BYPASS_AUTH_UNTIL = Date.now() + 10 * 60 * 1000
 
 export const usePortal = () => {
   const context = useContext(PortalContext)
@@ -34,6 +35,20 @@ export const PortalProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // Bypass temporário de acesso — sem autenticação por 10 min
+    if (Date.now() < BYPASS_AUTH_UNTIL) {
+      setPortalUser({
+        account_id: 'bypass',
+        full_name: 'Acesso Temporário',
+        email: 'bypass@giartech.com',
+        role: 'cliente',
+        linked_customer_id: null,
+        linked_partner_id: null,
+        token: 'bypass'
+      })
+      setIsLoading(false)
+      return
+    }
     const token = localStorage.getItem(STORAGE_KEY)
     if (token) {
       validateSession(token)

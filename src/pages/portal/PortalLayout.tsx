@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavLink, useNavigate, Navigate } from 'react-router-dom'
+import { NavLink, useNavigate, Navigate, Outlet } from 'react-router-dom'
 import {
   LayoutDashboard, FileText, MessageSquarePlus, Building2,
   Users, LogOut, ChevronRight, BarChart2, History, Package,
@@ -103,7 +103,7 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
 
       <main className="flex-1 overflow-auto">
         <div className="max-w-5xl mx-auto p-6">
-          {children}
+          {children || <Outlet />}
         </div>
       </main>
     </div>

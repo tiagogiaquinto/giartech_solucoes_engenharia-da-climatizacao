@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import { UserProvider } from './contexts/UserContext'
+import { PortalProvider } from './contexts/PortalContext'
 import WebLayout from './components/layouts/WebLayout'
 import LoadingScreen from './components/LoadingScreen'
 import Home from './pages/Home'
@@ -151,6 +152,13 @@ const AccessDenied403 = lazy(() => import('./pages/AccessDenied403'))
 const PortalLogin = lazy(() => import('./pages/portal/PortalLogin'))
 const PortalLayout = lazy(() => import('./pages/portal/PortalLayout'))
 const PortalDashboardRouter = lazy(() => import('./pages/portal/PortalDashboardRouter'))
+const CustomerPortalHistory = lazy(() => import('./pages/portal/CustomerPortalHistory'))
+const CustomerPortalAddresses = lazy(() => import('./pages/portal/CustomerPortalAddresses'))
+const CustomerPortalInventory = lazy(() => import('./pages/portal/CustomerPortalInventory'))
+const CustomerPortalDocuments = lazy(() => import('./pages/portal/CustomerPortalDocuments'))
+const CustomerServiceRequest = lazy(() => import('./pages/portal/CustomerServiceRequest'))
+const CustomerPortalBudgets = lazy(() => import('./pages/portal/CustomerPortalBudgets'))
+const PartnerPortalHistory = lazy(() => import('./pages/portal/PartnerPortalHistory'))
 
 // Mobile
 const MobileRoutes = lazy(() => import('./pages/mobile/MobileRoutes'))
@@ -177,9 +185,16 @@ function App() {
             <Route path="/track/:token" element={<OSTrackPage />} />
 
             {/* === PORTAL CLIENTE/PARCEIRO === */}
-            <Route path="/portal/login" element={<PortalLogin />} />
-            <Route path="/portal" element={<PortalLayout />}>
+            <Route path="/portal/login" element={<PortalProvider><PortalLogin /></PortalProvider>} />
+            <Route path="/portal" element={<PortalProvider><PortalLayout /></PortalProvider>}>
               <Route path="dashboard" element={<PortalDashboardRouter />} />
+              <Route path="historico" element={<CustomerPortalHistory />} />
+              <Route path="enderecos" element={<CustomerPortalAddresses />} />
+              <Route path="inventario" element={<CustomerPortalInventory />} />
+              <Route path="documentos" element={<CustomerPortalDocuments />} />
+              <Route path="solicitar" element={<CustomerServiceRequest />} />
+              <Route path="orcamentos" element={<CustomerPortalBudgets />} />
+              <Route path="historico-parceiro" element={<PartnerPortalHistory />} />
             </Route>
 
             {/* === MOBILE === */}
