@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Plus, Trash2, Save, X, User, Calendar, FileText, Package, Users, Clock, DollarSign, TrendingUp, AlertCircle, Check, Printer, Send, Download, Eye, FileDown, Search, ChevronDown, ChevronUp, Building2, CreditCard, FileSignature, Wrench, MapPin } from 'lucide-react'
@@ -76,6 +76,10 @@ const ServiceOrderCreate = () => {
   const [contractTemplates, setContractTemplates] = useState<any[]>([])
   const [serviceCatalog, setServiceCatalog] = useState<any[]>([])
   const [inventory, setInventory] = useState<any[]>([])
+  const [matSearchQuery, setMatSearchQuery] = useState<Record<string, string>>({})
+  const [matSearchResults, setMatSearchResults] = useState<Record<string, any[]>>({})
+  const [matSearchLoading, setMatSearchLoading] = useState<Record<string, boolean>>({})
+  const matSearchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const [showEmailModal, setShowEmailModal] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [emailRecipient, setEmailRecipient] = useState('')
@@ -592,23 +596,43 @@ const ServiceOrderCreate = () => {
     updateServiceItem(serviceId, { materiais: updatedMateriais })
   }
 
-  const selectMaterial = (serviceId: string, materialId: string, selectedMaterialId: string) => {
-    const material = materials.find(m => m.id === selectedMaterialId)
-    if (!material) return
-
-    const precoCompra = Number(material.unit_cost) || 0
-    const precoVenda = Number(material.sale_price) || 0
-    const unidade = material.unit || 'UN'
-
+  const selectMaterialFromSearch = (serviceId: string, materialId: string, found: any) => {
+    const precoCompra = Number(found.unit_cost) || 0
+    const precoVenda = Number(found.unit_price) || 0
+    const unidade = found.unit || 'UN'
     updateMaterial(serviceId, materialId, {
-      material_id: selectedMaterialId,
-      nome: material.name,
+      material_id: found.id,
+      nome: found.name,
       unidade_medida: unidade,
       preco_compra_unitario: precoCompra,
       preco_venda_unitario: precoVenda,
       preco_compra: precoCompra,
       preco_venda: precoVenda
     })
+    const key = `${serviceId}_${materialId}`
+    setMatSearchQuery(q => ({ ...q, [key]: found.name }))
+    setMatSearchResults(r => ({ ...r, [key]: [] }))
+  }
+
+  const handleMatSearchInput = (serviceId: string, materialId: string, value: string) => {
+    const key = `${serviceId}_${materialId}`
+    setMatSearchQuery(q => ({ ...q, [key]: value }))
+    if (matSearchTimers.current[key]) clearTimeout(matSearchTimers.current[key])
+    if (!value.trim() || value.length < 2) {
+      setMatSearchResults(r => ({ ...r, [key]: [] }))
+      return
+    }
+    setMatSearchLoading(l => ({ ...l, [key]: true }))
+    matSearchTimers.current[key] = setTimeout(async () => {
+      try {
+        const { data } = await supabase.rpc('buscar_materiais', { termo: value.trim() })
+        setMatSearchResults(r => ({ ...r, [key]: data || [] }))
+      } catch {
+        setMatSearchResults(r => ({ ...r, [key]: [] }))
+      } finally {
+        setMatSearchLoading(l => ({ ...l, [key]: false }))
+      }
+    }, 300)
   }
 
   const addLabor = (serviceId: string) => {
@@ -806,42 +830,36 @@ const ServiceOrderCreate = () => {
         if (itemError) throw itemError
 
         if (item.materiais.length > 0) {
-          const materiaisData = item.materiais.map(m => ({
-            service_order_id: order.id,
-            service_order_item_id: itemData.id,
-            material_id: m.material_id,
-            nome_material: m.nome,
-            quantidade: m.quantidade,
-            preco_compra: m.preco_compra,
-            preco_venda: m.preco_venda,
-            custo_total: m.custo_total,
-            valor_total: m.valor_total,
-            lucro: m.lucro
-          }))
-
-          const { error: materiaisError } = await supabase
-            .from('service_order_materials')
-            .insert(materiaisData)
-
-          if (materiaisError) throw materiaisError
+          for (const m of item.materiais) {
+            if (!m.material_id && !m.nome) continue
+            await supabase.rpc('salvar_material_os', {
+              payload: {
+                service_order_id: order.id,
+                service_order_item_id: itemData.id,
+                material_id: m.material_id || null,
+                nome_material: m.nome,
+                quantidade: m.quantidade,
+                preco_compra: m.preco_compra_unitario || m.preco_compra || 0,
+                preco_venda: m.preco_venda_unitario || m.preco_venda || 0,
+                unit: m.unidade_medida || 'UN'
+              }
+            })
+          }
         }
 
         if (item.funcionarios.length > 0) {
-          const funcionariosData = item.funcionarios.map(f => ({
-            service_order_id: order.id,
-            service_order_item_id: itemData.id,
-            staff_id: f.staff_id,
-            nome_funcionario: f.nome,
-            tempo_minutos: f.tempo_minutos,
-            custo_hora: f.custo_hora,
-            custo_total: f.custo_total
-          }))
-
-          const { error: funcionariosError } = await supabase
-            .from('service_order_labor')
-            .insert(funcionariosData)
-
-          if (funcionariosError) throw funcionariosError
+          for (const f of item.funcionarios) {
+            if (!f.staff_id) continue
+            await supabase.rpc('salvar_funcionario_os', {
+              payload: {
+                service_order_id: order.id,
+                employee_id: f.staff_id,
+                horas_trabalhadas: Number((f.tempo_minutos || 0) / 60).toFixed(2),
+                custo_hora: f.custo_hora || 0,
+                role: f.nome || 'Técnico'
+              }
+            })
+          }
         }
       }
 
@@ -2224,16 +2242,33 @@ const ServiceOrderCreate = () => {
                   {item.materiais.map(material => (
                     <div key={material.id} className="border rounded-lg p-3 mb-3 bg-gray-50">
                       <div className="grid grid-cols-6 gap-2 mb-2">
-                        <select value={material.material_id}
-                          onChange={(e) => selectMaterial(item.id, material.id, e.target.value)}
-                          className="col-span-3 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500">
-                          <option value="">Selecione o material...</option>
-                          {materials.map(m => (
-                            <option key={m.id} value={m.id}>
-                              {m.name} - {formatCurrency(Number(m.sale_price))} ({m.unit || 'UN'})
-                            </option>
-                          ))}
-                        </select>
+                        <div className="col-span-3 relative">
+                          <input
+                            type="text"
+                            value={matSearchQuery[`${item.id}_${material.id}`] ?? (material.nome || '')}
+                            onChange={e => handleMatSearchInput(item.id, material.id, e.target.value)}
+                            placeholder="Buscar material..."
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                          />
+                          {matSearchLoading[`${item.id}_${material.id}`] && (
+                            <span className="absolute right-2 top-2 text-xs text-gray-400">...</span>
+                          )}
+                          {(matSearchResults[`${item.id}_${material.id}`] || []).length > 0 && (
+                            <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-52 overflow-y-auto">
+                              {matSearchResults[`${item.id}_${material.id}`].map((r: any) => (
+                                <button
+                                  key={r.id}
+                                  type="button"
+                                  onMouseDown={() => selectMaterialFromSearch(item.id, material.id, r)}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 border-b last:border-0 flex items-center justify-between gap-2"
+                                >
+                                  <span className="font-medium truncate">{r.name}</span>
+                                  <span className="text-xs text-gray-500 shrink-0">{r.unit} · R$ {Number(r.unit_price).toFixed(2)}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <div className="col-span-2 relative">
                           <input type="number" value={material.quantidade} min="0.01" step="0.01"
                             onChange={(e) => updateMaterial(item.id, material.id, {quantidade: Number(e.target.value)})}

@@ -12,7 +12,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   RotateCcw,
-  ExternalLink
+  ExternalLink,
+  AlertTriangle
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useUser } from '../contexts/UserContext'
@@ -29,13 +30,16 @@ interface Message {
   timestamp: Date
   confidence?: number
   suggestions?: string[]
+  alertas?: any[]
+  acoes?: any[]
+  pergunta_original?: string
 }
 
 async function callThomazRaciocinar(
   pergunta: string,
   sessionId: string,
   userId?: string
-): Promise<{ resposta_direta: string; sugestoes?: string[]; confianca_final?: number }> {
+): Promise<{ resposta_direta: string; sugestoes?: string[]; confianca_final?: number; alertas?: any[]; acoes?: any[] }> {
   const { data, error } = await supabase.rpc('thomaz_raciocinar', {
     pergunta,
     p_session: sessionId,
@@ -193,7 +197,10 @@ export function ThomazSuperChat() {
         content: result.resposta_direta,
         timestamp: new Date(),
         confidence: result.confianca_final,
-        suggestions: result.sugestoes
+        suggestions: result.sugestoes,
+        alertas: result.alertas,
+        acoes: result.acoes,
+        pergunta_original: textToSend
       }])
     } catch {
       setIsTyping(false)
@@ -210,6 +217,17 @@ export function ThomazSuperChat() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
+  }
+
+  const sendFeedback = async (message: Message, feedback: 'positivo' | 'negativo') => {
+    try {
+      await supabase.rpc('thomaz_aprender', {
+        p_topic: 'chat_feedback',
+        p_pergunta: message.pergunta_original || message.content,
+        p_resposta: message.content,
+        p_feedback: feedback
+      })
+    } catch {}
   }
 
   const formatContent = (content: string) => {
@@ -329,11 +347,40 @@ export function ThomazSuperChat() {
                       <button onClick={() => copyToClipboard(message.content)} className="p-1 text-gray-400 hover:text-gray-600 transition-colors" title="Copiar">
                         <Copy className="w-3 h-3" />
                       </button>
-                      <button className="p-1 text-gray-400 hover:text-green-600 transition-colors"><ThumbsUp className="w-3 h-3" /></button>
-                      <button className="p-1 text-gray-400 hover:text-red-600 transition-colors"><ThumbsDown className="w-3 h-3" /></button>
+                      <button onClick={() => sendFeedback(message, 'positivo')} className="p-1 text-gray-400 hover:text-green-600 transition-colors" title="Útil"><ThumbsUp className="w-3 h-3" /></button>
+                      <button onClick={() => sendFeedback(message, 'negativo')} className="p-1 text-gray-400 hover:text-red-600 transition-colors" title="Não útil"><ThumbsDown className="w-3 h-3" /></button>
+                      {message.confidence !== undefined && (
+                        <span className="text-[10px] text-gray-400 ml-1">{Math.round(message.confidence * 100)}%</span>
+                      )}
                     </div>
                   )}
                 </div>
+
+                {message.role === 'assistant' && message.alertas && message.alertas.length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    {message.alertas.slice(0, 3).map((alerta: any, i: number) => (
+                      <div key={i} className={`flex items-start gap-2 text-xs px-3 py-2 rounded-lg ${
+                        alerta.nivel_risco === 'critico' ? 'bg-red-50 text-red-700 border border-red-200' :
+                        alerta.nivel_risco === 'atencao' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                        'bg-blue-50 text-blue-700 border border-blue-200'
+                      }`}>
+                        <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                        <span>{alerta.mensagem_humana || alerta.title || alerta.description}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {message.role === 'assistant' && message.acoes && message.acoes.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {message.acoes.slice(0, 3).map((acao: any, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-xs bg-green-50 border border-green-200 text-green-700 px-3 py-1.5 rounded-lg">
+                        <span className="font-semibold shrink-0">{i + 1}.</span>
+                        <span>{acao.acao || acao.title || acao.description}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {message.role === 'assistant' && message.suggestions && message.suggestions.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">

@@ -706,7 +706,7 @@ class ThomazSuperAdvancedService {
     const { data } = await supabase
       .from('thomaz_conversations')
       .select('*')
-      .eq('conversation_id', conversationId)
+      .eq('session_id', conversationId)
       .order('created_at', { ascending: true })
       .limit(10)
 
@@ -742,7 +742,7 @@ class ThomazSuperAdvancedService {
   ): Promise<void> {
     try {
       await supabase.from('thomaz_conversations').insert({
-        conversation_id: conversationId || Math.random().toString(36),
+        session_id: conversationId || Math.random().toString(36),
         user_id: userId,
         user_message: message,
         thomaz_response: response,
