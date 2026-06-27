@@ -128,6 +128,9 @@ const AdminAccessCodes = lazy(() => import('./pages/AdminAccessCodes'))
 const RouteTracking = lazy(() => import('./pages/RouteTracking'))
 const QRCodeManager = lazy(() => import('./pages/QRCodeManager'))
 
+// Automações
+const WorkflowAutomation = lazy(() => import('./pages/WorkflowAutomation'))
+
 // Configurações
 const Settings = lazy(() => import('./pages/Settings'))
 const CompanySettings = lazy(() => import('./pages/CompanySettings'))
@@ -328,6 +331,8 @@ function App() {
               {/* Rastreamento / QR */}
               <Route path="/rotas" element={<RouteTracking />} />
               <Route path="/qr-codes" element={<QRCodeManager />} />
+
+              <Route path="/automacoes" element={<WorkflowAutomation />} />
 
               {/* Configurações */}
               <Route path="/settings" element={<Settings />} />

@@ -45,7 +45,8 @@ import {
   Wind,
   LayoutGrid,
   Fingerprint,
-  Bell
+  Bell,
+  Zap
 } from 'lucide-react'
 import { useUser } from '../../contexts/UserContext'
 import { supabase } from '../../lib/supabase'
@@ -91,6 +92,7 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { id: 'portal-clientes', path: '/portal/login', icon: Building2, label: 'Portal Cliente/Parceiro', description: 'Acesso externo para clientes e parceiros', moduleCode: 'portal' },
   { id: 'settings', path: '/settings', icon: Settings, label: 'Configurações', description: 'Configurações gerais', moduleCode: 'configuracoes' },
   { id: 'notification-rules', path: '/settings/notification-rules', icon: Bell, label: 'Regras de Alertas', description: 'Configure tipos, prioridades e destinatários dos alertas', moduleCode: 'configuracoes' },
+  { id: 'automacoes', path: '/automacoes', icon: Zap, label: 'Automações', description: 'Regras de workflow automático do sistema', moduleCode: 'configuracoes' },
 ]
 
 const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
